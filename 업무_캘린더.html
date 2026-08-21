@@ -179,6 +179,14 @@ tr.is-late td.dday,tr.is-late td.st{color:var(--bad);font-weight:700}
   font-size:12px;color:#6b4c05;line-height:1.7}
 .pv-chk b{color:#4a3403}
 
+/* 프로세스 수정 — 이 브라우저에서 카탈로그 문구를 고치는 폼 */
+.proc-edited{font-size:10.5px;color:var(--warn);background:var(--warn-bg);
+  border:1px solid rgba(141,103,20,.25);border-radius:3px;padding:2px 8px;white-space:nowrap}
+.pv-edit-tb input,.pv-edit-tb textarea{width:100%;padding:6px 8px;border:1px solid var(--line);
+  border-radius:3px;font-size:11.5px;font-family:inherit;background:var(--surface);color:var(--ink)}
+.pv-edit-tb textarea{resize:vertical}
+.pv-edit-tb input:focus,.pv-edit-tb textarea:focus{outline:2px solid var(--navy-600);outline-offset:-1px;background:#fff}
+
 /* ── 캘린더 ─────────────────────────────── */
 .calnav{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
 .calnav .btn{white-space:nowrap;border-color:var(--line);color:var(--ink-2)}
@@ -1496,6 +1504,12 @@ var CYCLES=['월간','분기','반기','연간','연 4회','수시'];
 var S={ tasks:[], regs:[], seq:1 };
 /* 수행의 원장 — 프로세스를 실제로 굴리는 인스턴스(RUN). S 와 별도로 저장한다. */
 var RUNS={ items:[], seq:1 };
+/* 프로세스 수정 — 실사용자가 카탈로그 설명을 자기 브라우저에서 고칠 수 있게.
+   procName → {desc,gubun,cycle,law,base,due,calc,check,steps:[{cont,doc,own,note}]}.
+   이 브라우저에만 저장되고 다른 사람 화면·카탈로그 원본에는 안 간다 — 원본에
+   반영하려면 화면의 「카탈로그에 반영 요청」으로 담당자에게 보낸다. */
+var PROC_EDITS={};
+var PROC_EDIT=false;   /* 프로세스 뷰어가 지금 수정 폼을 보여주고 있는지 */
 /* 그룹웨어 트리거 템플릿 — TRIGGERS[procName]={stepIndex:{type,make(run,proc)}}.
    비어 있으면 트리거 버튼이 그려지지 않는다.
 
@@ -2183,8 +2197,37 @@ function saveRuns(){
   try{ localStorage.setItem(runsKey(), JSON.stringify(RUNS)); }
   catch(e){ toast('저장에 실패했습니다 — 브라우저 저장 공간을 확인해 주세요'); }
 }
+function procEditsKey(){ return 'jb-work-proc-edits-v1:'+DEPT; }
+function loadProcEdits(){
+  PROC_EDITS={};
+  var raw=null; try{ raw=localStorage.getItem(procEditsKey()); }catch(e){}
+  if(!raw) return;
+  try{ var o=JSON.parse(raw); if(o&&typeof o==='object'&&!(o instanceof Array)) PROC_EDITS=o; }catch(e){}
+}
+function saveProcEdits(){
+  try{ localStorage.setItem(procEditsKey(), JSON.stringify(PROC_EDITS)); }
+  catch(e){ toast('저장에 실패했습니다 — 브라우저 저장 공간을 확인해 주세요'); }
+}
+/* 카탈로그 원본에 이 브라우저의 수정을 얹은 실효 프로세스.
+   STEP 개수는 카탈로그 기준으로 고정한다 — 단계 추가·삭제는 아직 지원하지
+   않고, 문구(세부내용·산출물·담당·비고)와 머리 정보만 고칠 수 있다. */
+function effectiveProc(p0){
+  var e=PROC_EDITS[p0.name]; if(!e) return p0;
+  var steps=p0.steps.map(function(s,i){
+    var es=(e.steps&&e.steps[i])||{};
+    return { step:s.step,
+      cont:(es.cont!=null?es.cont:s.cont), doc:(es.doc!=null?es.doc:s.doc),
+      own:(es.own!=null?es.own:s.own), note:(es.note!=null?es.note:s.note) };
+  });
+  return { name:p0.name, _edited:true,
+    desc:(e.desc!=null?e.desc:p0.desc), gubun:(e.gubun!=null?e.gubun:p0.gubun),
+    cycle:(e.cycle!=null?e.cycle:p0.cycle), law:(e.law!=null?e.law:p0.law),
+    base:(e.base!=null?e.base:p0.base), due:(e.due!=null?e.due:p0.due),
+    calc:(e.calc!=null?e.calc:p0.calc), check:(e.check!=null?e.check:p0.check),
+    steps:steps };
+}
 function procByName(nm){
-  for(var i=0;i<PROCS.length;i++) if(PROCS[i].name===nm) return PROCS[i];
+  for(var i=0;i<PROCS.length;i++) if(PROCS[i].name===nm) return effectiveProc(PROCS[i]);
   return null;
 }
 /* 저장소에서 읽은 RUN 도 사용자가 준 것처럼 의심한다 — normTask 와 같은
@@ -2779,10 +2822,59 @@ function paneReg(){
 /* ── 업무 프로세스 (고정 뷰어) ─────────────────────────────
    원래 엑셀에서 가장 공들인 부분이다. 시트를 옮기거나 스크롤하지 않고
    같은 자리에서 업무만 바꿔 가며 절차를 본다. 그대로 옮긴다. */
+/* 프로세스 수정 폼 읽기 — b0 는 카탈로그 원본(STEP 개수 기준). */
+function readProcEditForm(b0){
+  function v(id){ var el=document.getElementById(id); return el? el.value : ''; }
+  function iv(attr,i){ var el=document.querySelector('['+attr+'="'+i+'"]'); return el? el.value : ''; }
+  var steps=b0.steps.map(function(s,i){
+    return { step:safeText(iv('data-editstep',i),80)||s.step,
+      cont:safeText(iv('data-editcont',i),400), doc:safeText(iv('data-editdoc',i),120),
+      own:safeText(iv('data-editown',i),60), note:safeText(iv('data-editnote',i),150) };
+  });
+  return {
+    desc:safeText(v('peDesc'),300), gubun:safeText(v('peGubun'),40), cycle:safeText(v('peCycle'),40),
+    law:safeText(v('peLaw'),200), base:safeText(v('peBase'),120), due:safeText(v('peDue'),200),
+    calc:safeText(v('peCalc'),400), check:safeText(v('peCheck'),500),
+    steps:steps };
+}
+/* 수정한 프로세스를 카탈로그 원본에 반영해 달라고 요청 — 이 브라우저 저장과
+   동시에, 기존 「개선안」 채널(메일·복사)로 담당자에게 전체 내용을 보낸다.
+   원본(procs.domestic.json)에 실제로 합치는 건 그 요청을 받은 사람의 몫이다. */
+function requestProcSync(b0){
+  var e=readProcEditForm(b0);
+  PROC_EDITS[b0.name]=e; saveProcEdits();
+  var lines=['[카탈로그 반영 요청] '+b0.name,
+    '본부: '+((DEPTS[DEPT]||{}).name||''), ''];
+  lines.push('업무 개요: '+e.desc);
+  lines.push('구분: '+e.gubun+' · 주기: '+e.cycle);
+  lines.push('근거: '+e.law);
+  lines.push('발생(기준)일자: '+e.base);
+  lines.push('처리 · 납부기한: '+e.due);
+  if(e.calc) lines.push('계산법 · 산식: '+e.calc);
+  if(e.check) lines.push('체크포인트: '+e.check);
+  lines.push('');
+  e.steps.forEach(function(s,i){
+    lines.push('STEP '+(i+1)+' '+s.step);
+    lines.push('  세부 내용: '+s.cont);
+    lines.push('  산출물: '+s.doc+' · 담당: '+s.own+(s.note? ' · 비고: '+s.note : ''));
+  });
+  var body=lines.join('\n');
+  if(isEmbedded()){
+    copyText(body,function(ok){
+      if(ok) toast('복사했습니다 — '+FEEDBACK_TO+' 로 붙여 넣어 보내 주세요');
+      else toast('복사가 막혔습니다 — '+FEEDBACK_TO+' 로 직접 전달해 주세요');
+    });
+  } else {
+    location.href='mailto:'+FEEDBACK_TO+'?subject='+encodeURIComponent('[업무 캘린더 프로세스 반영 요청] '+b0.name)+'&body='+encodeURIComponent(body);
+    toast('메일 앱을 열었습니다 — 보내기를 눌러 주세요');
+  }
+  PROC_EDIT=false; render();
+}
 function paneProc(){
-  var p=PROCS[PROC_PICK]||PROCS[0];
+  var base0=PROCS[PROC_PICK]||PROCS[0];
+  var p=effectiveProc(base0);
   var h='<div class="pv-pick"><select id="pvSel" aria-label="업무 선택">'+
-    PROCS.map(function(x,i){ return '<option value="'+i+'"'+(i===PROC_PICK?' selected':'')+'>'+esc(x.name)+'</option>'; }).join('')+
+    PROCS.map(function(x,i){ return '<option value="'+i+'"'+(i===PROC_PICK?' selected':'')+'>'+esc(x.name)+(PROC_EDITS[x.name]?' (수정됨)':'')+'</option>'; }).join('')+
     '</select><span style="font-size:11.5px;color:var(--ink-3)">업무를 바꿔도 화면이 움직이지 않습니다</span></div>';
 
   /* 실행 모드로 열어 둔 RUN. 이 프로세스 것이 아니면(스테일) 카탈로그 모드다. */
@@ -2790,21 +2882,38 @@ function paneProc(){
   if(run&&run.proc!==p.name) run=null;
   var myRuns=[];
   RUNS.items.forEach(function(r){ if(r.proc===p.name) myRuns.push(r); });
+  var editing=(!run&&PROC_EDIT);
 
   h+='<div class="card"><header><h2>'+esc(p.name)+'</h2>'+
+     (p._edited?'<span class="proc-edited">이 브라우저에서 수정됨</span>':'')+
      '<span class="desc">'+esc(p.gubun)+' · '+esc(p.cycle)+'</span></header>'+
-     '<div class="body">'+
-     '<div class="pv-meta">'+
+     '<div class="body">';
+
+  if(editing){
+    h+='<div class="pv-meta pv-edit">'+
+       '<div class="fld full"><label for="peDesc">업무 개요</label><textarea id="peDesc" class="fb-text" rows="2">'+esc(p.desc)+'</textarea></div>'+
+       fld('구분','<input type="text" id="peGubun" maxlength="40" value="'+esc(p.gubun)+'">')+
+       fld('주기','<input type="text" id="peCycle" maxlength="40" value="'+esc(p.cycle)+'">')+
+       fld('근거','<input type="text" id="peLaw" maxlength="200" value="'+esc(p.law)+'">')+
+       fld('발생(기준)일자','<input type="text" id="peBase" maxlength="120" value="'+esc(p.base)+'">')+
+       fld('처리 · 납부기한','<input type="text" id="peDue" maxlength="200" value="'+esc(p.due)+'">')+
+       '<div class="fld full"><label for="peCalc">계산법 · 산식</label><textarea id="peCalc" class="fb-text" rows="2">'+esc(p.calc)+'</textarea></div>'+
+       '<div class="fld full"><label for="peCheck">체크포인트</label><textarea id="peCheck" class="fb-text" rows="2">'+esc(p.check)+'</textarea></div>'+
+     '</div>';
+  } else {
+    h+='<div class="pv-meta">'+
        '<div class="full"><b>업무 개요</b><span>'+esc(p.desc)+'</span></div>'+
        '<div><b>근거</b><span>'+esc(p.law)+'</span></div>'+
        '<div><b>발생(기준)일자</b><span>'+esc(p.base)+'</span></div>'+
        '<div><b>처리 · 납부기한</b><span>'+esc(p.due)+'</span></div>'+
        (p.calc?'<div class="full"><b>계산법 · 산식</b><span class="pv-calc">'+esc(p.calc)+'</span></div>':'')+
      '</div>';
+  }
 
   /* 수행 영역 — 설명서(카탈로그)를 원장(RUN)으로 바꾸는 곳 */
   h+='<div class="runbar">'+
-     '<button class="qbtn" id="runStart">이 절차 수행 시작</button>';
+     '<button class="qbtn" id="runStart">이 절차 수행 시작</button>'+
+     (run?'':'<button class="rbtn" id="procEditToggle">'+(editing?'수정 취소':'이 프로세스 수정')+'</button>');
   if(myRuns.length){
     h+='<select id="runSel" aria-label="수행 기록 선택">'+
        '<option value="0">절차 설명 (카탈로그)</option>'+
@@ -2854,6 +2963,29 @@ function paneProc(){
         '<td class="mid run-at">'+(rs.at? esc(rs.at) : '—')+'</td></tr>';
     });
     h+='</tbody></table></div>';
+  } else if(editing){
+    /* 수정 모드 — STEP 문구를 이 브라우저에서 직접 고친다 */
+    h+='<div class="tbl-wrap"><table class="pv-step pv-edit-tb"><thead><tr>'+
+       '<th style="width:44px">STEP</th><th style="width:150px">단계</th><th>세부 내용</th>'+
+       '<th style="width:130px">산출물</th><th style="width:110px">담당</th><th style="width:150px">비고</th>'+
+       '</tr></thead><tbody>';
+    p.steps.forEach(function(s,i){
+      h+='<tr><td class="no">'+(i+1)+'</td>'+
+        '<td><input type="text" data-editstep="'+i+'" maxlength="80" value="'+esc(s.step)+'" aria-label="STEP '+(i+1)+' 단계명"></td>'+
+        '<td><textarea data-editcont="'+i+'" rows="2" aria-label="STEP '+(i+1)+' 세부 내용">'+esc(s.cont)+'</textarea></td>'+
+        '<td><input type="text" data-editdoc="'+i+'" maxlength="120" value="'+esc(s.doc)+'" aria-label="STEP '+(i+1)+' 산출물"></td>'+
+        '<td><input type="text" data-editown="'+i+'" maxlength="60" value="'+esc(s.own)+'" aria-label="STEP '+(i+1)+' 담당"></td>'+
+        '<td><input type="text" data-editnote="'+i+'" maxlength="150" value="'+esc(s.note)+'" aria-label="STEP '+(i+1)+' 비고"></td></tr>';
+    });
+    h+='</tbody></table></div>'+
+      '<p class="fb-note" style="margin:10px 0">이 수정은 이 브라우저에만 저장됩니다 — 카탈로그 자체(다른 사람 화면)에 반영하려면 '+
+      '「카탈로그에 반영 요청」을 눌러 주세요.</p>'+
+      '<div class="fb-acts">'+
+        '<button class="btn primary" id="procEdSave">이 브라우저에 저장</button>'+
+        '<button class="btn" id="procEdSync">카탈로그에 반영 요청</button>'+
+        (p._edited?'<button class="btn" id="procEdReset">기본값으로 되돌리기</button>':'')+
+        '<button class="btn" id="procEdCancel">취소</button>'+
+      '</div>';
   } else {
     /* 카탈로그 모드 — 기존 표 그대로 */
     h+='<div class="tbl-wrap"><table class="pv-step"><thead><tr>'+
@@ -2867,7 +2999,7 @@ function paneProc(){
     });
     h+='</tbody></table></div>';
   }
-  if(p.check) h+='<div style="margin-top:12px" class="pv-chk"><b>체크포인트</b><br>'+esc(p.check)+'</div>';
+  if(!editing&&p.check) h+='<div style="margin-top:12px" class="pv-chk"><b>체크포인트</b><br>'+esc(p.check)+'</div>';
   h+='</div></div>';
   return h;
 }
@@ -2987,7 +3119,8 @@ function renderDept(){
   sel.addEventListener('change',function(){
     setDept(sel.value);
     if(!load()){ fillSample(); save(); saveRuns(); } else loadRuns();
-    PROC_PICK=0; RUN_PICK=0; TAB='dash';
+    loadProcEdits();
+    PROC_PICK=0; RUN_PICK=0; TAB='dash'; PROC_EDIT=false;
     render();
     toast((DEPTS[DEPT]||{}).name+' 로 전환했습니다');
   });
@@ -3087,7 +3220,7 @@ function bind(){
   });
 
   var sel=document.getElementById('pvSel');
-  if(sel) sel.addEventListener('change',function(){ PROC_PICK=+sel.value; RUN_PICK=0; render(); });
+  if(sel) sel.addEventListener('change',function(){ PROC_PICK=+sel.value; RUN_PICK=0; PROC_EDIT=false; render(); });
   document.querySelectorAll('[data-proc]').forEach(function(b){
     b.addEventListener('click',function(){
       var nm=b.getAttribute('data-proc');
@@ -3100,7 +3233,28 @@ function bind(){
   var rst=document.getElementById('runStart');
   if(rst) rst.addEventListener('click',runNewModal);
   var rsel=document.getElementById('runSel');
-  if(rsel) rsel.addEventListener('change',function(){ RUN_PICK=+rsel.value||0; render(); });
+  if(rsel) rsel.addEventListener('change',function(){ RUN_PICK=+rsel.value||0; PROC_EDIT=false; render(); });
+
+  /* ── 프로세스 수정 (이 브라우저에만 저장) ── */
+  var peTog=document.getElementById('procEditToggle');
+  if(peTog) peTog.addEventListener('click',function(){ PROC_EDIT=!PROC_EDIT; render(); });
+  var peSave=document.getElementById('procEdSave');
+  if(peSave) peSave.addEventListener('click',function(){
+    var b0=PROCS[PROC_PICK]||PROCS[0];
+    PROC_EDITS[b0.name]=readProcEditForm(b0); saveProcEdits();
+    PROC_EDIT=false; toast('이 브라우저에 수정을 저장했습니다'); render();
+  });
+  var peCancel=document.getElementById('procEdCancel');
+  if(peCancel) peCancel.addEventListener('click',function(){ PROC_EDIT=false; render(); });
+  var peReset=document.getElementById('procEdReset');
+  if(peReset) peReset.addEventListener('click',function(){
+    var b0=PROCS[PROC_PICK]||PROCS[0];
+    askConfirm('이 프로세스의 수정 내용을 지우고 카탈로그 기본값으로 되돌립니다. 계속할까요?',function(){
+      delete PROC_EDITS[b0.name]; saveProcEdits(); PROC_EDIT=false; toast('기본값으로 되돌렸습니다'); render();
+    });
+  });
+  var peSync=document.getElementById('procEdSync');
+  if(peSync) peSync.addEventListener('click',function(){ requestProcSync(PROCS[PROC_PICK]||PROCS[0]); });
   var rdel=document.getElementById('runDel');
   if(rdel) rdel.addEventListener('click',function(){
     var run=findRun(RUN_PICK); if(!run) return;
@@ -3334,6 +3488,7 @@ document.getElementById('btnSample').addEventListener('click',function(){
 
 /* 본부를 먼저 정한다 — 그래야 어느 저장소를 읽을지 안다 */
 setDept(pickDept());
+loadProcEdits();
 /* 옛 저장소(v1, 본부 구분 없음)가 있으면 첫 본부(국내운용)로 이어받는다.
    지금까지 쌓은 할 일을 잃게 하지 않는다. */
 (function migrateV1(){
@@ -3389,7 +3544,7 @@ window.__cal={ S:S, nlParse:nlParse, statusOf:statusOf, holidaysOf:holidaysOf,
   setTab:function(t){ TAB=t; render(); },
   /* 검사용: 가상 본부를 심어 본부 전환·격리를 시험한다 */
   addDept:function(key,def){ DEPTS[key]=def; if(DEPT_ORDER.indexOf(key)<0) DEPT_ORDER.push(key); render(); },
-  switchDept:function(key){ setDept(key); if(!load()){ fillSample(); save(); saveRuns(); } else loadRuns(); PROC_PICK=0; RUN_PICK=0; render(); },
+  switchDept:function(key){ setDept(key); if(!load()){ fillSample(); save(); saveRuns(); } else loadRuns(); loadProcEdits(); PROC_PICK=0; RUN_PICK=0; PROC_EDIT=false; render(); },
   /* 수행의 원장 */
   runs:function(){ return RUNS.items; },
   startRun:function(procName,fund,base,cycle){ var id=startRun(procName,fund,base,'',cycle); if(id) render(); return id; },
