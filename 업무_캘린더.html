@@ -348,6 +348,27 @@ tr.run-done td{background:var(--good-bg)}
 .trig-needs{margin-top:9px;padding:6px 10px;font-size:10.5px;color:var(--warn);
   background:var(--warn-bg);border:1px solid rgba(141,103,20,.25);border-radius:5px}
 .trig-needs[hidden]{display:none}
+
+/* 결재 문서 미리보기 — 기안·공문·운용지시서를 실제 사내 양식처럼 보이게.
+   결재선·서명은 전부 시연 표시(placeholder)이고 실제 전자결재가 아니다. */
+.fbm-box.doc{max-width:660px}
+.doc-frame{border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin:0 0 12px;background:var(--surface-2)}
+.doc-warn{font-size:10.5px;color:var(--warn);background:var(--warn-bg);
+  border:1px solid rgba(141,103,20,.25);border-radius:4px;padding:5px 8px;margin:0 0 10px}
+.doc-tbrow{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.doc-tb{border-collapse:collapse;font-size:10.5px;flex:1 1 160px}
+.doc-tb th,.doc-tb td{border:1px solid var(--line);padding:5px 8px;text-align:center;color:var(--ink-2)}
+.doc-tb th{background:var(--surface);font-weight:700;color:var(--navy-700)}
+.doc-tb td i{display:block;font-style:normal;font-size:9px;color:var(--ink-3);margin-top:2px}
+.doc-meta{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--ink-2);margin:0 0 8px}
+.doc-meta b{color:var(--navy-800);font-variant-numeric:tabular-nums}
+.doc-line{display:flex;gap:8px;font-size:11.5px;margin:0 0 4px}
+.doc-k{flex:0 0 32px;color:var(--ink-3)}
+.doc-v{color:var(--ink);word-break:break-all}
+.doc-title{font-size:13px;font-weight:700;color:var(--navy-800);margin:8px 0 6px}
+.doc-body{font-size:12px;line-height:1.7;color:var(--ink);white-space:pre-wrap;
+  border-top:1px dashed var(--line-soft);padding-top:8px}
+.doc-end{text-align:right;font-size:11px;color:var(--ink-3);margin-top:6px}
 </style>
 </head>
 <body>
@@ -1538,6 +1559,17 @@ var TRIGGERS={
     }}
   },
   '원본 일부해지 당일 업무':{
+    2:{ type:'운용지시서', make:function(run,proc){
+      return { title:'[운용지시] '+run.fund+' 원본 일부해지',
+        to:'수탁사 (투자자산수탁부)',
+        body:'아래와 같이 운용지시를 요청합니다.\n\n'+
+          '1. 펀드명: '+run.fund+'\n'+
+          '2. 업무처리사항: 원본 일부해지\n'+
+          '3. 세부사항\n'+
+          '   - 해지금액(1종·2종 수익증권별): (기재)\n'+
+          '   - 합계: (기재)\n'+
+          '4. 원본해지일: '+(run.base||'(기재)')+'' };
+    }},
     3:{ type:'메일', make:function(run,proc){
       return { title:'[확인 요청] '+run.fund+' 일부해지 상환좌수 확인',
         to:'사무관리사',
@@ -1698,19 +1730,21 @@ function fillSample(){
              next:(s.d==null? '' : ymd(addDays(t0,s.d))), proc:s.proc||'' };
   });
   S.seq=S.tasks.length+1;
-  /* 수행(RUN) 예시 — 첫 본부에만 원본해지 1건, STEP 1~2 완료 상태로.
-     시연을 열면 대시보드에 "진행중 2/9"가 떠 있고 STEP 3 이 다음 행동으로
-     보인다. 다른 본부는 빈 원장. 트리거 이력(log)은 비워 둔다. */
+  /* 수행(RUN) 예시 — 첫 본부에만 원본 일부해지 1건, STEP 1~2 완료 상태로.
+     시연을 열면 대시보드에 "진행중 2/6"이 떠 있고 STEP 3(운용지시) 이 다음
+     행동으로 보인다 — 트리거 셋업(메일·공문·운용지시서)까지 바로 볼 수 있게
+     실제 당일 업무와 겹치는 프로세스로 골랐다. 다른 본부는 빈 원장.
+     트리거 이력(log)은 비워 둔다. */
   RUNS.items=[]; RUNS.seq=1;
   if(DEPT===DEPT_ORDER[0]){
-    var rp=procByName('원본해지 (펀드 해지·상환)');
+    var rp=procByName('원본 일부해지 당일 업무');
     if(rp&&rp.steps.length>=2){
       var rsteps=rp.steps.map(function(){ return {done:false,at:'',own:'',out:''}; });
-      rsteps[0]={done:true, at:ymd(addDays(t0,-3)), own:'운용역', out:'신탁계약서 §12 확인'};
-      rsteps[1]={done:true, at:ymd(addDays(t0,-2)), own:'운용역·준법감시', out:'승인 면제 검토메모'};
+      rsteps[0]={done:true, at:ymd(addDays(t0,0)), own:'운용역', out:'일부해지 공문 결재 완료'};
+      rsteps[1]={done:true, at:ymd(addDays(t0,0)), own:'운용역', out:'대출원금 수령 운용지시 완료'};
       RUNS.items.push({ id:1, proc:rp.name, fund:'A호 펀드',
-        base:ymd(addDays(t0,11)), due:ymd(addDays(t0,40)),
-        startedAt:ymd(addDays(t0,-3)), doneAt:'', steps:rsteps, log:[] });
+        base:ymd(addDays(t0,1)), due:ymd(addDays(t0,1)),
+        startedAt:ymd(t0), doneAt:'', steps:rsteps, log:[] });
       RUNS.seq=2;
     }
   }
@@ -2310,19 +2344,51 @@ function runLogLabel(l){
    시뮬레이션이다: 실제 그룹웨어에 연결되지 않으며, 화면이 그 사실을
    숨기지 않는다(제목·버튼·토스트 전부 "(시연)" 명시). 상용화 시 이
    자리가 실제 상신 API 호출로 바뀐다. */
+/* 결재선 표는 실제 회사 조직표가 아니라 일반적인 3단 결재(기안·팀장·본부장)
+   골격만 예시화한 것 — 시연에서 전자결재 화면을 흉내 내되, 실제 서명·직원명은
+   절대 넣지 않는다(전부 "(시연)" 대기 표시). 문서번호도 실제 채번 규칙이 아닌
+   예시 형식이다. */
+function trigDocNo(run){
+  var d=parseYmd(run.base)||today();
+  return ((DEPTS[DEPT]||{}).short||'본부')+'-'+d.getFullYear()+'-'+('0000'+run.id).slice(-4);
+}
+function trigDocDate(){
+  var d=today();
+  return d.getFullYear()+'. '+pad2(d.getMonth()+1)+'. '+pad2(d.getDate())+'.';
+}
 function openTrigger(runId, si){
   var run=findRun(runId); if(!run) return;
   var proc=procByName(run.proc); if(!proc) return;
   var t=TRIGGERS[run.proc]&&TRIGGERS[run.proc][si]; if(!t) return;
   var made=t.make(run,proc);
+  var isDoc=(t.type!=='메일');   /* 메일은 결재선 없는 단순 서식, 기안·공문·운용지시서는 결재문서 서식 */
   var old=document.getElementById('mdTrig'); if(old) old.parentNode.removeChild(old);
   var d=document.createElement('div'); d.className='fbm'; d.id='mdTrig';
-  d.innerHTML='<div class="fbm-box" role="dialog" aria-modal="true" aria-label="'+esc(t.type)+' 셋업">'+
+  d.innerHTML='<div class="fbm-box'+(isDoc?' doc':'')+'" role="dialog" aria-modal="true" aria-label="'+esc(t.type)+' 셋업">'+
     '<header><b>'+esc(t.type)+' 셋업 (시연) &middot; STEP '+(si+1)+' '+esc(proc.steps[si].step)+'</b>'+
     '<button class="fbm-x" aria-label="닫기">✕</button></header>'+
     '<div class="fbm-body">'+
       '<p class="fbm-lead">아래 초안이 그룹웨어에 자동 상신되도록 준비됩니다. '+
         '시연에서는 실제 연결 없이 수행 이력만 남습니다 — 내용은 고쳐서 쓰셔도 됩니다.</p>'+
+      (isDoc?
+      '<div class="doc-frame" id="trigDocFrame">'+
+        '<div class="doc-warn">시연 — 실제 전자결재와 연결되어 있지 않습니다. 결재선·서명은 예시이며, 상신 전 직접 확인해 주세요.</div>'+
+        '<div class="doc-tbrow">'+
+          '<table class="doc-tb"><thead><tr><th>기안</th><th>팀장</th><th>본부장</th></tr></thead>'+
+          '<tbody><tr><td>'+esc(proc.steps[si].own||'운용역')+'<br><i>(시연 — 전자결재 대기)</i></td><td>—</td><td>—</td></tr></tbody></table>'+
+          '<table class="doc-tb doc-tb2"><thead><tr><th>준법감시</th><th>일상감사</th></tr></thead>'+
+          '<tbody><tr><td>대상 여부 확인 필요</td><td>대상 여부 확인 필요</td></tr></tbody></table>'+
+        '</div>'+
+        '<div class="doc-meta">'+
+          '<span>문서번호 <b id="trigDocNo"></b></span>'+
+          '<span>일자 <b id="trigDocDate"></b></span>'+
+        '</div>'+
+        '<div class="doc-line"><span class="doc-k">수신</span><span class="doc-v" id="trigToView"></span></div>'+
+        '<div class="doc-line"><span class="doc-k">발신</span><span class="doc-v" id="trigFromView"></span></div>'+
+        '<div class="doc-title" id="trigTitleView"></div>'+
+        '<div class="doc-body" id="trigBodyView"></div>'+
+        '<div class="doc-end">끝.</div>'+
+      '</div>' : '')+
       '<div style="display:flex;flex-direction:column;gap:9px">'+
         fld('제목','<input type="text" id="trigTitle" maxlength="80">')+
         fld('수신','<input type="text" id="trigTo" maxlength="80">')+
@@ -2345,6 +2411,19 @@ function openTrigger(runId, si){
   var elT=document.getElementById('trigTitle'), elTo=document.getElementById('trigTo'), elB=document.getElementById('trigBody');
   elT.value=made.title; elTo.value=made.to; elB.value=made.body;
   elT.focus();
+  if(isDoc){
+    document.getElementById('trigDocNo').textContent=trigDocNo(run);
+    document.getElementById('trigDocDate').textContent=trigDocDate();
+    document.getElementById('trigFromView').textContent=((DEPTS[DEPT]||{}).name||'')+' '+(proc.steps[si].own||'운용역');
+    var elToV=document.getElementById('trigToView'), elTiV=document.getElementById('trigTitleView'), elBoV=document.getElementById('trigBodyView');
+    function paintDoc(){
+      elToV.textContent=elTo.value;
+      elTiV.textContent=elT.value;
+      elBoV.textContent=elB.value;
+    }
+    paintDoc();
+    [elT,elTo,elB].forEach(function(el){ el.addEventListener('input',paintDoc); });
+  }
   function draft(){
     return { title:elT.value.trim()||made.title, to:elTo.value.trim(), body:elB.value };
   }
