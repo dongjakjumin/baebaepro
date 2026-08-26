@@ -805,7 +805,7 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
 
 /* ══ 0. 공통 상태 ══════════════════════════════════════════ */
 var G_DEFAULT = {
-  deal:'office', depth:'std', scen:'base', compoMode:'col',
+  deal:'dev', depth:'std', scen:'base', compoMode:'col',
   asOf:'2026-07-29', unit:'백만원', ccy:'KRW', author:'', firm:'',
   scens:{
     base:{name:'Base',     dRev:0,     dG:0,      dRate:0,       dCap:0},
@@ -824,7 +824,7 @@ var CATS  =['관리','원본','엔진','결과','검증'];
 var DEAL  ={};                       /* 딜 엔진 레지스트리 */
 /* 리파이낸싱은 우선 제외했다(2026-08-26 합의) — 코드는 pb2_refi.html 에 그대로
    있으니 복구는 여기와 build.ps1 의 두 줄이면 된다. */
-var DEALORDER=['office','logistics','dev'];
+var DEALORDER=['dev','office','logistics'];
 
 /* ══ 1. 서식 · 유틸 ════════════════════════════════════════ */
 function num(v,d){ v=parseFloat(String(v).replace(/,/g,'')); return isFinite(v)?v:(d||0); }
@@ -1609,14 +1609,14 @@ function compoHeader(title,desc){
   return '<div class="card"><header><h2>'+esc(title)+'</h2><span class="desc">'+esc(desc)+'</span>'+
     '<div class="seg mini">'+
     '<button data-compo="col" class="'+(m==='col'?'on':'')+'">세로막대</button>'+
-    '<button data-compo="bar" class="'+(m==='bar'?'on':'')+'">가로막대</button>'+
-    '<button data-compo="donut" class="'+(m==='donut'?'on':'')+'">원형</button></div></header>';
+    '<button data-compo="bar" class="'+(m==='bar'?'on':'')+'">가로막대</button></div></header>';
 }
 function drawCompoAuto(host,segs,totLabel){
   if(!host) return;                       /* 활성 탭만 그리므로 빈 자리가 온다 */
+  /* 원형은 뺐다 — 조각마다 칸 크기가 달라져 항목 간 비교가 안 된다.
+     저장값에 'donut' 이 남아 있어도 세로막대로 떨어진다. */
   var m=G.compoMode||'col';
-  if(m==='donut') drawDonut(host,segs,totLabel);
-  else if(m==='bar') drawCompo(host,segs,totLabel);
+  if(m==='bar') drawCompo(host,segs,totLabel);
   else drawColumns(host,segs,totLabel);
 }
 /* 텍스트 폭 추정 (한글 전각 · 영숫자 반각) */
@@ -2161,12 +2161,44 @@ var GLOSSARY=[
     ['Debt Yield','대출원금 대비 1차년도 NOI 비율입니다. LTV·DSCR과 별개로 대주가 많이 보는 보수적 기준입니다.'],
     ['LTV (담보인정비율)','감정평가액 대비 대출금 비율입니다. 화면의 "선순위 LTV"가 이것으로, 높을수록 자기자본 부담은 줄지만 DSCR·금리 조건은 빡빡해집니다.']
   ]},
+  { sec:'개발 PF — 자금 조달', terms:[
+    ['브릿지론','토지 매입 단계에서 쓰는 단기 고금리 대출입니다. 인허가·착공이 되면 본PF로 갈아탑니다(차환). 화면의 착공월에 잔액이 그대로 본PF로 넘어갑니다.'],
+    ['본PF (Project Financing)','착공 이후 공사비·사업비를 대는 대출입니다. 사업주 신용이 아니라 그 사업의 분양수입을 갚을 재원으로 보고 빌려주는 구조라 담보·보증 장치가 붙습니다.'],
+    ['약정 한도 / 실제 인출','약정은 «빌릴 수 있는 최대»이고 인출은 «실제로 쓴 돈»입니다. 자금이 모자란 달에만 끌어쓰므로 한도가 넉넉하면 인출이 훨씬 작게 나옵니다.'],
+    ['자금 재조달 (Refinancing)','기존 대출을 새 조건의 대출로 갈아타는 것입니다. 금리를 낮추거나 만기를 늘리려고 합니다.'],
+    ['에쿼티 (자기자본)','시행사가 직접 넣는 돈입니다. 대주는 보통 «에쿼티가 먼저 들어가야» 인출을 열어 줍니다 — 화면의 조달 순서가 그래서 자기자본부터입니다.'],
+    ['책임준공','시공사가 «공사를 반드시 끝내겠다»고 약속하는 것입니다. 대주가 요구하는 대표적인 신용보강이며, 시공사 신용도가 곧 PF 조건이 됩니다.'],
+    ['신용보강','사업 자체 힘만으로 부족할 때 시공사 책임준공·연대보증·자금보충약정 등으로 대주 위험을 덜어 주는 장치를 통칭합니다.'],
+    ['자금보충약정','약정한 상황(공사비 초과 등)이 되면 시행사·시공사가 부족분을 채워 넣기로 하는 약정입니다.'],
+    ['기표','대출이 실제로 실행되어 계좌에 돈이 들어오는 것을 말합니다. 화면·공문의 «기표일»이 그 날입니다.'],
+    ['캐피탈 콜','펀드·조합이 약정된 출자금을 실제로 내라고 요청하는 것입니다.']
+  ]},
+  { sec:'개발 PF — 사업비 · 분양', terms:[
+    ['총사업비','토지비·공사비·설계감리·판매비·금융비용까지 사업에 드는 돈 전부입니다. 사업이익률·조달 한도의 분모가 됩니다.'],
+    ['도급공사비','시공사에 지급하는 공사 대금입니다. 통상 총사업비에서 가장 큰 항목입니다.'],
+    ['기성 (기성고)','공사가 진행된 만큼 인정해 지급하는 공사비입니다. 화면의 S-커브(20/60/20)가 그 투입 시점을 나타냅니다.'],
+    ['예비비 (Contingency)','설계 변경·물가 상승처럼 미리 못 잡은 지출에 대비해 잡아 두는 몫입니다.'],
+    ['분양수입','분양가 × 분양면적 × 분양률입니다. 이 사업의 유일한 회수 재원이라 PF 상환도 여기서 나옵니다.'],
+    ['분양률 (흡수율)','전체 세대 중 계약이 된 비율입니다. 사업 성패를 가르는 가장 민감한 가정이라 손익분기 분양률을 따로 계산합니다.'],
+    ['계약금 · 중도금 · 잔금','분양대금을 나눠 받는 순서입니다(통상 10 / 60 / 30%). 언제 들어오느냐가 PF 잔액과 이자를 좌우합니다.'],
+    ['중도금 무이자','중도금 대출 이자를 시행사가 대신 내주는 판촉 조건입니다. 분양은 잘되지만 사업비가 늘어납니다.'],
+    ['분양보증 (HUG)','시행사가 부도나도 수분양자가 돈을 돌려받도록 보증하는 제도입니다. 그 대가로 보증수수료를 냅니다.'],
+    ['사업이익률','(분양수입 − 총사업비) ÷ 분양수입입니다. 통상 10% 안팎을 목표로 보며, 이 도구의 개발 PF 대표 지표입니다.'],
+    ['손익분기 분양률','사업이익이 0이 되는 분양률입니다. 실제 분양률이 이보다 낮으면 손실이라 «얼마나 여유가 있나»를 보는 값입니다.']
+  ]},
   { sec:'매각 · 구조', terms:[
     ['Exit Cap (매각 시 자본환원율)','보유기간 종료 시점 NOI를 이 값으로 나누어 매각가를 추정합니다. 낮을수록(시장이 좋을수록) 매각가는 높게 잡힙니다.'],
     ['원리금균등 / 만기일시','원리금균등은 매달 원금+이자를 같이 갚아 대출잔액이 줄어드는 방식, 만기일시(불릿)는 보유기간 동안 이자만 내고 만기에 원금을 한 번에 갚는 방식입니다.'],
     ['우선주 누적배당','그 해에 못 준 우선주 배당을 다음 해로 이월해 나중에 몰아서 주는 방식입니다. 화면에 "누적"으로 표시되며, 매각 시점까지 밀린 배당이 남아 있으면 유의 문구로 알려드립니다.'],
     ['도관과세','리츠·부동산펀드처럼 배당가능이익의 90% 이상을 배당하면 법인 단계 세금이 0에 가깝게 줄어드는 과세 방식입니다. 화면의 세전·세후 지표 차이가 작다면 대개 이 가정 때문입니다.'],
-    ['사업이익률 (개발 PF)','분양수입에서 총사업비(토지비·공사비·금융비용 등)를 뺀 이익을 총사업비로 나눈 값입니다. 오피스·물류의 IRR에 해당하는, 개발 사업의 대표 수익성 지표입니다.']
+    ['LTC (총사업비 대비 대출비율)','총사업비 중 대출이 차지하는 비율입니다. 개발 사업은 담보가치(LTV)보다 사업비 기준(LTC)으로 한도를 잡는 일이 많습니다.'],
+    ['자본화 이자','건설 기간에 발생한 이자를 비용으로 털지 않고 사업비(자산)에 얹는 처리입니다. 그래서 PF 잔액이 이자만큼 계속 불어납니다.'],
+    ['PIK (Payment In Kind)','이자를 현금으로 내지 않고 원금에 얹어 만기에 함께 갚는 방식입니다. 보유 중 현금 부담과 DSCR은 가벼워지지만 만기 상환액이 커집니다.'],
+    ['메자닌 (중순위)','선순위 대출과 지분 사이에 끼는 자금입니다. 선순위보다 위험해 금리가 높고, 상환 순서는 선순위 다음입니다.'],
+    ['워터폴','돈이 들어왔을 때 누가 먼저 가져가는지의 순서입니다. 이 도구는 선순위 → 중순위 → 후순위 → 우선주 → 보통주 순으로 배분합니다.'],
+    ['에스크로','분양대금 등을 제3자 계좌에 묶어 두고 약정된 용도로만 쓰게 하는 장치입니다.'],
+    ['시행사 / 시공사','시행사는 사업을 기획·자금조달하는 주체(사업 주인)이고, 시공사는 공사를 맡아 짓는 건설사입니다.'],
+    ['SPC / PFV','사업만을 위해 따로 세우는 회사입니다. 모회사 위험과 사업 위험을 끊어 두려고 씁니다. PFV는 세제 혜택이 있는 프로젝트금융투자회사입니다.']
   ]}
 ];
 function glossaryModal(){
@@ -4909,6 +4941,20 @@ function model(key){
     out[m6]+=(M.designAmt+M.contAmt)/s.constMonths;
   }
   for(var m7=1;m7<=T;m7++){ out[m7]+=s.fixedCost/T; }
+  /* 추가 사업비 — 넣은 시점에 따라 월별로 흩뿌린다. 총액만 더하고 시점을
+     안 잡으면 PF 이자가 실제와 달라진다(돈은 «언제» 나가느냐가 이자를 만든다). */
+  M.extras=(s.extras||[]).map(function(x,i){
+    return {i:i, n:(x.n||('추가 항목 '+(i+1))), v:Math.max(0,+x.v||0), when:(x.when||'even')};
+  }).filter(function(x){ return x.v>0; });
+  M.extraTot=M.extras.reduce(function(a,x){ return a+x.v; },0);
+  M.extras.forEach(function(x){
+    if(x.when==='pre'){ out[lm]+=x.v; return; }                  /* 토지비와 같은 달 */
+    if(x.when==='const'){
+      for(var mc=start;mc<=T;mc++) out[mc]+=x.v/Math.max(1,(T-start+1));
+      return;
+    }
+    for(var me=1;me<=T;me++) out[me]+=x.v/T;                     /* even */
+  });
   cohorts.forEach(function(c){ out[c.m]+=M.salesCost*c.wn; });
   out[launch]+=M.guarantee;
   for(var m8=1;m8<=T;m8++){ out[m8]+=(midInt[m8]||0); }
@@ -5293,10 +5339,13 @@ function drawCostAuto(host,M){
     {n:'설계·감리·예비비',v:M.designAmt+M.contAmt,c:STACK[2]},
     {n:'판매비·보증수수료',v:M.salesCost+M.guarantee,c:SERIES[3]},
     {n:'기타 고정비',v:s.fixedCost,c:SERIES[4]},
+    {n:'추가 사업비',v:M.extraTot,c:SERIES[2]},
     {n:'금융비용 (이자·수수료)',v:M.finCost+M.midIntTotal,c:SERIES[1]}
   ],'총사업비');
 }
 /* ── 패널 ── */
+/* 추가 사업비의 지출 시점 이름표 — 화면·엑셀이 같은 말을 쓰게 한 곳에 둔다 */
+var WHEN_LAB={pre:'착공 전 일시', const:'공사기간 분산', even:'전 기간 분산'};
 var PANES={};
 function tile(cls,lab,val,sub){
   return '<div class="tile '+cls+'"><div class="lab">'+lab+'</div><div class="val">'+val+'</div><div class="sub">'+sub+'</div></div>';
@@ -5342,7 +5391,10 @@ PANES.sum=function(M){
     ['도급 공사비',G.unit,f0(s.constCost),'입력 · 기성 곡선 '+s.curveLabel],
     ['설계·감리 · 예비비',G.unit,f0(M.designAmt+M.contAmt),'공사비 × ('+fp(s.designPct,1)+' + '+fp(s.contingPct,1)+')'],
     ['판매비 · 분양보증수수료',G.unit,f0(M.salesCost+M.guarantee),'분양수입 × ('+fp(s.salesPct,1)+' + '+fp(s.guaranteePct,1)+')'],
-    ['기타 고정비',G.unit,f0(s.fixedCost),'입력'],
+    ['기타 고정비',G.unit,f0(s.fixedCost),'입력']
+  ].concat(M.extras.map(function(x){
+    return [x.n,G.unit,f0(x.v),'추가 항목 · '+WHEN_LAB[x.when]];
+  })).concat([
     ['중도금 무이자 부담',G.unit,f0(M.midIntTotal),s.midFree?'미상환 중도금 × '+fp(s.midLoanRate,1)+' (시행 부담)':'미반영'],
     ['금융비용 (이자 + PF수수료)',G.unit,f0(M.finCost),'브릿지 '+f0(M.totIntBr)+' + 본PF '+f0(M.totIntPf)+' + 수수료 '+f0(M.pfFee)],
     ['총사업비 (계산)',G.unit,'<b>'+f0(M.totalCost)+'</b>','항목 합계'],
@@ -5356,7 +5408,7 @@ PANES.sum=function(M){
     ['자기자본 회수',G.unit,f0(M.endCash-M.tax),'준공 시점 잉여현금 − 법인세'],
     ['Equity Multiple','x',fx(M.em),'회수 ÷ 투입'],
     ['자기자본 IRR (연환산)','%','<b>'+fp(M.irrM,2)+'</b>','월별 현금흐름 IRR × 12개월 복리']
-  ];
+  ]);
   h+=card('사업 수지 요약 (Profitability_Summary)','단위: '+G.unit+' · 기준일 '+G.asOf+' · 시나리오 '+s.scenName, tblWrap(kvTable(rows)),
     '분양수입은 평형별 세대수·분양가에서 산출하며, 총사업비는 토지·공사·부대비·판매비·금융비용의 항목 합계입니다. 입력된 총사업비와 차이가 있으면 검증 탭에 CHECK로 표시합니다.',
     role('총사업비·분양수입·사업이익률·자기자본수익률 산출','Assumptions 전 가정값, 월별 전개','사업이익률·필요 PF 한도·자기자본 IRR','보고용 요약'));
@@ -5490,6 +5542,29 @@ PANES.su=function(M){
     '<b>비중</b>은 총사업비 대비 약정 한도입니다. 자금이 모자라면 <b>지분 층 → 자기자본 → 선순위 → 부채 층</b> 순으로 한도까지 끌어쓰고, 여유가 생기면 <b>선순위부터</b> 갚습니다. '+
     '<b>PIK</b> 층은 이자를 현금으로 내지 않고 잔액에 얹어 준공 시점에 갚습니다. 한도가 넉넉하면 «약정 한도»보다 «실제 인출»이 작게 나옵니다.'+
     (M.shortfall>1? ' 지금은 한도로 사업비를 다 대지 못해 부족분 '+f0(M.shortfall)+' '+G.unit+'이 남아 있습니다.' : ''));
+  /* 추가 사업비 편집기 — 사업장마다 예시에 없는 항목이 붙는다.
+     넣는 시점까지 받아야 PF 이자가 실제와 맞는다. */
+  var ex=(d.extras||[]);
+  var xe='<div class="tbl-wrap"><table class="alt-tbl"><thead><tr>'+
+    '<th class="l">항목명</th><th style="width:140px">금액 ('+esc(G.unit)+')</th>'+
+    '<th style="width:170px">지출 시점</th><th style="width:80px"></th></tr></thead><tbody>';
+  ex.forEach(function(x,i){
+    xe+='<tr><td class="l"><input class="nm on-blue" data-xi="'+i+'" data-xf="n" value="'+esc(x.n||'')+'"></td>'+
+      '<td><input type="text" inputmode="decimal" class="on-blue" data-xi="'+i+'" data-xf="v" value="'+fnum(x.v||0)+'"></td>'+
+      '<td><select class="on-blue" data-xi="'+i+'" data-xf="when">'+
+        ['pre','const','even'].map(function(w){
+          return '<option value="'+w+'"'+((x.when||'even')===w?' selected':'')+'>'+esc(WHEN_LAB[w])+'</option>'; }).join('')+
+      '</select></td>'+
+      '<td><button class="xbtn" data-xdel="'+i+'">삭제</button></td></tr>';
+  });
+  if(!ex.length) xe+='<tr><td class="l dim" colspan="4">추가한 항목이 없습니다 — 기본 구성만으로 계산합니다.</td></tr>';
+  else xe+='<tr class="tot"><td class="l">추가 사업비 합계</td><td><b>'+f0(M.extraTot)+'</b></td><td colspan="2" class="l dim">총사업비에 포함</td></tr>';
+  xe+='</tbody></table></div><div class="body" style="padding:10px 0 0">'+
+      '<button class="addbtn" id="addExtra">+ 사업비 항목 추가</button></div>';
+  var xCard=card('추가 사업비 항목','기본 구성에 없는 사업장별 항목 — 기부채납·지장물 철거·민원 보상 등',
+    '<div class="body flush">'+xe+'</div>',
+    '여기 넣은 금액은 <b>총사업비·월별 자금수지·엑셀</b>에 함께 들어갑니다. '+
+    '<b>지출 시점</b>은 PF 이자를 좌우합니다 — 착공 전에 나가는 돈은 브릿지 금리로, 공사기간에 나가는 돈은 본PF 금리로 이자가 붙습니다.');
   var u=[
     ['SEC','Uses (총사업비)'],
     ['토지비',G.unit,f0(s.landCost),'입력'],
@@ -5499,7 +5574,10 @@ PANES.su=function(M){
     ['예비비',G.unit,f0(M.contAmt),'공사비 × '+fp(s.contingPct,1)],
     ['판매비 (분양대행·광고)',G.unit,f0(M.salesCost),'분양수입 × '+fp(s.salesPct,1)],
     ['분양보증 수수료',G.unit,f0(M.guarantee),'분양수입 × '+fp(s.guaranteePct,1)],
-    ['기타 고정비',G.unit,f0(s.fixedCost),'입력'],
+    ['기타 고정비',G.unit,f0(s.fixedCost),'입력']
+  ].concat(M.extras.map(function(x){
+    return [x.n,G.unit,f0(x.v),'추가 항목 · '+WHEN_LAB[x.when]];
+  })).concat([
     ['중도금 무이자 부담',G.unit,f0(M.midIntTotal),'시행 부담'],
     ['금융비용 (이자·수수료)',G.unit,f0(M.finCost),'자본화 이자 + PF 수수료'],
     ['총사업비 (Uses)',G.unit,'<b>'+f0(M.totalCost)+'</b>','항목 합계'],
@@ -5511,7 +5589,7 @@ PANES.su=function(M){
     ['자기자본 + 분양수입',G.unit,f0(M.eqUsed+M.revenue),'유입 합계'],
     ['총사업비 + 잉여현금',G.unit,f0(M.totalCost+M.endCash),'유출 + 잔여'],
     ['차이',G.unit,f0((M.eqUsed+M.revenue)-(M.totalCost+M.endCash)),pill(Math.abs((M.eqUsed+M.revenue)-(M.totalCost+M.endCash))<1,'0 (일치)','불일치')]
-  ];
+  ]);
   /* 약정(한도)과 실제 인출은 다르다 — 둘을 같은 표에 두어야 «비중대로 잡았는데
      실제로는 얼마 안 썼다»가 보인다. 안 쓴 층은 회색으로만 남긴다. */
   var c='<table><thead><tr><th class="l">순위</th><th class="l">트랜치</th><th>약정 한도</th><th>실제 인출</th>'+
@@ -5529,7 +5607,7 @@ PANES.su=function(M){
        '<td>'+fp(t.rate,1)+'</td><td class="l dim">'+esc(note)+(t.used>0.0001?'':' · 미사용')+'</td></tr>';
   });
   c+='</tbody></table>';
-  return eCard + card('자금 조달 · 사용 (Sources & Uses)','단위 '+G.unit, tblWrap(kvTable(u)),
+  return eCard + xCard + card('자금 조달 · 사용 (Sources & Uses)','단위 '+G.unit, tblWrap(kvTable(u)),
       '개발사업의 Sources는 자기자본·PF·분양수입으로 구성되며, 분양수입이 PF를 상환하고 잔여가 사업이익이 됩니다. 총사업비는 금융비용을 포함한 항목 합계입니다.',
       role('총사업비와 조달 재원을 연결하고 양변 일치 검증','토지·공사·부대비·금융비용, 자기자본·PF','총사업비, 조달 구성, 균형 차이','Capital_Stack · Validation_Checks'))
     + card('자본구조 (Capital_Stack)','조달 순서: 자기자본 → 선순위 → 중순위 → 후순위 · 상환 순서: 선순위 → 중순위 → 후순위', tblWrap(c),
@@ -5621,6 +5699,29 @@ function bindPanes(){
       saveState(); render(true);
     });
   }
+  /* 추가 사업비 항목 편집 */
+  if(sb){
+    if(!d.extras) d.extras=[];
+    sb.querySelectorAll('[data-xf]').forEach(function(el){
+      el.addEventListener('change',function(){
+        var i=+el.getAttribute('data-xi'), f=el.getAttribute('data-xf'), t=d.extras[i];
+        if(!t) return;
+        if(f==='n')         t.n=safeText(el.value,40)||('추가 항목 '+(i+1));
+        else if(f==='v')    t.v=Math.max(0,round1(el.value));
+        else if(f==='when') t.when=(el.value==='pre'||el.value==='const')?el.value:'even';
+        saveState(); render(true);
+      });
+    });
+    sb.querySelectorAll('[data-xdel]').forEach(function(b){
+      b.addEventListener('click',function(){ d.extras.splice(+b.getAttribute('data-xdel'),1); saveState(); render(true); });
+    });
+    var aX=document.getElementById('addExtra');
+    if(aX) aX.addEventListener('click',function(){
+      /* 금액 0 으로 넣는다 — 추가하자마자 총사업비가 흔들리면 실수처럼 보인다 */
+      d.extras.push({n:'추가 항목 '+(d.extras.length+1), v:0, when:'even'});
+      saveState(); render(true);
+    });
+  }
   var box=document.getElementById('pane-mix');
   if(!box) return;
   box.querySelectorAll('[data-mf]').forEach(function(el){
@@ -5662,6 +5763,12 @@ function build(){
   items.push({k:'sales',cat:'2. 원가',item:'판매비율',v:d.salesPct,src:'분양수입 대비',z:Z.p});
   items.push({k:'guar',cat:'2. 원가',item:'분양보증 수수료율',v:d.guaranteePct,src:'분양수입 대비',z:Z.p});
   items.push({k:'fixed',cat:'2. 원가',item:'기타 고정비',v:d.fixedCost,u:unit,src:'사업계획서',z:Z.m});
+  /* 사업장별 추가 항목 — 개수가 정해져 있지 않으므로 배열을 그대로 편다 */
+  (d.extras||[]).forEach(function(x,i){
+    if(!(+x.v>0)) return;
+    items.push({k:'extra'+i,cat:'2. 원가',item:(x.n||('추가 항목 '+(i+1))),v:+x.v||0,u:unit,
+      src:'사업계획서 — 추가 항목',note:WHEN_LAB[x.when||'even'],z:Z.m});
+  });
   items.push({k:'pre',cat:'3. 일정',item:'토지 선매입~착공',v:d.preMonths,u:'개월',src:'사업계획서',z:Z.i});
   items.push({k:'landDown',cat:'3. 일정',item:'토지 계약금 비율',v:d.landDownPct,src:'매매계약(안)',z:Z.p});
   items.push({k:'landBal',cat:'3. 일정',item:'토지 잔금 시점',v:d.landBalM,u:'개월차',src:'매매계약(안)',z:Z.i});
@@ -5950,6 +6057,11 @@ function build(){
   var x6=P(su,['Uses','판매비',N(M.salesCost,Z.m,'Unit_Mix_Pricing!F'+umRev+'*'+R.sales),'','분양수입 × 판매비율']);
   var x7=P(su,['Uses','분양보증 수수료',N(M.guarantee,Z.m,'Unit_Mix_Pricing!F'+umRev+'*'+R.guar),'','분양수입 × 보증수수료율']);
   var x8=P(su,['Uses','기타 고정비',N(s.fixedCost,Z.m,R.fixed),'','Assumptions']);
+  /* 추가 항목은 금융비용 «앞»에 넣는다 — 합계 SUM 범위 안에 들어가야
+     총사업비가 화면과 같아진다(빠지면 그만큼 사업이 좋아 보인다). */
+  M.extras.forEach(function(x){
+    P(su,['Uses',x.n,N(x.v,Z.m,R['extra'+x.i]),'','Assumptions · '+WHEN_LAB[x.when]]);
+  });
   var x9=P(su,['Uses','금융비용 (이자·수수료·중도금)',N(M.finCost+M.midIntTotal,Z.m,'Interest_Capitalization!C'+i6),'','Interest_Capitalization']);
   var xT=P(su,['','총사업비 (Uses)',N(M.totalCost,Z.m,'SUM(C'+x1+':C'+x9+')'),N(1,Z.p1),'항목 합계']);
   for(var xi=x1;xi<=x9;xi++) su.rows[xi-1][3]=N(0,Z.p1,'C'+xi+'/$C$'+xT);
@@ -6177,6 +6289,10 @@ DEAL.dev={
     landCost:180000, landTaxPct:0.046, landDownPct:0.10, landBalM:2,
     constCost:290000, curveLabel:'S-커브 (20/60/20)',
     designPct:0.040, contingPct:0.030, salesPct:0.030, guaranteePct:0.004, fixedCost:12000,
+    /* 사업장마다 기본 예시에 없는 사업비가 붙는다(기부채납·지장물 철거·
+       민원 보상 등). 여기에 넣으면 총사업비·월별 지출·엑셀에 함께 들어간다.
+       when: 'pre'=착공 전 일시 · 'const'=공사기간 분산 · 'even'=전 기간 분산 */
+    extras:[],
     preMonths:8, constMonths:32, launchM:3, absorbMonths:18,
     initSell:0.60, finalSell:1.00,
     downPct:0.10, midPct:0.60, midCount:6, finPct:0.30,
