@@ -119,6 +119,8 @@ tr.is-late td.dday,tr.is-late td.st{color:var(--bad);font-weight:700}
 .badge.wait{background:var(--line-soft);color:var(--ink-3)}
 .badge.run {background:#e7f0fb;color:var(--navy-700)}
 .badge.late{background:var(--bad-bg);color:var(--bad)}
+/* 부재 — 상태가 아니라 «그날 없음» 표시라 다른 계열로 */
+.badge.abs{background:rgba(90,103,120,.12);color:#4A5568}
 .badge.hold{background:var(--hold-bg);color:var(--hold)}
 .badge.done{background:var(--good-bg);color:var(--good)}
 .pri{font-size:11px;font-weight:600}
@@ -211,6 +213,10 @@ table.cal td.is-today{background:#fffaf0;box-shadow:inset 0 0 0 2px var(--gold)}
 .ev.late{border-left-color:var(--bad);color:var(--bad)}
 .ev.done{border-left-color:var(--ink-3);color:var(--ink-3);text-decoration:line-through}
 .ev.hold{border-left-color:var(--hold);color:var(--hold)}
+.ev.abs{border-left-style:dashed;border-left-color:var(--ink-3);color:var(--ink-3);font-style:italic}
+/* 남의 일정 — 읽기 전용이라 눌러도 아무 일이 없다. 내 것과 확실히 달라 보여야 한다 */
+.ev.shared{border-left-style:dotted;border-left-color:var(--navy-600);
+  background:var(--surface-2);color:var(--ink-2);opacity:.9}
 .ev.more{background:transparent;color:var(--ink-3);border-left-color:transparent;padding-left:5px}
 
 /* ── 기타 ───────────────────────────────── */
@@ -297,6 +303,17 @@ table.cal td.is-today{background:#fffaf0;box-shadow:inset 0 0 0 2px var(--gold)}
 .fb-acts .btn{border-color:var(--line);color:var(--ink-2)}
 .fb-acts .btn.primary{background:var(--gold);border-color:var(--gold);color:#fff}
 .fb-note{font-size:11px;color:var(--ink-3)}
+.share-chk{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-2);margin:10px 0}
+.share-import{margin-top:16px;padding-top:14px;border-top:1px solid var(--line-soft)}
+.share-import h4{font-size:12px;color:var(--navy-800);margin-bottom:4px}
+.share-none{font-size:11px;color:var(--ink-3);margin:8px 0 0}
+.share-row{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:8px 0;border-bottom:1px solid var(--line-soft);font-size:11.5px}
+.share-row:last-child{border-bottom:none}
+.share-row .dim{color:var(--ink-3);font-size:10.5px}
+.share-meta{font-size:10.5px;color:var(--ink-3);margin-top:2px}
+.share-warn{font-size:11.5px;color:var(--warn);background:var(--warn-bg);border:1px solid rgba(141,103,20,.25);
+  border-radius:3px;padding:7px 10px;margin:0}
 /* 확인 대화상자 — 머리글 없이 문장과 두 버튼만 */
 .cfm-box{max-width:420px}
 .cfm-msg{margin:2px 0 0;font-size:13px;line-height:1.65;color:var(--ink)}
@@ -397,6 +414,7 @@ tr.run-done td{background:var(--good-bg)}
   <div class="clock">오늘<b id="hdToday">—</b></div>
   <button class="btn fb" id="btnFeedback" title="써 보고 불편한 점·틀린 것·바라는 기능을 보내 주세요">개선안</button>
   <button class="btn" id="btnSample">예시 다시 채우기</button>
+  <button class="btn" id="btnShare">공유</button>
   <button class="btn" id="btnPrint">인쇄</button>
 </header>
 
@@ -1663,12 +1681,17 @@ function toast(msg){
 
 /* ── 상태는 수식이다 ─────────────────────────────────────── */
 function statusOf(t){
+  /* 부재(연차·출장)는 «해야 할 일»이 아니라 «그날 없음»이다. 마감 개념이
+     없으므로 done/hold 보다 먼저 걸러 낸다 — 안 그러면 날짜가 지난 휴가가
+     「지연」으로 잡혀 밀린 업무 목록에 낀다. */
+  if(t.kind==='absence') return '부재';
   if(t.done) return '완료';
   if(t.hold) return '보류';
   if(!t.due) return '대기';
   return parseYmd(t.due)<today() ? '지연' : '진행중';
 }
 function ddayOf(t){
+  if(t.kind==='absence') return null;   /* 휴가에 D-Day 를 붙이지 않는다 */
   if(t.done) return null;
   var d=parseYmd(t.due);
   return d? days(d,today()) : null;
@@ -1679,7 +1702,7 @@ function ddayText(t){
   if(n===null) return '—';
   return n===0? 'D-Day' : (n>0? 'D-'+n : 'D+'+(-n));
 }
-var BADGE={'대기':'wait','진행중':'run','지연':'late','보류':'hold','완료':'done'};
+var BADGE={'대기':'wait','진행중':'run','지연':'late','보류':'hold','완료':'done','부재':'abs'};
 
 /* ── 저장 ───────────────────────────────────────────────── */
 function save(){
@@ -1713,10 +1736,15 @@ function cleanYmd(v){ return (typeof v==='string'&&parseYmd(v))? v : ''; }
 function pick(list,v,dflt){ return list.indexOf(v)>=0? v : dflt; }
 function normTask(t){
   if(!t||typeof t!=='object'||typeof t.task!=='string'||!t.task) return null;
+  var due=cleanYmd(t.due);
+  var kind=(t.kind==='absence')? 'absence' : '';
+  var until=cleanYmd(t.until);
+  if(kind!=='absence' || !due || (until && until<due)) until='';
   return { id:(typeof t.id==='number'&&isFinite(t.id))? Math.floor(t.id) : 0,
     gubun:pick(GUBUN,t.gubun,'기타'), pri:pick(PRIORITY,t.pri,'보통'),
     task:safeText(t.task,120), fund:safeText(t.fund,60), note:safeText(t.note,120),
-    due:cleanYmd(t.due), done:cleanYmd(t.done), hold:!!t.hold };
+    due:due, done:cleanYmd(t.done), hold:!!t.hold,
+    kind:kind, until:until };
 }
 function normReg(r){
   if(!r||typeof r!=='object'||typeof r.task!=='string'||!r.task) return null;
@@ -2176,9 +2204,12 @@ function addTask(o){
      준다. 그대로 저장하면 다음 렌더에서 죽으므로 못 읽는 날짜는 비운다. */
   var due=cleanYmd(o.due);
   if(o.due&&!due) toast('마감일 형식을 읽지 못해 비워 두었습니다 (yyyy-mm-dd)');
+  var kind=(o.kind==='absence')? 'absence' : '';
+  var until=cleanYmd(o.until);
+  if(kind!=='absence' || !due || (until && until<due)) until='';
   S.tasks.push({ id:S.seq++, gubun:pick(GUBUN,o.gubun,'기타'), pri:pick(PRIORITY,o.pri,'보통'),
     task:safeText(o.task,120), fund:safeText(o.fund,60), note:safeText(o.note,120),
-    due:due, done:'', hold:false });
+    due:due, done:'', hold:false, kind:kind, until:until });
   save();
 }
 function findTask(id){
@@ -2578,6 +2609,10 @@ function counts(){
   var t0=today(), lim=addDays(t0,7);
   var ym=t0.getFullYear()+'-'+pad2(t0.getMonth()+1);
   S.tasks.forEach(function(t){
+    /* 부재는 업무 «건수»가 아니다. soon·thisMonth 는 statusOf 를 거치지 않고
+       done/hold 만 보므로, statusOf 만 고쳐서는 여기가 안 고쳐진다 — 임박
+       타일과 이번 달 마감 숫자에 휴가가 섞인다. 그래서 여기서 따로 뺀다. */
+    if(t.kind==='absence') return;
     var st=statusOf(t); c[st]=(c[st]||0)+1;
     if(st!=='완료') c.open++;
     var d=parseYmd(t.due);
@@ -2642,7 +2677,7 @@ function paneDash(){
   h+='</div></div>';
 
   /* 마감 임박 TOP 5 — 미완료·미보류만 */
-  var soon=S.tasks.filter(function(t){ return !t.done&&!t.hold&&t.due; })
+  var soon=S.tasks.filter(function(t){ return !t.done&&!t.hold&&t.due&&t.kind!=='absence'; })
     .sort(function(a,b){ return parseYmd(a.due)-parseYmd(b.due); }).slice(0,5);
   h+='<div class="card"><header><h2>마감 임박 5건</h2>'+
      '<span class="desc">미완료·미보류 기준 · 마감일 순</span></header>'+
@@ -2660,11 +2695,17 @@ function paneDash(){
   h+='</tbody></table></div></div></div>';
 
   /* 구분별 · 이번 달 */
-  var by={};
+  var by={}, nWork=0;
   GUBUN.forEach(function(g){ by[g]=0; });
-  S.tasks.forEach(function(t){ if(by[t.gubun]!=null) by[t.gubun]++; else by['기타']++; });
+  S.tasks.forEach(function(t){
+    if(t.kind==='absence') return;      /* 구분은 업무 성격 분류다 — 부재는 안 센다 */
+    nWork++;
+    if(by[t.gubun]!=null) by[t.gubun]++; else by['기타']++;
+  });
+  var nAbs=S.tasks.length-nWork;
   h+='<div class="card"><header><h2>구분별 건수</h2>'+
-     '<span class="desc">이번 달 마감 '+c.thisMonth+'건 · 전체 '+S.tasks.length+'건</span></header>'+
+     '<span class="desc">이번 달 마감 '+c.thisMonth+'건 · 전체 '+nWork+'건'+
+     (nAbs? ' · 부재 '+nAbs+'건은 제외' : '')+'</span></header>'+
      '<div class="body flush"><div class="tbl-wrap"><table><thead><tr>'+
      GUBUN.map(function(g){ return '<th class="mid">'+esc(g)+'</th>'; }).join('')+
      '</tr></thead><tbody><tr>'+
@@ -2784,6 +2825,8 @@ function paneTask(){
      fld('마감일','<input type="date" id="fDue">')+
      fld('구분','<select id="fGubun">'+GUBUN.map(function(g){return '<option>'+esc(g)+'</option>';}).join('')+'</select>')+
      fld('중요도','<select id="fPri">'+PRIORITY.map(function(p){return '<option'+(p==='보통'?' selected':'')+'>'+esc(p)+'</option>';}).join('')+'</select>')+
+     fld('종류','<select id="fKind"><option value="">업무</option><option value="absence">부재</option></select>')+
+     fld('종료일 (부재·선택)','<input type="date" id="fUntil">')+
      fld('비고','<input type="text" id="fNote" maxlength="120">')+
      '</div><div style="margin-top:11px"><button class="qbtn" id="fAdd">등록</button></div>'+
      '</div></div>';
@@ -3016,6 +3059,20 @@ function paneCal(){
   var byDay={};
   S.tasks.forEach(function(t){
     var d=parseYmd(t.due); if(!d) return;
+    if(t.kind==='absence' && t.until){
+      var u=parseYmd(t.until);
+      if(u){
+        var cur=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+        var end=new Date(u.getFullYear(),u.getMonth(),u.getDate());
+        while(cur<=end){
+          if(cur.getFullYear()===y && cur.getMonth()===mo){
+            (byDay[cur.getDate()]=byDay[cur.getDate()]||[]).push(t);
+          }
+          cur=new Date(cur.getFullYear(),cur.getMonth(),cur.getDate()+1);
+        }
+        return;
+      }
+    }
     if(d.getFullYear()!==y||d.getMonth()!==mo) return;
     (byDay[d.getDate()]=byDay[d.getDate()]||[]).push(t);
   });
@@ -3046,12 +3103,38 @@ function paneCal(){
        '<div class="dnum'+(hol?' hol':(wd===5?' sat':(wd===6?' sun':'')))+'">'+d+'</div>'+
        (hol? '<div class="holn" title="'+esc(hol.name)+'">'+esc(hol.name)+'</div>' : '');
     var list=byDay[d]||[];
+    /* 남의 일정을 겹쳐 얹는다. 내 것 다음에, 회색으로, 보낸이를 붙여서 —
+       누구 일정인지 모르게 되면 겹쳐 보이는 의미가 없다. */
+    var shared=[];
+    SHARED.bundles.forEach(function(b){
+      b.tasks.forEach(function(t){
+        var sd=parseYmd(t.due); if(!sd) return;
+        if(t.kind==='absence'&&t.until){
+          var su=parseYmd(t.until);
+          if(su){
+            var c2=new Date(sd.getFullYear(),sd.getMonth(),sd.getDate());
+            var e2=new Date(su.getFullYear(),su.getMonth(),su.getDate());
+            while(c2<=e2){
+              if(c2.getFullYear()===y&&c2.getMonth()===mo&&c2.getDate()===d) shared.push({b:b,t:t});
+              c2=new Date(c2.getFullYear(),c2.getMonth(),c2.getDate()+1);
+            }
+            return;
+          }
+        }
+        if(sd.getFullYear()===y&&sd.getMonth()===mo&&sd.getDate()===d) shared.push({b:b,t:t});
+      });
+    });
     list.slice(0,3).forEach(function(t){
       var st=statusOf(t);
-      var cls=st==='완료'?'done':(st==='지연'?'late':(st==='보류'?'hold':''));
+      var cls=st==='완료'?'done':(st==='지연'?'late':(st==='보류'?'hold':(st==='부재'?'abs':'')));
       h+='<div class="ev '+cls+'" title="'+esc(t.task+(t.fund?' · '+t.fund:''))+'">'+esc(t.task)+'</div>';
     });
     if(list.length>3) h+='<div class="ev more">외 '+(list.length-3)+'건</div>';
+    shared.slice(0,2).forEach(function(x){
+      h+='<div class="ev shared" title="'+esc(x.b.sender+' · '+x.t.task)+'">'+
+         esc(x.b.sender)+' · '+esc(x.t.task)+'</div>';
+    });
+    if(shared.length>2) h+='<div class="ev more">공유 외 '+(shared.length-2)+'건</div>';
     h+='</td>'; col++;
   }
   while(col<7&&col>0){ h+='<td class="off"></td>'; col++; }
@@ -3063,7 +3146,7 @@ function paneCal(){
 /* 재렌더는 패널을 통째로 다시 만든다. 쓰다 만 입력이 그대로 날아가면
    "완료 하나 눌렀을 뿐인데 적던 게 사라졌다"가 된다. 값과 커서 위치를
    붙들었다가 되돌린다. */
-var KEEP_INPUTS=['qIn','fTask','fFund','fDue','fGubun','fPri','fNote'];
+var KEEP_INPUTS=['qIn','fTask','fFund','fDue','fGubun','fPri','fNote','fKind','fUntil'];
 function grabInputs(){
   var out={}, act=document.activeElement;
   KEEP_INPUTS.forEach(function(id){
@@ -3119,6 +3202,7 @@ function renderDept(){
   sel.addEventListener('change',function(){
     setDept(sel.value);
     if(!load()){ fillSample(); save(); saveRuns(); } else loadRuns();
+    loadShared();      /* 본부마다 받은 파일이 다르다 — 앞 본부 것이 남으면 안 된다 */
     loadProcEdits();
     PROC_PICK=0; RUN_PICK=0; TAB='dash'; PROC_EDIT=false;
     render();
@@ -3184,7 +3268,8 @@ function bind(){
     if(!t){ toast('업무명을 입력해 주세요'); document.getElementById('fTask').focus(); return; }
     addTask({ task:t, fund:document.getElementById('fFund').value,
       due:document.getElementById('fDue').value, gubun:document.getElementById('fGubun').value,
-      pri:document.getElementById('fPri').value, note:document.getElementById('fNote').value });
+      pri:document.getElementById('fPri').value, note:document.getElementById('fNote').value,
+      kind:document.getElementById('fKind').value, until:document.getElementById('fUntil').value });
     toast('등록했습니다'); render();
   });
 
@@ -3402,6 +3487,235 @@ function askConfirm(msg, onYes){
   d.querySelector('#cfmYes').focus();
 }
 
+/* ── 공유 · 내보내기 ─────────────────────────────────────────
+   사내 공유 폴더로 파일을 주고받는다(서버 전송 없음). 계약(v1)은
+   docs/superpowers/plans/2026-08-26-shared-calendar-impl.md §4 참조.
+   원장(RUNS)은 담당자 실명이 들어갈 수 있어 기본적으로 뺀다 — 뺄 때는
+   빈 배열이 아니라 키 자체를 없애서 "일부러 뺐다"와 "원장이 비었다"를
+   구분한다. */
+/* ══ 공유 레이어 ═══════════════════════════════════════════
+   남이 준 일정은 «내 데이터»가 아니다. S 에 섞지 않고 따로 얹어 읽기만 한다.
+   섞으면 (1) 누구 일정인지 모르게 되고 (2) 불러오기가 곧 덮어쓰기가 되어
+   내가 쓰던 걸 날린다. 여기 있는 것은 화면에 보여 주기만 하고, 완료·삭제
+   같은 조작 대상이 되지 않는다(칩에 data-act 를 붙이지 않는 것이 계약).  */
+var SHARED={ bundles:[] };
+/* 공유 모달이 열려 있을 때만 가리키는, 받은 묶음 목록을 다시 그리는 함수.
+   importSharedText 가 모달 밖(예: __cal.importText)에서도 불릴 수 있어
+   모달이 안 열려 있으면 그냥 null 로 둔다. */
+var shareListRepaint=null;
+function sharedKey(){ return 'jb-work-shared-v1:'+DEPT; }
+function saveShared(){
+  try{ localStorage.setItem(sharedKey(), JSON.stringify(SHARED)); }
+  catch(e){ toast('공유 일정 저장에 실패했습니다 — 저장 공간을 확인해 주세요'); }
+}
+function loadShared(){
+  /* 먼저 비운다 — 못 읽어도 «앞 본부의 남의 일정»이 남지 않게. loadRuns 와 같은 규칙 */
+  SHARED.bundles=[];
+  var raw=null;
+  try{ raw=localStorage.getItem(sharedKey()); }catch(e){}
+  if(!raw) return false;
+  try{
+    var o=JSON.parse(raw);
+    if(!o||!(o.bundles instanceof Array)) return false;
+    SHARED.bundles=o.bundles.map(normBundle).filter(function(b){ return !!b; });
+    return true;
+  }catch(e){ return false; }
+}
+/* 저장소에서 읽은 것도 파일에서 읽은 것처럼 의심한다 — 같은 정규화를 또 태운다 */
+function normBundle(b){
+  if(!b||typeof b!=='object') return null;
+  var tasks=(b.tasks instanceof Array)? b.tasks.map(normTask).filter(isTask) : [];
+  var regs =(b.regs  instanceof Array)? b.regs.map(normReg).filter(isReg)   : [];
+  var runs =(b.runs  instanceof Array)? b.runs.map(normSharedRun).filter(function(r){ return !!r; }) : [];
+  return { sender:safeText(b.sender,40)||'(이름 없음)',
+           deptName:safeText(b.deptName,40),
+           madeAt:safeText(b.madeAt,40),
+           receivedAt:cleanYmd(b.receivedAt)||ymd(today()),
+           tasks:tasks, regs:regs, runs:runs };
+}
+/* 공유 원장은 «보여 주기»가 전부다. 기존 normRun 은 이 빌드의 카탈로그에 없는
+   프로세스면 통째로 버리는데(procByName 실패), 남의 본부 파일이나 카탈로그
+   개편 뒤 파일이면 원장이 통째로 증발한다. 그래서 카탈로그에 기대지 않는다. */
+function normSharedRun(r){
+  if(!r||typeof r!=='object'||typeof r.proc!=='string'||!r.proc) return null;
+  var steps=(r.steps instanceof Array)? r.steps.slice(0,60).map(normRunStep) : [];
+  return { proc:safeText(r.proc,60), fund:safeText(r.fund,60),
+           base:cleanYmd(r.base), due:cleanYmd(r.due), cycle:safeText(r.cycle,20),
+           startedAt:cleanYmd(r.startedAt), doneAt:cleanYmd(r.doneAt), steps:steps };
+}
+/* 파일 텍스트 한 덩어리를 받아 묶음으로 만든다. 파일은 localStorage 보다 험한
+   입력이다 — 전달되고, 손대지고, 손으로 만들어질 수 있다.
+   반환: {ok:true, bundle, dropped} | {ok:false, why} */
+var SHARED_MAX=1048576;               /* 1MB — 일정 파일이 이보다 클 이유가 없다 */
+function parseShared(txt){
+  if(typeof txt!=='string') return {ok:false,why:'파일을 읽지 못했습니다'};
+  if(txt.length>SHARED_MAX) return {ok:false,why:'파일이 너무 큽니다 (1MB 초과)'};
+  if(txt.charCodeAt(0)===0xFEFF) txt=txt.slice(1);   /* 공유 폴더를 돌며 BOM 이 붙는다 */
+  var o;
+  try{ o=JSON.parse(txt); }catch(e){ return {ok:false,why:'JSON 형식이 아닙니다'}; }
+  if(!o||typeof o!=='object') return {ok:false,why:'JSON 형식이 아닙니다'};
+  if(o.format!=='jb-work-shared') return {ok:false,why:'이 도구의 공유 파일이 아닙니다'};
+  if(o.ver!==1) return {ok:false,why:'새 버전 파일입니다 — 앱을 갱신해 주세요'};
+  var rawT=(o.tasks instanceof Array)? o.tasks.length : 0;
+  var rawR=(o.runs  instanceof Array)? o.runs.length  : 0;
+  var b=normBundle({ sender:o.sender, deptName:o.deptName, madeAt:o.madeAt,
+                     receivedAt:ymd(today()), tasks:o.tasks, regs:o.regs, runs:o.runs });
+  if(!b) return {ok:false,why:'내용을 읽지 못했습니다'};
+  return {ok:true, bundle:b, dropped:(rawT-b.tasks.length)+(rawR-b.runs.length)};
+}
+/* 파일이 만들어진 지 며칠 됐나 — 낡은 걸 최신으로 착각하는 것이 이 방식의
+   가장 큰 위험이라 나이를 늘 적는다. 손으로 만든 파일은 시각이 이상할 수 있다. */
+/* 텍스트를 받아 실제로 얹는다. 성공하면 몇 건 들어왔는지·몇 건 빠졌는지 말한다.
+   묶음 키는 sender+'|'+deptName — 같은 키가 이미 있으면 조용히 쌓지 않고
+   askConfirm 으로 교체 여부를 묻는다(§4). askConfirm 은 비동기라 이 함수의
+   반환값은 "파일을 읽어 들이는 데까지는 성공했다"만 의미하고, 실제 교체·추가
+   반영과 화면 갱신은 (새 키면 지금, 겹치는 키면 확인 콜백 안에서) 따로 한다. */
+function shareBundleKey(b){ return b.sender+'|'+b.deptName; }
+function applyImportedBundle(bundle,dropped){
+  SHARED.bundles.push(bundle);
+  saveShared();
+  var msg='불러왔습니다 — '+bundle.sender+' · 할 일 '+bundle.tasks.length+'건';
+  if(bundle.runs.length) msg+=' · 원장 '+bundle.runs.length+'건';
+  if(dropped>0) msg+=' (형식이 달라 '+dropped+'건 제외)';
+  toast(msg);
+  render();
+  if(shareListRepaint) shareListRepaint();
+}
+function importSharedText(txt){
+  var r=parseShared(txt);
+  if(!r.ok){ toast(r.why); return false; }
+  var key=shareBundleKey(r.bundle), idx=-1;
+  for(var i=0;i<SHARED.bundles.length;i++){ if(shareBundleKey(SHARED.bundles[i])===key){ idx=i; break; } }
+  if(idx===-1){
+    applyImportedBundle(r.bundle,r.dropped);
+    return true;
+  }
+  var old=SHARED.bundles[idx];
+  askConfirm(old.sender+' 님('+(old.deptName||'')+')의 파일을 이미 불러왔습니다 (기존: '+bundleAge(old)+'). 새 파일로 바꿀까요?',function(){
+    SHARED.bundles[idx]=r.bundle;
+    saveShared();
+    var msg='바꿨습니다 — '+r.bundle.sender+' · 할 일 '+r.bundle.tasks.length+'건';
+    if(r.bundle.runs.length) msg+=' · 원장 '+r.bundle.runs.length+'건';
+    if(r.dropped>0) msg+=' (형식이 달라 '+r.dropped+'건 제외)';
+    toast(msg);
+    render();
+    if(shareListRepaint) shareListRepaint();
+  });
+  return true;
+}
+function bundleAge(b){
+  var d=parseYmd((b.madeAt||'').slice(0,10));
+  if(!d) return '만든 시각 불명';
+  var n=days(today(),d);
+  if(n<0) return '만든 시각 불명';
+  return (d.getMonth()+1)+'월 '+d.getDate()+'일 만든 파일'+(n===0?' · 오늘':' · '+n+'일 지남');
+}
+function buildExport(opts){
+  opts=opts||{};
+  var o={
+    format:'jb-work-shared',
+    ver:1,
+    madeAt:new Date().toISOString(),
+    deptKey:DEPT,
+    deptName:(DEPTS[DEPT]||{}).name||'',
+    sender:safeText(opts.sender,40),
+    tasks:S.tasks,
+    regs:S.regs
+  };
+  if(opts.withRuns) o.runs=RUNS.items;
+  return o;
+}
+function downloadExport(o){
+  var short=(DEPTS[DEPT]||{}).short||DEPT;
+  var name='업무캘린더_'+short+'_'+ymd(today())+'.json';
+  var blob=new Blob([JSON.stringify(o,null,2)],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a'); a.href=url; a.download=name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function shareModal(){
+  var old=document.getElementById('mdShare'); if(old) old.parentNode.removeChild(old);
+  var d=document.createElement('div'); d.className='fbm'; d.id='mdShare';
+  d.innerHTML='<div class="fbm-box" role="dialog" aria-modal="true" aria-label="공유">'+
+    '<header><b>공유</b><button class="fbm-x" aria-label="닫기">✕</button></header>'+
+    '<div class="fbm-body">'+
+      '<section class="share-export">'+
+        '<p class="fbm-lead">이 화면의 할 일·정기업무를 파일로 내보냅니다. 사내 공유 폴더로 전달해 주세요.</p>'+
+        fld('보낸 사람','<input type="text" id="shSender" maxlength="40" placeholder="이름">')+
+        '<label class="share-chk"><input type="checkbox" id="shRuns"> 수행 원장 포함 (담당자 실명이 들어갈 수 있습니다)</label>'+
+        '<p class="share-warn">사내에서만 공유하세요 — 실명이 포함될 수 있습니다</p>'+
+        '<div class="fb-acts"><button class="btn primary" id="shExport">내보내기</button></div>'+
+      '</section>'+
+      '<section class="share-import">'+
+        '<h4>동료 일정 불러오기</h4>'+
+        '<p class="fbm-lead">받은 파일을 열면 내 달력 위에 <b>겹쳐서</b> 보입니다. '+
+          '내 일정과 섞이지 않고, 지워도 내 것은 그대로 남습니다.</p>'+
+        '<div class="fb-acts"><button class="btn" id="shPick">파일 고르기</button>'+
+          '<input type="file" id="shFile" accept=".json,application/json" hidden></div>'+
+        '<div id="shList"></div>'+
+      '</section>'+
+    '</div></div>';
+  var opener=document.activeElement;
+  function close(){ if(d.parentNode) d.parentNode.removeChild(d); document.removeEventListener('keydown',onKey);
+    shareListRepaint=null;
+    if(opener&&opener.focus&&document.contains(opener)){ try{ opener.focus({preventScroll:true}); }catch(e){ opener.focus(); } } }
+  function onKey(e){ if(e.key==='Escape'||e.keyCode===27) close(); }
+  d.querySelector('.fbm-x').addEventListener('click',close);
+  d.addEventListener('click',function(e){ if(e.target===d) close(); });
+  document.addEventListener('keydown',onKey);
+  document.body.appendChild(d);
+  var senderInp=document.getElementById('shSender');
+  senderInp.focus();
+  function paintList(){
+    var box=document.getElementById('shList'); if(!box) return;
+    if(!SHARED.bundles.length){ box.innerHTML='<p class="share-none">불러온 파일이 없습니다.</p>'; return; }
+    box.innerHTML=SHARED.bundles.map(function(b,i){
+      return '<div class="share-row"><div><b>'+esc(b.sender)+'</b>'+
+        (b.deptName?' <span class="dim">'+esc(b.deptName)+'</span>':'')+
+        '<div class="share-meta">'+esc(bundleAge(b))+' · 할 일 '+b.tasks.length+'건'+
+        (b.runs.length?' · 원장 '+b.runs.length+'건':'')+'</div></div>'+
+        '<button class="xbtn" data-sdel="'+i+'">삭제</button></div>';
+    }).join('');
+    box.querySelectorAll('[data-sdel]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var i=+btn.getAttribute('data-sdel'), b=SHARED.bundles[i]; if(!b) return;
+        askConfirm(b.sender+' 님이 준 일정을 화면에서 지웁니다. 내 일정은 그대로 남습니다.',function(){
+          SHARED.bundles.splice(i,1); saveShared(); paintList(); render();
+          toast('지웠습니다');
+        });
+      });
+    });
+  }
+  shareListRepaint=paintList;
+  paintList();
+  var fileInp=document.getElementById('shFile');
+  document.getElementById('shPick').addEventListener('click',function(){ fileInp.click(); });
+  fileInp.addEventListener('change',function(){
+    var f=fileInp.files&&fileInp.files[0];
+    /* 같은 파일을 다시 골라도 change 가 오도록 매번 비운다 —
+       안 그러면 «바꾸려고 다시 골랐는데 아무 일도 없다»가 된다. */
+    if(!f){ fileInp.value=''; return; }
+    var rd=new FileReader();
+    rd.onload=function(){
+      /* 새 키면 즉시, 겹치는 키면 확인 콜백 안에서 목록·달력을 갱신한다
+         (importSharedText 참조) — 여기서 다시 그리면 확인 전 상태를 덧그린다. */
+      importSharedText(String(rd.result));
+      fileInp.value='';
+    };
+    rd.onerror=function(){ toast('파일을 읽지 못했습니다'); fileInp.value=''; };
+    rd.readAsText(f);
+  });
+  document.getElementById('shExport').addEventListener('click',function(){
+    var sender=senderInp.value.trim();
+    if(!sender){ toast('보낸 사람을 입력해 주세요'); senderInp.focus(); return; }
+    var withRuns=document.getElementById('shRuns').checked;
+    var o=buildExport({sender:sender,withRuns:withRuns});
+    downloadExport(o);
+    toast('내보냈습니다');
+  });
+}
+
 /* ── 개선안 보내기 ─────────────────────────────────────────
    서버가 없으니 피드백도 서버로 못 받는다. 사용자의 메일 앱을 열어(mailto)
    내용을 채워 주고, 메일 앱이 없는 환경을 위해 클립보드 복사도 둔다.
@@ -3479,6 +3793,7 @@ function feedbackModal(){
   });
 }
 document.getElementById('btnFeedback').addEventListener('click',feedbackModal);
+document.getElementById('btnShare').addEventListener('click',shareModal);
 
 document.getElementById('btnSample').addEventListener('click',function(){
   askConfirm('지금 입력한 내용을 지우고 예시 데이터로 되돌립니다. 계속할까요?',function(){
@@ -3515,6 +3830,7 @@ if(!load()){
     toast('저장된 내용을 읽지 못해 예시로 시작합니다 — 원본은 보관해 두었습니다');
   },300);
 } else loadRuns();   /* 원장은 별도 키다 — 못 읽으면 빈 원장으로 살아간다 */
+loadShared();        /* 공유도 별도 키다. 예시로 시작한 경우에도 읽는다 */
 render();
 
 /* 도구 간 이동 링크 — 빌더와 같은 규칙. 포털이 홈이라 '홈'은 없다. */
@@ -3530,6 +3846,7 @@ render();
    마지막에 저장하는 탭이 앞 탭의 변경을 덮어쓴다. */
 window.addEventListener('storage',function(e){
   if(e.key===runsKey()){ if(loadRuns()) render(); return; }
+  if(e.key===sharedKey()){ loadShared(); render(); return; }
   if(e.key!==lsKey()) return;
   if(load()) render();
 });
@@ -3544,12 +3861,17 @@ window.__cal={ S:S, nlParse:nlParse, statusOf:statusOf, holidaysOf:holidaysOf,
   setTab:function(t){ TAB=t; render(); },
   /* 검사용: 가상 본부를 심어 본부 전환·격리를 시험한다 */
   addDept:function(key,def){ DEPTS[key]=def; if(DEPT_ORDER.indexOf(key)<0) DEPT_ORDER.push(key); render(); },
-  switchDept:function(key){ setDept(key); if(!load()){ fillSample(); save(); saveRuns(); } else loadRuns(); loadProcEdits(); PROC_PICK=0; RUN_PICK=0; PROC_EDIT=false; render(); },
+  switchDept:function(key){ setDept(key); if(!load()){ fillSample(); save(); saveRuns(); } else loadRuns(); loadShared(); loadProcEdits(); PROC_PICK=0; RUN_PICK=0; PROC_EDIT=false; render(); },
   /* 수행의 원장 */
   runs:function(){ return RUNS.items; },
   startRun:function(procName,fund,base,cycle){ var id=startRun(procName,fund,base,'',cycle); if(id) render(); return id; },
   openRun:function(id){ openRunById(id); },
-  reset:function(){ fillSample(); save(); saveRuns(); render(); } };
+  exportObj:buildExport,
+  reset:function(){ fillSample(); save(); saveRuns(); render(); },
+  /* 공유 레이어 */
+  shared:function(){ return SHARED.bundles; },
+  exportObj:buildExport,
+  importText:function(txt){ var r=importSharedText(txt); render(); return r; } };
 
 })();
 </script>
