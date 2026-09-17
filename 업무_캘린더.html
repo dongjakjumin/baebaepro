@@ -2642,8 +2642,11 @@ function paneDash(){
   var c=counts(), t0=today();
   var h='<div class="tiles">'+
     tile('지연',      c.지연,   '건', '마감이 지났고 아직 미완료', c.지연>0?'late':'')+
-    tile('임박',      c.soon,   '건', '7일 이내 마감', c.soon>0?'soon':'')+
-    tile('진행중',    c.진행중, '건', '마감일이 남아 있음','')+
+    /* 임박은 «진행 상태»가 아니라 «기한 상태»다 — 진행중 안에 들어 있다.
+       그래서 타일 숫자를 다 더하면 전체 건수보다 크다. 숫자를 바꿔서
+       맞추면 임박이 사라지므로, 포함 관계를 글로 밝혀 둔다. */
+    tile('임박',      c.soon,   '건', '7일 이내 마감 · 진행중에 포함', c.soon>0?'soon':'')+
+    tile('진행중',    c.진행중, '건', '마감일이 남아 있음 · 임박 '+c.soon+'건 포함','')+
     tile('보류',      c.보류,   '건', '사유가 있어 멈춰 둔 건', c.보류>0?'hold':'')+
     tile('완료',      c.완료,   '건', '완료일이 기록된 건','done')+
   '</div>';
@@ -2676,11 +2679,14 @@ function paneDash(){
   });
   h+='</div></div>';
 
-  /* 마감 임박 TOP 5 — 미완료·미보류만 */
+  /* 우선 확인할 미완료 업무 5건 — 미완료·미보류를 마감일 순으로.
+     「마감 임박」이라 부르지 않는다. 이 표는 7일 필터를 걸지 않으므로
+     마감이 지난 건도 아직 먼 건도 들어온다 — 임박 타일(7일)과 기준이
+     다르다. 이름을 임박이라 붙이면 타일 숫자와 표 내용이 어긋나 보인다. */
   var soon=S.tasks.filter(function(t){ return !t.done&&!t.hold&&t.due&&t.kind!=='absence'; })
     .sort(function(a,b){ return parseYmd(a.due)-parseYmd(b.due); }).slice(0,5);
-  h+='<div class="card"><header><h2>마감 임박 5건</h2>'+
-     '<span class="desc">미완료·미보류 기준 · 마감일 순</span></header>'+
+  h+='<div class="card"><header><h2>우선 확인할 미완료 업무 5건</h2>'+
+     '<span class="desc">미완료·미보류 기준 · 마감일 순 (지난 건부터) · 7일 필터 아님</span></header>'+
      '<div class="body flush"><div class="tbl-wrap"><table><thead><tr>'+
      '<th>업무명</th><th>관련</th><th>마감일</th><th>D-Day</th><th>상태</th>'+
      '</tr></thead><tbody>';
@@ -2843,7 +2849,11 @@ function fld(lab,inp){
 /* ── 정기업무 ──────────────────────────────────────────── */
 function paneReg(){
   var h='<div class="card"><header><h2>정기 · 반복 업무</h2>'+
-    '<span class="desc">프로세스를 누르면 그 업무의 절차가 바로 열립니다</span></header>'+
+    /* 정기업무는 «주기표»지 «할 일»이 아니다 — 회차를 업무로 만들어
+       두지 않으므로 달력·할 일·대시보드에는 안 나온다. 화면이 그렇다고
+       말하지 않으면 「D-2 인데 달력에 왜 없나」로 읽힌다. */
+    '<span class="desc">다음 예정일은 여기서만 봅니다 — 회차를 업무로 등록해야 달력·할 일·대시보드에 나옵니다 · '+
+    '프로세스를 누르면 그 업무의 절차가 바로 열립니다</span></header>'+
     '<div class="body flush"><div class="tbl-wrap"><table><thead><tr>'+
     '<th>주기</th><th>업무명</th><th>관련</th><th>다음 예정일</th><th>D-Day</th><th>절차</th><th>비고</th>'+
     '</tr></thead><tbody>';
