@@ -539,6 +539,41 @@ td.neg{color:var(--bad)}
 .verdict .cau span{display:block;padding-left:11px;position:relative;margin-top:2px}
 .verdict .cau span:before{content:'·';position:absolute;left:2px;color:var(--ink-3)}
 .verdict .cau.dim{margin-top:7px;padding-top:7px;font-size:10.5px;opacity:.75}
+/* ── 예시 표시줄 · 역산 접기 (P1) ── */
+.samplebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:7px 14px;
+  background:var(--warn-bg);border-bottom:1px solid rgba(141,103,20,.22);font-size:12px;color:var(--ink-2)}
+.sb-tag{font-weight:700;color:var(--warn);border:1px solid rgba(141,103,20,.35);
+  border-radius:2px;padding:1px 7px;font-size:11px;letter-spacing:.02em}
+.sb-d{margin-left:auto;color:var(--ink-3)}
+.sb-x{border:1px solid var(--line);background:#fff;border-radius:3px;padding:3px 10px;
+  font-size:11.5px;cursor:pointer;color:var(--ink-2)}
+.sb-x:hover{border-color:var(--gold);color:var(--ink)}
+details.rxfold{border:1px solid var(--line);border-radius:3px;margin:0 0 14px;background:#fff}
+details.rxfold>summary{cursor:pointer;padding:9px 13px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+details.rxfold[open]>summary{border-bottom:1px solid var(--line-soft)}
+
+/* ── 투자검토보고서 3단계 ── */
+.rsteps{display:flex;gap:8px;margin:0 0 12px;flex-wrap:wrap}
+.rstep{flex:1;min-width:150px;padding:9px 12px;border:1px solid var(--line);background:#fff;
+  border-radius:3px;cursor:pointer;font-size:13px;color:var(--ink-2);text-align:left}
+.rstep b{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;
+  background:var(--line);color:var(--ink-2);font-size:11px;margin-right:6px}
+.rstep.on{border-color:var(--navy-900);color:var(--ink);font-weight:600}
+.rstep.on b{background:var(--navy-900);color:#fff}
+.agopts{display:flex;flex-direction:column;gap:5px}
+.agopt{display:block;padding:6px 9px;border:1px solid var(--line);border-radius:3px;cursor:pointer;font-size:12.5px}
+.agopt.on{border-color:var(--gold);background:rgba(185,138,60,.07)}
+.rtocs{display:flex;flex-wrap:wrap;gap:6px}
+.rtoc{padding:6px 10px;border:1px solid var(--line);background:#fff;border-radius:3px;cursor:pointer;font-size:12.5px}
+.rtoc.on{border-color:var(--navy-900);font-weight:600}
+.rtoc-n{color:var(--bad);font-weight:700;margin-left:4px}
+.rtoc-ok{color:var(--good);font-weight:700;margin-left:4px}
+.rpt-na{color:var(--ink-3);font-size:12px;font-style:italic}
+.integrity{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.ibadge{display:inline-block;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:3px;border:1px solid}
+.ibadge.ok{color:var(--good);background:var(--good-bg);border-color:var(--good)}
+.ibadge.warn{color:var(--warn);background:var(--warn-bg);border-color:var(--warn)}
+.ibadge.no{color:var(--bad);background:var(--bad-bg);border-color:var(--bad)}
 
 /* ── 시트 구조 칩 ────────────────────────── */
 .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
@@ -812,6 +847,10 @@ body.nav-open .backdrop{display:block}
   <aside class="side" id="side"></aside>
   <main class="main">
     <div class="dealbar" id="dealbar" role="tablist" aria-label="딜 유형"></div>
+    <!-- P1-3: 지금 보고 있는 숫자가 «예시»라는 사실을 결과보다 먼저 말한다.
+         기준일을 오늘로 바꿨다고 시장 가정이 최신이 되는 것은 아니므로,
+         분석 기준일과 «예시» 표시를 같은 줄에 둔다. -->
+    <div class="samplebar" id="samplebar"></div>
     <div class="tabs" id="tabs"></div>
     <div id="printhd"></div>
 <div id="panes"></div>
@@ -1251,6 +1290,41 @@ function hardcodedScan(made,order){
 }
 
 /* Validation 시트의 ⑦ 행을 실측 결과로 갈아끼운다. */
+/* ⑧ 「주요 지표의 셀 참조 경로」는 예전에 무조건 PASS 문자열이었다 — 점검 항목이
+   스스로를 점검하지 않으면 검증표가 아니라 장식이다. 표지 핵심 지표가 실제로
+   다른 시트를 참조하는 수식인지 세어서 판정한다(참조가 아니면 그 값은 가정을
+   바꿔도 안 변한다는 뜻이므로 그대로 드러낸다). */
+function patchRefPathRow(made,order,keyM){
+  if(!keyM||!keyM.length) return null;
+  var tot=0, linked=0, dead=[];
+  keyM.forEach(function(r){
+    var v=r&&r[2];
+    if(!v||typeof v!=='object'||v.t!=='n') return;
+    tot++;
+    if(v.f) linked++; else dead.push(String(r[0]||''));
+  });
+  if(!tot) return null;
+  var ok=(linked===tot);
+  var msg=ok? ('표지 핵심 지표 '+tot+'개 전부 다른 시트를 참조하는 수식')
+            : ('표지 핵심 지표 '+tot+'개 중 '+linked+'개만 수식 참조 — 고정값: '+dead.join(', ')+
+               '  ※ 고정값은 가정을 바꿔도 따라 변하지 않습니다');
+  ['Validation_Checks','Validation_Dashboard'].forEach(function(vn){
+    var sh=made[vn]; if(!sh) return;
+    (sh.rows||[]).forEach(function(row){
+      if(!row||!row.length) return;
+      var a=row[0];
+      var t=(typeof a==='string')?a:((a&&a.t==='s')?String(a.v||''):'');
+      if(t.indexOf('셀 참조 경로')<0) return;
+      for(var j=1;j<row.length;j++){
+        var c=row[j];
+        var ct=(typeof c==='string')?c:((c&&c.t==='s')?String(c.v||''):'');
+        if(ct==='PASS'||ct==='CHECK') row[j]=T(ok?'PASS':'CHECK');
+        else if(j===2) row[j]=msg;
+      }
+    });
+  });
+  return {total:tot,linked:linked,dead:dead};
+}
 function patchHardcodeRow(made,order){
   var scan=hardcodedScan(made,order);
   var top=scan.per.slice(0,3).map(function(x){ return x.sheet+' '+x.n+'개'; }).join(' · ');
@@ -1310,6 +1384,20 @@ function finishBook(wb,made,title,subject,keyM,info){
   dropDeadRefs(made,order);
   /* 참조를 정리한 뒤에 센다 — dropDeadRefs가 수식을 떼어낸 셀도 하드코딩이다 */
   LAST_HARDCODE=patchHardcodeRow(made,order);
+  var refScan=patchRefPathRow(made,order,keyM);
+  /* 표지에 «이 파일이 어디까지 살아있는 수식인가»를 적는다 — 검증 시트까지
+     들어가야만 알 수 있으면, 엑셀을 받아 가정을 고치는 사람은 끝내 모른다. */
+  if(made.Cover&&LAST_HARDCODE){
+    P(made.Cover,[]);
+    P(made.Cover,['이 파일의 수식 범위']);
+    P(made.Cover,['','고정값 셀',
+      LAST_HARDCODE.total===0? '없음 — 결과 시트 수치가 모두 수식입니다'
+        : (f0(LAST_HARDCODE.total)+'개 (상세는 Validation_Checks 「하드코딩 셀 존재 여부」 행)')]);
+    if(refScan) P(made.Cover,['','표지 핵심 지표',
+      refScan.linked+' / '+refScan.total+'개가 다른 시트를 참조하는 수식'+
+      (refScan.dead.length? (' · 고정값: '+refScan.dead.join(', ')) : '')]);
+    P(made.Cover,['','주의','고정값 셀은 엑셀에서 가정을 바꿔도 따라 변하지 않습니다. 가정을 크게 바꾼 뒤에는 화면에서 다시 내려받으세요.']);
+  }
   LAST_VERIFY=readVerify(made,order);
   rewriteRefs(made,order);
   order.forEach(function(nm){ if(made[nm]) addSheet(wb,made[nm],sheetNo(nm)); });
@@ -1976,9 +2064,14 @@ function quickAdjCard(){
    무료 도구가 실무에서 쓰이려면 "이 숫자를 믿어도 되나"를 넘어야 한다.
    산식을 숨기면 장난감이 되고, 공개하면 검증 가능한 도구가 된다.
    ─ 면책은 한 곳에 적고 세 군데(푸터·모달·엑셀 Cover)에서 같은 것을 쓴다. */
+/* P1-5: 「어디에도 전송되지 않습니다」는 넓게 말한 것이었다. 실제 동작 그대로
+   적는다 — 계산은 이 브라우저, 저장은 이 브라우저의 localStorage, 개선안은
+   사용자의 메일 앱을 여는 mailto(화면 위치만 싣고 입력 숫자는 싣지 않는다). */
 var TRUST_NOTE='화면 수치는 간이 추정입니다. 투자 권유가 아닌 정보 제공 목적이며, '+
-  '실제 거래 정보를 포함하지 않습니다. 모든 계산은 브라우저 안에서만 이뤄지고 '+
-  '입력값은 어디에도 전송되지 않습니다.';
+  '실제 거래 정보를 포함하지 않습니다. 모델 계산은 이 브라우저 안에서 이뤄지고, '+
+  '입력값은 이 브라우저에만 저장됩니다(서버로 보내지 않으며 다른 기기로 이어지지 않습니다 — '+
+  '지우려면 브라우저의 사이트 데이터 삭제를 쓰십시오). '+
+  '「개선안」은 메일 앱을 열어 화면 위치(딜·깊이·시나리오)만 채워 주며 입력 숫자는 싣지 않습니다.';
 
 /* ── 개선안 보내기 ─────────────────────────────────────────
    서버가 없으니 피드백도 서버로 못 받는다. 사용자의 메일 앱을 열어(mailto)
@@ -2495,14 +2588,34 @@ function heatColor(r){
   return 'rgba('+mix(0)+','+mix(1)+','+mix(2)+',.30)';
 }
 
-function verdictCard(V){
+/* P0-2: '계산이 맞다'(정합성)와 '이 조건은 기준에 못 미치거나 가정끼리
+   안 맞는다'(검토 필요 — 수익성 미달·DSCR 미달·상환 부족 등)는 서로 다른
+   질문인데, 기존엔 검증 탭에 들어가야만 구분이 보였다. 판정 요약 맨 위,
+   다른 수치보다 먼저 보이는 자리에 둘을 나란히 배지로 둔다 — 계산이
+   맞다고 해서 조건까지 충족한 건 아니라는 걸 첫 화면에서 바로 보게.
+   아래쪽 '검토 필요 항목' 카드와 같은 용어를 쓴다(다른 이름을 쓰면 같은
+   걸 가리키는지 헷갈린다). */
+function integrityBadges(C){
+  if(!C) return '';
+  var pass=C.checks.filter(function(c){return c.ok&&!c.na;}).length;
+  var nNa=C.checks.filter(function(c){return c.na;}).length;
+  var total=C.checks.length-nNa;
+  var n=C.errs.length;
+  var detail=n?esc(C.errs[0].e+': '+C.errs[0].i)+(n>1?' 외 '+(n-1)+'건':''):'없음';
+  return '<div class="integrity">'+
+    '<span class="ibadge '+(pass===total?'ok':'no')+'">계산 정합성 '+pass+' / '+total+' 통과</span>'+
+    '<span class="ibadge '+(n?'warn':'ok')+'">검토 필요 '+n+'건'+(n?' — '+detail:'')+'</span>'+
+    '</div>';
+}
+function verdictCard(V,C){
   return '<div class="verdict"><h3><span class="tagx">판정 요약</span>'+esc(V.title)+
-    (G.scen!=='base'?' &middot; '+esc(scenOf().name)+' 시나리오 적용':'')+'</h3><ul>'+
+    (G.scen!=='base'?' &middot; '+esc(scenOf().name)+' 시나리오 적용':'')+'</h3>'+
+    integrityBadges(C)+'<ul>'+
     V.lines.map(function(l){ return '<li><span class="cri">'+esc(l.c)+'</span><span>'+l.t+'</span></li>'; }).join('')+'</ul>'+
     (V.caution&&V.caution.length?'<div class="cau"><b>유의</b> '+
       V.caution.map(function(c){ return '<span>'+esc(c)+'</span>'; }).join('')+'</div>':'')+
     /* 긴 면책은 푸터에 한 번만 적는다. 여기서는 한 마디로 끝낸다. */
-    '<div class="cau dim">기준별 산출 결과이며 우선순위가 아닙니다.</div></div>';
+    '<div class="cau dim">기준별 산출 결과이며 우선순위가 아닙니다. 계산 정합성 통과는 상환·수익성 기준 충족을 뜻하지 않습니다.</div></div>';
 }
 function sheetPlanCard(){
   var eng=E(), list=eng.depths[G.depth].sheets, all=Object.keys(eng.sheetmeta);
@@ -3534,6 +3647,12 @@ function rxLevers(s){
   ];
 }
 
+/* P1-2 — 매입형 엔진용. 딜 엔진 블록은 스코프가 서로 나뉘어 있어서(그래서
+   rxBlock 도 블록마다 따로 있다) 이 함수도 블록마다 있어야 한다. */
+function rxFold(html){
+  if(!html) return '';
+  return '<details class="rxfold"><summary>목표 역산 — 무엇을 하나만 바꾸면 기준을 넘는지 보기</summary>'+html+'</details>';
+}
 function rxBlock(M){ return rxMemo(rxKey(), function(){ return rxBlockCalc(M); }); }
 function rxBlockCalc(M){
   if(RX_BUSY) return '';
@@ -3684,8 +3803,8 @@ function drawStack(host,M){
 /* ── 패널 ── */
 var PANES={};
 PANES.sum=function(M){
-  var s=M.s, h=verdictCard(verdict(M));
-  h+=rxBlock(M);
+  var s=M.s, h=verdictCard(verdict(M),checks(M));
+  h+=rxFold(rxBlock(M));
   h+='<div class="tiles">'+
     tile('a1','보통주 세후 IRR',fIrr(M.irrCom,2),'목표 '+fp(s.comTargetIRR,1)+' &middot; '+(M.passTarget?pill(true,'충족'):pill(false,'미달')),
       (M.irrCom==null?null:M.passTarget))+
@@ -4648,7 +4767,9 @@ function build(){
     T('PASS','IF(ABS(Sources_Uses!C'+suD+')<0.001,"PASS","CHECK")')]);
   coreRows.push(['② 대출 트랜치 LTV · 자기자본 plug 정합','선순위 / 보통주','선순위 = 감정평가액 × LTV, 보통주 = 잔액 plug','Sources_Uses!C'+s1+' · C'+s4,
     T(M.common>0?'PASS':'CHECK','IF(AND(ABS(Sources_Uses!C'+s1+'-'+R.appr+'*'+R.srLTV+')<0.001,Sources_Uses!C'+s4+'>0),"PASS","CHECK")')]);
-  coreRows.push(['③ 연도별 NOI → 자기자본 CF 연결','전 연도','배분전 CF = NOI − 운용보수 − 고정비 − 원리금 − 법인세','Waterfall!G'+wFirst+':G'+wLast,T('PASS')]);
+  /* 이 항목은 «구성 요소를 이 자리에서 다시 더해 보는» 실측을 넣지 않았다.
+     무조건 PASS로 두면 점검한 척이 되므로 미검증으로 표시한다. */
+  coreRows.push(['③ 연도별 NOI → 자기자본 CF 연결','전 연도','배분전 CF = NOI − 운용보수 − 고정비 − 원리금 − 법인세 (구성 요소 재합산 대사는 하지 않음)','Waterfall!G'+wFirst+':G'+wLast,T('미검증')]);
   coreRows.push(['④ DSCR이 모든 연도에서 기준선 이상','전 연도','최소 DSCR vs 통상 약정선 1.20x','Debt_Schedule!H'+dSum,
     T(M.minD>=1.2-1e-9?'PASS':'CHECK','IF(Debt_Schedule!H'+dSum+'>=1.2,"PASS","CHECK")')]);
   coreRows.push(['⑤ 매각가 = forward NOI ÷ Exit Cap','매각연도',f0(M.saleValue)+' = '+f0(M.noi(hold+1))+' ÷ '+fp(s.exitCap,2),'Tax_Disposition!C'+t_sv,
@@ -5282,6 +5403,13 @@ function rxRecalc(k,v){
   return reCalc(o);
 }
 
+/* P1-2: 역산 블록은 «무엇을 바꾸면 기준을 넘는가»를 길게 펼친다. 첫 화면에서
+   KPI보다 위에 통째로 펴 두면 정작 결과가 아래로 밀린다. 한 줄로 접고, 필요할
+   때 펼치게 한다 — 내용은 그대로다(접었다고 빼지 않는다). */
+function rxFold(html){
+  if(!html) return '';
+  return '<details class="rxfold"><summary>목표 역산 — 무엇을 하나만 바꾸면 기준을 넘는지 보기</summary>'+html+'</details>';
+}
 function rxBlock(M){ return rxMemo(rxKey(), function(){ return rxBlockCalc(M); }); }
 function rxBlockCalc(M){
   if(RX_BUSY||BE_LOCK) return '';
@@ -5485,8 +5613,8 @@ function tile(cls,lab,val,sub){
   return '<div class="tile '+cls+'"><div class="lab">'+lab+'</div><div class="val">'+val+'</div><div class="sub">'+sub+'</div></div>';
 }
 PANES.sum=function(M){
-  var s=M.s, h=verdictCard(verdict(M));
-  h+=rxBlock(M);
+  var s=M.s, h=verdictCard(verdict(M),checks(M));
+  h+=rxFold(rxBlock(M));
   var peakM=M.rows.reduce(function(a,r){return r.close>a.close?r:a;},M.rows[0]).m;
   var MTGT=0.10;
   h+='<div class="tiles">'+
@@ -6200,14 +6328,21 @@ function build(){
   var csHdr=P(cs,['개월차','구간','월 기성','누적 기성','공정률','설계·감리·예비비','비고']);
   var csFirst=csHdr+1;
   var ccum=0;
+  /* 월 기성·부대비는 «금액»이 아니라 «공사비 × 그달 배분비율»이다. 예전에는 계산된
+     금액을 그대로 박아, 엑셀에서 공사비를 고쳐도 기성이 그대로였다 — 그러면 PF 인출·
+     이자·총사업비가 전부 옛 공사비 기준으로 남는다. 배분비율만 상수로 두고 금액은
+     Assumptions 를 참조하는 수식으로 만든다(곡선 모양은 일정 입력이지 금액이 아니다). */
   for(var m2=1;m2<=NMO;m2++){
     var rw2=csFirst+m2-1;
     ccum+=M.build[m2];
     var etc=(m2>=M.startM)?(M.designAmt+M.contAmt)/s.constMonths:0;
+    var wBuild=(s.constCost>0)? (M.build[m2]/s.constCost) : 0;
     P(cs,[N(m2,Z.i),(m2<M.startM?'착공 전':(m2===NMO?'준공':'공사 중')),
-      N(M.build[m2],Z.m),N(ccum,Z.m, m2===1?'C'+rw2:'D'+(rw2-1)+'+C'+rw2),
+      N(M.build[m2],Z.m, wBuild>0? (R.constC+'*'+wBuild) : ''),
+      N(ccum,Z.m, m2===1?'C'+rw2:'D'+(rw2-1)+'+C'+rw2),
       N(s.constCost>0?ccum/s.constCost:0,Z.p1,'D'+rw2+'/'+R.constC),
-      N(etc,Z.m), (m2===M.startM?'착공':'')]);
+      N(etc,Z.m, (m2>=M.startM&&s.constMonths>0)? ('('+R.constC+'*'+R.design+'+'+R.constC+'*'+R.cont+')/'+R.cm) : ''),
+      (m2===M.startM?'착공':'')]);
   }
   var csLast=csFirst+NMO-1;
   P(cs,['합계','',N(s.constCost,Z.m,'SUM(C'+csFirst+':C'+csLast+')'),N(ccum,Z.m,'D'+csLast),N(1,Z.p1),
@@ -6226,7 +6361,7 @@ function build(){
      jd0·jd1 은 «부채 층 중 첫째·둘째»이고, 지분 층은 인출만 있어 열이 필요 없다. */
   var JDx=[]; (s.jr||[]).forEach(function(t,i){ if(t.kind!=='pref') JDx.push({i:i,t:t,n:t.n||('Tr.'+String.fromCharCode(66+i))}); });
   var jd0=JDx[0]||null, jd1=JDx[1]||null;
-  var pf=SH(); pf.cols=W(12,12,16,16,16,16,16,16,16,26, 16,16,16,16,16, 16,16,16,16,16);
+  var pf=SH(); pf.cols=W(12,12,16,16,16,16,16,16,16,26, 16,16,16,16,16, 16,16,16,16,16, 16,16,16,16,16);
   head(pf,'PF_Drawdown — PF 인출 스케줄','층별 인출·상환과 약정·인출·미인출 잔액을 관리한다',
     '월별 자금 부족액, 층별 금리·한도','월별 층별 잔액과 최대 소요액, 이자 자본화액','Interest_Capitalization · Profitability_Summary');
   var pfCommit=P(pf,['본PF 약정액',N(M.pfCommit,Z.m),'','최대 PF 잔액 기준']);
@@ -6238,26 +6373,79 @@ function build(){
   var pfTcR=P(pf,['총사업비 (고정점 수렴값)',N(M.totalCost,Z.m),'','한도·수수료 산정 기준 — 순환참조를 끊는 앵커']);
   var jrFeeFrm=''; JDx.forEach(function(x){ jrFeeFrm+=(jrFeeFrm?'+':'')+'B'+pfTcR+'*'+R['jrPct'+x.i]+'*'+R['jrFee'+x.i]; });
   var jrFeeR=P(pf,['트랜치 취급수수료',N(M.jrFeeTot,Z.m,jrFeeFrm),'','약정 한도 × 층별 취급수수료율']);
+  /* 월별 자금수지를 엑셀에서도 «수식으로» 돌린다.
+     예전에는 인출·상환·자기자본 투입이 화면 계산 결과를 박아 넣은 값이라, 엑셀에서
+     공사비를 고쳐도 이 세 열이 그대로였다 → PF 잔액·이자·금융비용·총사업비·IRR 이
+     옛 값에 멈춰 화면과 엑셀이 어긋났다(공사비 +1%: 화면 6.09% vs 엑셀 6.13%).
+     아래 U~Y 보조열이 «그달 유출·유입·가용현금·누적 자기자본·보유현금»을 만들고,
+     D(인출)·F(상환)·I(자기자본)은 그 가용현금에서 화면과 같은 순서로 끌어쓴다.
+       부족하면: 자기자본 한도까지 → 선순위 한도까지
+       남으면  : 선순위부터 상환, 나머지는 보유현금
+     선순위 아래 층(중순위·후순위)이 있으면 순서가 층 수만큼 갈라져 한 줄 수식으로
+     세우기 어렵다 — 그 경우에는 기존처럼 계산값을 넣고 이 사실을 시트에 밝힌다. */
+  /* 수식으로 펼 수 있는 범위: 지분 층이 없고, 부채 층은 최대 한 개(그리고 PIK)
+     인 경우. 그 이상이면 조달·상환 순서가 층마다 갈라져 한 칸 수식으로 세우기
+     어려우므로 기존처럼 계산값을 넣고 시트에 그 사실을 밝힌다.
+     층이 «정의만» 되어 있고 비중이 0이면 실제로는 인출되지 않으므로 없는 것과 같다. */
+  var prefUsed=(s.jr||[]).filter(function(t){ return t.kind==='pref' && +t.pct>0; });
+  var debtUsed=(s.jr||[]).filter(function(t){ return t.kind!=='pref' && +t.pct>0; });
+  var jrLiveIdx=(debtUsed.length===1 && jd0 && debtUsed[0]===jd0.t && debtUsed[0].pik)? jd0.i : -1;
+  var LIVE=(prefUsed.length===0) && (debtUsed.length===0 || jrLiveIdx>=0);
+  var jrLimF=(jrLiveIdx>=0)? ('$B$'+pfTcR+'*'+R['jrPct'+jrLiveIdx]) : '';
+  var lmM=Math.max(1,Math.min(NMO,s.landBalM));
+  var srLimF='$B$'+pfTcR+'*'+R.srP;
+  function outFrm(m){
+    var t=[], lit=(M.outBase&&M.outBase[m])||0;
+    if(m===1){ t.push(R.land+'*'+R.landDown); lit-=s.landCost*s.landDownPct; }
+    if(m===lmM){ t.push('('+R.land+'*(1-'+R.landDown+')+'+R.land+'*'+R.landTax+')'); lit-=(s.landCost*(1-s.landDownPct)+M.landTax); }
+    if(m>=M.startM){
+      t.push('Construction_Schedule!C'+(csFirst+m-1));
+      t.push('Construction_Schedule!F'+(csFirst+m-1));
+      lit-=(M.build[m]||0);
+      if(s.constMonths>0) lit-=((M.designAmt+M.contAmt)/s.constMonths);
+    }
+    if(NMO>0){ t.push(R.fixed+'/'+NMO); lit-=s.fixedCost/NMO; }
+    if(Math.abs(lit)>1e-9) t.push(String(+lit.toFixed(6)));
+    return t.length? t.join('+') : '0';
+  }
   var pfHdr=P(pf,['개월차','구간','기초잔액','인출','이자 (자본화)','상환','기말잔액','미인출 한도','자기자본 투입','비고',
     (jd0?jd0.n:'(부채 층 1)')+' 기초',(jd0?jd0.n:'')+' 이자',(jd0?jd0.n:'')+' 인출',(jd0?jd0.n:'')+' 상환',(jd0?jd0.n:'')+' 기말',
-    (jd1?jd1.n:'(부채 층 2)')+' 기초',(jd1?jd1.n:'')+' 이자',(jd1?jd1.n:'')+' 인출',(jd1?jd1.n:'')+' 상환',(jd1?jd1.n:'')+' 기말']);
-  var pfFirst=pfHdr+1;
+    (jd1?jd1.n:'(부채 층 2)')+' 기초',(jd1?jd1.n:'')+' 이자',(jd1?jd1.n:'')+' 인출',(jd1?jd1.n:'')+' 상환',(jd1?jd1.n:'')+' 기말',
+    '그달 사업비 유출','그달 분양수입 유입','가용현금 (조달 전)','누적 자기자본 (기초)','보유현금 (월말)']);
+  var pfFirst=pfHdr+1, eqCum=0;
   M.rows.forEach(function(r,k){
     var rw3=pfFirst+k;
+    var feeAdd=(r.m===M.startM)? ('-$B$'+pfFeeR+'-$B$'+jrFeeR) : '';
+    var wF=(k===0?'':'Y'+(rw3-1)+'+')+'V'+rw3+'-U'+rw3+feeAdd;
+    var xF=(k===0?'0':'X'+(rw3-1)+'+I'+(rw3-1));
+    var iF='MIN(MAX(-W'+rw3+',0),MAX('+R.eq+'-X'+rw3+',0))';
+    var dF='MIN(MAX(-W'+rw3+'-I'+rw3+',0),MAX('+srLimF+'-(C'+rw3+'+E'+rw3+'),0))';
+    var fF='IF(W'+rw3+'>=0,MIN(W'+rw3+',C'+rw3+'+E'+rw3+'),0)';
+    /* 부채 층이 살아 있으면 선순위 다음 순서로 끌어쓰고, 상환도 선순위 뒤에 받는다 */
+    var mF=(jrLiveIdx>=0)? ('MIN(MAX(-W'+rw3+'-I'+rw3+'-D'+rw3+',0),MAX('+jrLimF+'-(K'+rw3+'+L'+rw3+'),0))') : '';
+    var nF=(jrLiveIdx>=0)? ('IF(W'+rw3+'>=0,MIN(W'+rw3+'-F'+rw3+',K'+rw3+'+L'+rw3+'),0)') : '';
+    var yF=(jrLiveIdx>=0)? ('IF(W'+rw3+'>=0,W'+rw3+'-F'+rw3+'-N'+rw3+',0)')
+                         : ('IF(W'+rw3+'>=0,W'+rw3+'-F'+rw3+',0)');
     P(pf,[N(r.m,Z.i),r.phase,
       N(r.open,Z.m, k===0?'0':'G'+(rw3-1)),
-      N(r.draw,Z.m), N(r.int,Z.m,'C'+rw3+'*'+(r.m<M.startM?R.br:R.pf)+'/12'), N(r.repay,Z.m),
+      N(r.draw,Z.m, LIVE?dF:''), N(r.int,Z.m,'C'+rw3+'*'+(r.m<M.startM?R.br:R.pf)+'/12'), N(r.repay,Z.m, LIVE?fF:''),
       N(r.close,Z.m,'C'+rw3+'+D'+rw3+'+E'+rw3+'-F'+rw3),
       N(Math.max(M.pfCommit-r.close,0),Z.m,'MAX($B$'+pfCommit+'-G'+rw3+',0)'),
-      N(r.eqDraw,Z.m), (r.m===M.startM?'브릿지 → 본PF 전환':''),
+      N(r.eqDraw,Z.m, LIVE?iF:''), (r.m===M.startM?'브릿지 → 본PF 전환':''),
       N(jd0? r.openJ[jd0.i]:0,Z.m, k===0?'0':'O'+(rw3-1)),
       N(jd0? r.intJ[jd0.i]:0,Z.m, jd0? ('K'+rw3+'*'+R['jrRate'+jd0.i]+'/12') : ''),
-      N(jd0? r.drawJ[jd0.i]:0,Z.m), N(jd0? r.repayJ[jd0.i]:0,Z.m),
+      N(jd0? r.drawJ[jd0.i]:0,Z.m, LIVE?mF:''), N(jd0? r.repayJ[jd0.i]:0,Z.m, LIVE?nF:''),
       N(jd0? r.closeJ[jd0.i]:0,Z.m, jd0? ('K'+rw3+'+M'+rw3+(jd0.t.pik?'+L'+rw3:'')+'-N'+rw3) : ''),
       N(jd1? r.openJ[jd1.i]:0,Z.m, k===0?'0':'T'+(rw3-1)),
       N(jd1? r.intJ[jd1.i]:0,Z.m, jd1? ('P'+rw3+'*'+R['jrRate'+jd1.i]+'/12') : ''),
       N(jd1? r.drawJ[jd1.i]:0,Z.m), N(jd1? r.repayJ[jd1.i]:0,Z.m),
-      N(jd1? r.closeJ[jd1.i]:0,Z.m, jd1? ('P'+rw3+'+R'+rw3+(jd1.t.pik?'+Q'+rw3:'')+'-S'+rw3) : '')]);
+      N(jd1? r.closeJ[jd1.i]:0,Z.m, jd1? ('P'+rw3+'+R'+rw3+(jd1.t.pik?'+Q'+rw3:'')+'-S'+rw3) : ''),
+      N((M.outBase&&M.outBase[r.m])||0,Z.m, LIVE? outFrm(r.m) : ''),
+      N(r.inflow,Z.m,'Payment_Cashin!G'+(pcFirst+k)),
+      N((k===0?0:M.rows[k-1].cash)+r.inflow-r.out-(r.cashInt||0),Z.m, LIVE? wF : ''),
+      N(eqCum,Z.m, LIVE? xF : ''),
+      N(r.cash,Z.m, LIVE? yF : '')]);
+    eqCum+=r.eqDraw;
   });
   var pfLast=pfFirst+NMO-1;
   P(pf,['합계 / 최대','','',N(M.rows.reduce(function(a,r){return a+r.draw;},0),Z.m,'SUM(D'+pfFirst+':D'+pfLast+')'),
@@ -6267,8 +6455,37 @@ function build(){
     N(M.eqUsed,Z.m,'SUM(I'+pfFirst+':I'+pfLast+')'),'기말잔액 최대 = 필요 PF 한도']);
   P(pf,['준공 시점 잔액','','','','','',N(M.endBal,Z.m,'G'+pfLast),'','','0 이어야 정상 상환']);
   P(pf,[]);
-  P(pf,['· 인출·상환액은 Cashflow_Model의 월별 자금수지 스위프 결과이며, 기말잔액은 기초 + 인출 + 이자 − 상환 수식으로 연결됩니다.']);
+  /* 자기자본 IRR — 예전에는 화면이 구한 값을 표지에 그대로 박아, 엑셀에서 무엇을
+     고쳐도 IRR만 옛 값에 멈춰 있었다. 월별 자기자본 현금흐름을 위 I·Y 열에서
+     받아 계열로 세우고 IRR() 로 직접 계산한다(t=0 에 0 을 두는 것까지 화면과 동일).
+     마지막 달에 보유현금에서 법인세를 뺀 회수액을 더한다. */
+  var irrR=0, cf0=0, cfLast=0, taxR=0;
+  if(LIVE){
+    var outSumF='SUM(U'+pfFirst+':U'+pfLast+')+$B$'+pfFeeR+'+$B$'+jrFeeR;
+    var totCostF='('+outSumF+'+SUM(E'+pfFirst+':E'+pfLast+'))';
+    P(pf,['자기자본 IRR 계산 (월별 현금흐름)']);
+    taxR=P(pf,['법인세 (추정)','',N(M.tax,Z.m,'MAX(0,Unit_Mix_Pricing!F'+umRev+'-'+totCostF+')*'+R.tax),'',
+      'MAX(0, 분양수입 − 총사업비) × 법인세율']);
+    cf0=P(pf,['t=0','',N(0,Z.m),'','투자 직전 시점 — 화면 계산과 같은 기준']);
+    M.rows.forEach(function(r,k){
+      var rw4=pfFirst+k, last=(k===M.rows.length-1);
+      var frm=last? ('-I'+rw4+'+Y'+rw4+'-C'+taxR) : ('-I'+rw4);
+      var val=-(r.eqDraw)+(last? (M.endCash-M.tax) : 0);
+      P(pf,[N(r.m,Z.i),'',N(val,Z.m,frm),'',(last?'준공 회수 (보유현금 − 법인세)':'')]);
+    });
+    cfLast=cf0+M.rows.length;
+    irrR=P(pf,['자기자본 IRR (연환산)','',N(M.irrM,Z.p,'(1+IRR(C'+cf0+':C'+cfLast+'))^12-1'),'',
+      '월별 IRR 을 월복리로 연환산 — 화면과 같은 방식']);
+    P(pf,[]);
+  }
+  P(pf,['· 인출·상환·자기자본 투입은 U~Y 열의 월별 자금수지에서 계산됩니다 — 가정을 고치면 이 열들이 따라 움직입니다.']);
   P(pf,['· 착공 전에는 브릿지 금리, 착공 후에는 본PF 금리를 적용합니다 (착공월에 잔액이 본PF로 전환).']);
+  if(LIVE){
+    P(pf,['· 다만 본PF 약정액(B'+pfCommit+')과 총사업비 앵커(B'+pfTcR+')는 고정값입니다 — 한도·수수료가 총사업비에 다시 들어가는 순환을 끊기 위한 자리로, 화면이 반복 계산으로 수렴시킨 값입니다. 가정을 크게 바꾸면 화면에서 다시 내려받으세요.']);
+    P(pf,['· 중도금 무이자 부담과 추가 사업비는 U열 안에 상수로 들어갑니다(분양 납부 일정에서 산출되는 값이라 한 줄 수식으로 펴지 않았습니다).']);
+  } else {
+    P(pf,['· 선순위 아래 층이 있어 인출·상환 순서가 층마다 갈라집니다 — 이 시트의 인출·상환·자기자본 투입은 화면 계산 결과값이며, 엑셀에서 가정을 바꿔도 자동으로 다시 계산되지 않습니다.']);
+  }
   made.PF_Drawdown=pf;
 
   /* Interest_Capitalization */
@@ -6462,7 +6679,8 @@ function build(){
   var p_rec=PS('자기자본 회수',unit,N(M.endCash-M.tax,Z.m),'준공 시점 잉여현금 − 법인세');
   PS('Equity Multiple','x',N(M.em,Z.x,'C'+p_rec+'/C'+p_eq),'회수 ÷ 투입');
   PS('자기자본 수익률 (총)','%',N(M.eqReturn,Z.p,'(C'+p_rec+'-C'+p_eq+')/C'+p_eq),'(회수 − 투입) ÷ 투입');
-  var p_irr=PS('자기자본 IRR (연환산)','%',N(M.irrM,Z.p),'월별 현금흐름 IRR을 연복리 환산한 계산 결과값');
+  var p_irr=PS('자기자본 IRR (연환산)','%',N(M.irrM,Z.p, irrR? ('PF_Drawdown!C'+irrR) : ''),
+    irrR? 'PF_Drawdown 월별 자기자본 현금흐름의 IRR (연환산)' : '월별 현금흐름 IRR을 연복리 환산한 계산 결과값');
   PS('보통주 목표 IRR','%',N(s.comTargetIRR,Z.p,R.tgt),'Assumptions');
   P(ps,['목표 달성 여부','',T(M.passTarget?'충족':'미달','IF(C'+p_irr+'>=C'+(p_irr+1)+',"충족","미달")'),'IRR ≥ 목표']);
   P(ps,[]);
@@ -6574,7 +6792,12 @@ function build(){
     T('PASS','IF(ABS(Sources_Uses!C'+zD+')<1,"PASS","CHECK")')]);
   coreRows.push(['② 대출 트랜치 · 자기자본 plug 정합','PF / 자기자본','PF 최대 잔액 '+f0(M.pfPeak)+' · 자기자본 실투입 '+f0(M.eqUsed)+' (한도 '+f0(s.equity)+')','Capital_Stack',
     T(M.eqUsed<=s.equity+1?'PASS':'CHECK')]);
-  coreRows.push(['③ 월별 분양수입 → 자금수지 연결','전 '+NMO+'개월','기말잔액 = 기초 + 이자 + 인출 − 상환','PF_Drawdown!G'+pfFirst+':G'+pfLast,T('PASS')]);
+  /* 예전에는 무조건 PASS 였다. 항등식이 실제로 전 기간 성립하는지 세어서 판정한다. */
+  var recBad=0;
+  M.rows.forEach(function(r){ if(Math.abs(r.close-(r.open+r.int+r.draw-r.repay))>1e-6) recBad++; });
+  coreRows.push(['③ 월별 분양수입 → 자금수지 연결','전 '+NMO+'개월',
+    '기말잔액 = 기초 + 이자 + 인출 − 상환'+(recBad?(' — '+recBad+'개월 불일치'):' — 전 기간 성립(실측)'),
+    'PF_Drawdown!G'+pfFirst+':G'+pfLast,T(recBad?'CHECK':'PASS')]);
   coreRows.push(['④ 준공 시점 PF 전액 상환','준공월','준공 시점 PF 잔액 '+f0(M.endBal),'PF_Drawdown!G'+pfLast,
     T(M.endBal<1?'PASS':'CHECK','IF(PF_Drawdown!G'+pfLast+'<1,"PASS","CHECK")')]);
   coreRows.push(['⑤ 분양수입 = 평형별 세대수 × 분양가','Unit_Mix',f0(M.revenue)+' = 100% 기준 '+f0(M.grossRev)+' × '+fp(M.absorb,0),'Unit_Mix_Pricing!F'+umRev,
@@ -6594,7 +6817,7 @@ function build(){
     ['사업이익률','%',{t:'n',v:M.margin,z:Z.p,f:'Profitability_Summary!C'+p_mar},'','Profitability_Summary'],
     ['필요 PF 한도',unit,{t:'n',v:M.pfPeak,z:Z.m,f:'PF_Drawdown!G'+(pfLast+1)},'','PF_Drawdown'],
     ['자기자본 실투입',unit,{t:'n',v:M.eqUsed,z:Z.m,f:'PF_Drawdown!I'+(pfLast+1)},'','PF_Drawdown'],
-    ['자기자본 IRR','%',{t:'n',v:M.irrM,z:Z.p},'','Profitability_Summary']
+    ['자기자본 IRR','%',{t:'n',v:M.irrM,z:Z.p,f:'Profitability_Summary!C'+p_irr},'','Profitability_Summary']
   ];
   if(inDepth('Validation_Checks')){
     var VS=validationSheets(M,coreRows,keyM);
@@ -7404,7 +7627,7 @@ function scaleRecv(a,mul){ var r=[],i; for(i=0;i<(a||[]).length;i++) r.push(num(
 
 var PANES={};
 PANES.sum=function(M){
-  var s=M.s, h=verdictCard(verdict(M));
+  var s=M.s, h=verdictCard(verdict(M),checks(M));
   if(M.kind==='sale') return h+sumSale(M);
   if(!M.sched){
     h+=card('투자 요약 (준비 중)','단위: '+G.unit+' · 기준일 '+G.asOf+' · 시나리오 '+s.scenName,
@@ -8934,9 +9157,40 @@ var REPORT=(function(){
   }
   function blankHint(need){ return '(직접 기재 — '+need+')'; }
 
+  /* ══ 심의 안건 ══════════════════════════════════════════════
+     거래 유형(분양대금 유동화 등)과 심의 안건(신규 투자·만기 연장 등)은 다른
+     축이다. 같은 거래라도 안건이 다르면 심의에 필요한 사실이 달라진다 —
+     신규 투자 건에 «실제 상환일·실제 상환액»을 받아 적을 수는 없다(아직
+     상환한 적이 없다). 안건에 해당하지 않는 칸은 빈칸으로 세지 않는다. */
+  var AGENDAS=[
+    {k:'new',   n:'신규 투자·대출', d:'신규 조건 · 자금 용도 · 투자 근거 · 회수 계획 · 주요 위험'},
+    {k:'ext',   n:'만기 연장',      d:'기존/연장 만기 · 현재 잔액 · 연장 사유 · 갱신 회수계획'},
+    {k:'amend', n:'주요 조건 변경',  d:'변경 전후 조건 · 변경 사유 · 수익·상환·담보 영향'},
+    {k:'add',   n:'추가 투자·대여',  d:'기존 익스포저 · 추가 금액·용도 · 누적 노출 · 회수 순서'}
+  ];
+  function agendaKey(){
+    var a=G.rptAgenda, i;
+    for(i=0;i<AGENDAS.length;i++) if(AGENDAS[i].k===a) return a;
+    return 'new';
+  }
+  function agendaName(k){
+    var i, key=k||agendaKey();
+    for(i=0;i<AGENDAS.length;i++) if(AGENDAS[i].k===key) return AGENDAS[i].n;
+    return '';
+  }
+  /* 안건에 해당하지 않는 칸 — 빈칸이 아니라 «해당 없음»이다. data-fill 이 없으므로
+     collectFills 가 세지 않는다(빈칸 감소를 위해 위험을 숨기는 것과는 다르다:
+     여기서 빠지는 것은 그 안건에 존재할 수 없는 사실뿐이다). */
+  function naChip(need){
+    return '<span class="rpt-na" data-na="'+esc(need)+'">해당 없음'+
+           ' <span class="dim">— '+esc(agendaName())+' 안건</span></span>';
+  }
+
   /* 글이 있으면 .rpt-writ(더 이상 빈칸이 아니다 — 「채울 것」 셈에서 빠진다),
-     없으면 .rpt-blank. 어느 쪽이든 그 자리에서 바로 고쳐 쓸 수 있다. */
-  function blank(need,key){
+     없으면 .rpt-blank. 어느 쪽이든 그 자리에서 바로 고쳐 쓸 수 있다.
+     only 를 주면 그 안건에서만 빈칸이 되고, 나머지 안건에서는 «해당 없음». */
+  function blank(need,key,only){
+    if(only&&only.indexOf(agendaKey())<0) return naChip(need);
     var t=rptGet(key), cls=t?'rpt-writ':'rpt-blank';
     return '<span class="'+cls+'" data-fill="'+esc(key)+'" data-need="'+esc(need)+'"'+
            ' contenteditable="true">'+esc(t||blankHint(need))+'</span>';
@@ -8958,7 +9212,9 @@ var REPORT=(function(){
      값은 전부 사용자 입력이다. 소스에는 절대 실제 펀드 정보를 넣지 않는다(기본값은 빈 문자열). */
   function fundDefault(){
     return { name:'', grade:'', commit:'', setDate:'', period:'', feeBp:'',
-             capitalCall:true, proprietary:false, guide:[] };
+             /* 약정 조항은 펀드마다 다르다 — 확인하지 않은 상태에서 기본으로 켜 두면
+                모든 펀드에 같은 문장이 «확정 사실»로 실린다. 기본은 미확인이다. */
+             capitalCall:false, settle:false, proprietary:false, guide:[] };
   }
   function FUND(){
     if(!G.fund || typeof G.fund!=='object') G.fund=fundDefault();
@@ -9005,7 +9261,8 @@ var REPORT=(function(){
       fRow('설정일','setDate',f.setDate)+
       fRow('운용기간','period',f.period)+
       fRow('운용보수(bp)','feeBp',f.feeBp)+
-      fChk('캐피탈콜 모펀드 문구 포함','capitalCall',f.capitalCall)+
+      fChk('캐피탈콜·재인출 조항 확인함 (확인해야 문서에 실림)','capitalCall',f.capitalCall)+
+      fChk('결산·이익분배 조항 확인함 (확인해야 문서에 실림)','settle',f.settle)+
       fChk('고유재산 투자(펀드 개요 절 생략)','proprietary',f.proprietary)+
       '</tbody></table>';
     return card('펀드 프로필','한 번 입력하면 저장되어 다음에도 재사용됩니다 · 값을 비우면 표지·펀드 개요에 채울 것으로 표시', tblWrap(t));
@@ -9034,6 +9291,13 @@ var REPORT=(function(){
   }
 
   /* ── 펀드 개요 — 고유재산 투자면 절 자체를 생략(문건 ⑪형) ── */
+  /* 펀드 약정 문장 — 「펀드 프로필에서 확인함」에 체크했을 때만 확정 문장으로
+     싣고, 아니면 확인이 필요하다는 사실만 남긴다. */
+  function fundClause(label,confirmed,text){
+    if(confirmed) return '<div class="note">'+text+'</div>';
+    return '<div class="note dim"><b>'+esc(label)+' — 미확인</b> · 펀드 약정에 따라 달라집니다. '+
+           '펀드 프로필에서 확인 표시를 해야 이 문장이 문서에 실립니다.</div>';
+  }
   function secFund(f){
     if(f.proprietary) return '';
     var rows=[
@@ -9046,8 +9310,11 @@ var REPORT=(function(){
       ['운용보수','bp',(f.feeBp? esc(f.feeBp) : blank('보수(bp)','fund.feeBp')),'','펀드 프로필']
     ];
     var body=sub(1,'펀드 개요')+tblWrap(kv2(rows));
-    if(f.capitalCall) body+='<div class="note">'+CAPCALL_TEXT+'</div>';
-    body+='<div class="note">'+SETTLE_TEXT+'</div>';
+    /* 확인한 펀드에만 그 펀드의 약정 문장을 싣는다. 확인 전에는 문장을 지우는
+       대신 «미확인»으로 남긴다 — 조용히 사라지면 확인해야 할 사실이 있다는
+       것조차 안 보인다. */
+    body+=fundClause('캐피탈콜·재인출 조항', f.capitalCall, CAPCALL_TEXT);
+    body+=fundClause('결산·이익분배 조항', f.settle, SETTLE_TEXT);
     var perfRows=[
       ['SEC','성과보수 (Carried Interest)'],
       ['구간 1 상한','',blank('구간 경계','carry.t1.cap'),''],
@@ -9170,8 +9437,20 @@ var REPORT=(function(){
        meta(.rpt-meta) -> 개발 메모. 「규격 — 11건 형식 동일」·「전역 설정」처럼
                           서식의 출처나 입력이 어디서 오는지에 대한 작업 메모다.
                           화면에서는 쓰지만 심의위원회 문서에는 실리지 않는다. */
+  /* 값 서식이 이미 단위를 달고 나오는 경우가 있다 — fp()는 «9.00%», fx()는 «0.90x».
+     거기에 단위 칸을 또 붙이면 «9.00% %», «0.90x 배»가 되어 두 번 읽힌다.
+     값 끝을 보고 같은 단위면 단위 칸을 생략한다(값 쪽을 고치면 화면·엑셀·문서가
+     제각각 달라지므로 표시 단계에서만 정리한다). */
+  function dupUnit(html,unit){
+    var txt=String(html==null?'':html).replace(/<[^>]*>/g,'').replace(/&[a-z]+;/gi,'').trim();
+    if(!txt||!unit) return false;
+    if(unit==='%') return /%$/.test(txt);
+    if(unit==='배'||unit==='x'||unit==='X') return /[xX]$/.test(txt);
+    return txt.length>=unit.length && txt.slice(-unit.length)===unit;
+  }
   function kvCell(val,unit,src,meta){
     var h=(val==null?'':val);
+    if(dupUnit(h,unit)) unit='';
     if(unit) h+=' <span class="rpt-u">'+esc(unit)+'</span>';
     if(src)  h+=' <span class="rpt-src">'+esc(src)+'</span>';
     if(meta) h+=' <span class="rpt-meta">'+esc(meta)+'</span>';
@@ -9896,8 +10175,10 @@ var REPORT=(function(){
         r+='<tr><td class="l">'+i+'회차</td><td>'+blank('예정 상환일','abs.repay'+i+'.dueDate')+'</td>'+
           '<td>'+blank('예정 상환액','abs.repay'+i+'.dueAmt')+'</td>';
       }
-      r+='<td>'+blank('실제 상환일','abs.repay'+i+'.actDate')+'</td>'+
-        '<td>'+blank('실제 상환액','abs.repay'+i+'.actAmt')+'</td>'+
+      /* 실적 2열은 이미 상환이 시작된 건에서만 존재한다 — 신규 투자 건에서는
+         받아 적을 사실 자체가 없으므로 필수 집계에서 뺀다. */
+      r+='<td>'+blank('실제 상환일','abs.repay'+i+'.actDate',['ext','amend','add'])+'</td>'+
+        '<td>'+blank('실제 상환액','abs.repay'+i+'.actAmt',['ext','amend','add'])+'</td>'+
         '<td class="l">'+blank('비고','abs.repay'+i+'.note')+'</td></tr>';
     }
     r+='</tbody></table>';
@@ -9912,10 +10193,12 @@ var REPORT=(function(){
     var t=gridHead(['항목','기존 조건','본건 조건','변경']), i, nm;
     for(i=0;i<ABS_ASSET_FIELDS.length;i++){
       nm=ABS_ASSET_FIELDS[i];
+      /* 「기존 조건 → 변경」 대비는 이미 있는 거래를 고칠 때의 축이다.
+         신규 투자에는 비교할 «기존»이 없으므로 본건 조건만 받는다. */
       t+='<tr><td class="l">'+esc(nm)+'</td>'+
-        '<td class="l">'+blank(nm+' — 기존 조건','asset.'+nm+'.old')+'</td>'+
+        '<td class="l">'+blank(nm+' — 기존 조건','asset.'+nm+'.old',['ext','amend','add'])+'</td>'+
         '<td class="l">'+blank(nm+' — 본건 조건','asset.'+nm+'.new')+'</td>'+
-        '<td class="l">'+blank(nm+' — 변경 사유','asset.'+nm+'.chg')+'</td></tr>';
+        '<td class="l">'+blank(nm+' — 변경 사유','asset.'+nm+'.chg',['ext','amend','add'])+'</td></tr>';
     }
     t+='</tbody></table>';
     var body=sub(1,'변경대비표 (기존 조건 | 본건 조건 | 변경)')+tblWrap(t);
@@ -10078,7 +10361,7 @@ var REPORT=(function(){
     return out;
   }
   /* 상단 요약 카드 — 절별로 묶어 세고, 항목을 누르면 그 빈칸으로 데려간다. */
-  function fillCard(fills,warns){
+  function fillCard(fills,warns,M){
     var order=[], byS={}, i, f;
     for(i=0;i<fills.length;i++){
       f=fills[i];
@@ -10099,11 +10382,23 @@ var REPORT=(function(){
       h+='<div class="body"><b>'+esc(order[i])+'</b> <span class="dim">'+list.length+'건</span>'+
          '<ol class="rpt-ol">'+items.join('')+'</ol></div>';
     }
-    if(!h) h='<div class="body">빈칸도 대사 경고도 없습니다.</div>';
-    return card('작성 전 확인 — 채울 것 '+fills.length+'건 · 대사 경고 '+warns.length+'건',
+    /* 수치가 맞는 것(대사)과 이 거래가 기준을 넘는 것(위험)은 다른 질문이다.
+       예전에는 대사만 통과하면 "남은 것은 사람이 채울 칸뿐"이라고 안내해,
+       상환 부족 같은 거래 위험이 이 화면에서 사라졌다. 셋을 따로 센다. */
+    var risk=[];
+    try{ if(M&&E().checks) risk=(E().checks(M).errs)||[]; }catch(e){ risk=[]; }
+    if(risk.length){
+      var rl='';
+      for(i=0;i<risk.length;i++) rl+='<li><b>'+esc(risk[i].e)+'</b> — '+esc(risk[i].i)+'</li>';
+      h='<div class="body"><b>거래 위험 (계산 오류 아님)</b><ol class="rpt-ol">'+rl+'</ol>'+
+        '<div class="dim" style="margin-top:6px">조건 자체가 기준에 못 미치거나 가정끼리 어긋난 항목입니다. 숨기지 말고 심의에 올리는 것이 보고서의 목적입니다.</div></div>'+h;
+    }
+    if(!h) h='<div class="body">빈칸도 대사 경고도 거래 위험 표시도 없습니다.</div>';
+    return card('작성 전 확인 — 채울 것 '+fills.length+'건 · 대사 경고 '+warns.length+'건 · 거래 위험 '+risk.length+'건',
       '빈칸을 누르면 그 자리로 이동합니다 · 대사 경고는 표에도 배지로 붙습니다', h,
       warns.length? '대사 경고가 있어도 문서는 생성됩니다 — 막으면 사람이 우회로를 찾기 때문입니다. 다만 경고가 붙은 표의 숫자는 합계가 맞지 않으므로 그대로 올리지 마십시오.'
-                  : '모델 대사(Sources=Uses · 사업비 합계 · 조달)는 모두 통과했습니다. 남은 것은 사람이 채울 칸뿐입니다.');
+        : (risk.length? '모델 대사(Sources=Uses · 사업비 합계 · 조달)는 통과했습니다. 다만 거래 위험 '+risk.length+'건은 그대로 남아 있습니다 — 수치가 맞는 것과 이 거래가 기준을 충족하는 것은 다릅니다.'
+                      : '모델 대사(Sources=Uses · 사업비 합계 · 조달)는 통과했고, 모델이 짚은 거래 위험도 없습니다. 남은 것은 사람이 확인할 사실(담보·약정·신용 등)과 판단입니다 — 모델은 그것까지 확인해 주지 않습니다.'));
   }
 
   /* 모드 토글 — 「이 딜로 작성」(열려 있는 딜의 kind 그대로) vs 「유동화·리파이낸스
@@ -10114,31 +10409,44 @@ var REPORT=(function(){
       '<label style="margin-right:16px"><input type="radio" name="rptMode" value="deal"'+(mode!=='abs'?' checked':'')+'> 이 딜로 작성</label>'+
       '<label><input type="radio" name="rptMode" value="abs"'+(mode==='abs'?' checked':'')+'> 유동화·리파이낸스 템플릿</label>'+
       '</div>';
-    return card('보고서 모드','유동화·리파이낸스형(공사비 유동화·BL 리파이낸싱·잔금유동화 등)은 대응 재무모델이 없습니다 — '+
-      '템플릿으로 전환하면 모델 숫자가 모두 빈칸으로 바뀌고 규격부(면책·펀드 개요·가이드라인)는 그대로 남습니다', body);
+    /* 공사비채권 유동화·분양대금 유동화는 이제 전용 모델이 있다 — 예전 안내문은
+       그 둘까지 «모델 없음»으로 말해 실제 지원 범위와 어긋났다. */
+    return card('보고서 모드','공사비채권 유동화·분양대금 유동화는 전용 재무모델이 있어 「이 딜로 작성」으로 숫자가 그대로 들어옵니다. '+
+      'BL 리파이낸싱·잔금유동화처럼 아직 대응 모델이 없는 유형만 템플릿으로 전환하세요 — '+
+      '전환하면 모델 숫자가 모두 빈칸으로 바뀌고 규격부(면책·펀드 개요·가이드라인)는 그대로 남습니다', body);
   }
 
   /* 절 본문 — 화면과 워드 문서가 보는 것은 반드시 같은 문자열이다.
      pane()도 docHtml()도 여기서 나온 결과만 쓴다. 두 곳에서 각자 만들면
      화면과 내려받은 문서가 조용히 갈라진다. */
-  function sections(M,kind){
+  /* parts 를 주면 절을 «이름 + HTML» 로 따로 담아 돌려준다 — 작성 화면이 절
+     하나씩만 펴서 보여줄 수 있게. 문서(docHtml)는 예전처럼 전부 이어 붙인 값을
+     쓴다: 작성 편의로 접은 것이 출력에서 빠지면 안 된다. */
+  function sections(M,kind,parts){
     var f=FUND();
     var body='';
+    function add(t,h){ if(parts) parts.push({t:t,h:h}); body+=h; }
     secReset();                      /* 절 번호는 매번 Ⅰ부터 — pane 과 doc 이 같아야 한다 */
-    body+=secCover(M,kind);
-    body+=secFund(f);
-    body+=secGuide(f);
-    if(kind==='acq'||kind==='dev'||isAbs(kind)){
-      body+=secES(M,kind);
-      body+=secTerms(M,kind);
-      body+=secAsset(kind,M);
-      body+=secFeas(M,kind);
-      body+=secSens(M,kind);
-      body+=secRisk(kind);
-      body+=secParties();
-      body+=secAppendix();
+    add('승인 요청·표지', secCover(M,kind));
+    /* 고유재산 건에는 펀드가 없다 — 펀드 개요·가이드라인의 빈칸을 «미작성»으로
+       세면 채울 수 없는 칸을 채우라고 요구하는 셈이다. 절째로 뺀다. */
+    if(principal()==='own'){
+      add('펀드 개요','<div class="note">고유재산 투자 건입니다 — 펀드 개요·운용 가이드라인 절은 이 안건에 해당하지 않아 싣지 않습니다.</div>');
     }else{
-      body+=secPlain('남은 절 (예정)','<div class="note">알 수 없는 딜 유형입니다.</div>');
+      add('펀드 개요', secFund(f));
+      add('운용 가이드라인', secGuide(f));
+    }
+    if(kind==='acq'||kind==='dev'||isAbs(kind)){
+      add('Executive Summary', secES(M,kind));
+      add('금융조건·담보 및 보강', secTerms(M,kind));
+      add('사업·자산 개요', secAsset(kind,M));
+      add('상환 계획·분석 결과', secFeas(M,kind));
+      add('민감도', secSens(M,kind));
+      add('주요 위험·대응', secRisk(kind));
+      add('관계사', secParties());
+      add('별첨', secAppendix());
+    }else{
+      add('남은 절 (예정)', secPlain('남은 절 (예정)','<div class="note">알 수 없는 딜 유형입니다.</div>'));
     }
     return body;
   }
@@ -10323,16 +10631,126 @@ var REPORT=(function(){
     if(box) box.innerHTML=imHitsHtml(LAST.kind);
   });
 
+  /* ══ 3단계 작성 흐름 ════════════════════════════════════════
+     예전에는 설정·IM 붙여넣기·빈칸 110건 목록·본문 전체가 한 화면에 이어져
+     어디부터 손대야 하는지가 안 보였다. 안건 선택 → 내용 보완 → 확인·내려받기
+     세 단계로 나누고, 2단계에서는 고른 절 하나만 편다. 단계는 자유롭게 오갈 수
+     있고 쓴 내용은 단계를 옮겨도 그대로 남는다(저장 키가 같다). */
+  function rptStep(){ var s=+G.rptStep; return (s===2||s===3)?s:1; }
+  function principal(){ return (G.rptPrincipal==='own')?'own':'fund'; }
+  function stepBar(cur){
+    var names=['안건 선택','내용 보완','확인·내려받기'], h='', i;
+    for(i=1;i<=3;i++)
+      h+='<button type="button" class="rstep'+(i===cur?' on':'')+'" data-rstep="'+i+'">'+
+         '<b>'+i+'</b> '+names[i-1]+'</button>';
+    return '<div class="rsteps">'+h+'</div>';
+  }
+  function countFills(html){
+    var m=String(html||'').match(/class="rpt-blank"/g);
+    return m?m.length:0;
+  }
+  function agendaCard(){
+    var k=agendaKey(), i, r='';
+    for(i=0;i<AGENDAS.length;i++){
+      var a=AGENDAS[i];
+      r+='<label class="agopt'+(a.k===k?' on':'')+'">'+
+         '<input type="radio" name="rptAgenda" value="'+esc(a.k)+'"'+(a.k===k?' checked':'')+'> '+
+         '<b>'+esc(a.n)+'</b><span class="dim"> — '+esc(a.d)+'</span></label>';
+    }
+    var p=principal();
+    var pr='<label class="agopt'+(p==='fund'?' on':'')+'"><input type="radio" name="rptPrin" value="fund"'+(p==='fund'?' checked':'')+'> 펀드</label>'+
+           '<label class="agopt'+(p==='own'?' on':'')+'"><input type="radio" name="rptPrin" value="own"'+(p==='own'?' checked':'')+'> 고유재산</label>';
+    var rows=[
+      ['거래 유형','','<b>'+esc(E().name)+'</b> · '+esc(E().assetName()||'')+' <span class="dim">— 모델에서 가져옵니다(여기서 바꾸지 않습니다)</span>',''],
+      ['심의 안건','','<div class="agopts">'+r+'</div>',''],
+      ['투자 주체','','<div class="agopts">'+pr+'</div>',''],
+      ['모델 분석 기준일','',esc(G.asOf||'—')+' <span class="dim">— 작성일과 따로 관리합니다(작성일은 표지 절에서 받습니다)</span>','']
+    ];
+    return card('단계 1 — 안건 선택','거래 유형은 모델에서 가져오고, 심의 안건만 고릅니다 — 안건에 따라 다음 단계에서 받을 항목이 달라집니다',
+      '<div class="body">'+kv2(rows)+'</div>',
+      '고른 안건: '+esc(agendaName())+(p==='own'?' · 고유재산 — 펀드 개요·가이드라인 절은 빠집니다':''));
+  }
+  function tocCard(parts,cur){
+    var h='', i, n;
+    for(i=0;i<parts.length;i++){
+      n=countFills(parts[i].h);
+      h+='<button type="button" class="rtoc'+(i===cur?' on':'')+'" data-rsec="'+i+'">'+
+         esc(parts[i].t)+' <span class="'+(n?'rtoc-n':'rtoc-ok')+'">'+(n?n+'건':'완료')+'</span></button>';
+    }
+    return card('단계 2 — 내용 보완','절을 고르면 그 절만 펴집니다 · 숫자는 그 절에 남은 빈칸 수',
+      '<div class="body"><div class="rtocs">'+h+'</div>'+
+      '<div class="dim" style="margin-top:8px">모델 숫자를 고치려면 위 딜 탭에서 「투자 요약」 등으로 돌아가면 됩니다 — 돌아와도 쓴 내용은 그대로 남습니다.</div></div>');
+  }
+  /* 모델 값이 바뀌면 이미 써 둔 의견이 그 숫자를 전제로 한 것일 수 있다.
+     의견을 덮어쓰지 않고 «재확인 필요»만 띄운다. */
+  function modelFinger(M){
+    try{
+      var V=E().verdict(M);
+      return String(V&&V.title||'')+'|'+G.deal+'|'+G.scen;
+    }catch(e){ return String(G.deal||'')+'|'+String(G.scen||''); }
+  }
+  function statusCard(M,kind,fills,warns){
+    var C=null; try{ C=E().checks(M); }catch(e){ C=null; }
+    var risk=(C&&C.errs)?C.errs:[];
+    var pass=C?C.checks.filter(function(c){return c.ok&&!c.na;}).length:0;
+    var na=C?C.checks.filter(function(c){return c.na;}).length:0;
+    var tot=C?(C.checks.length-na):0;
+    var fp=modelFinger(M), seen=(G.rptSeen||''), changed=(seen&&seen!==fp);
+    var rows=[
+      ['필수 정보','', (fills.length? '<b>미작성 '+fills.length+'건</b>':'<b>완료</b>')+
+        ' <span class="dim">— 이 안건('+esc(agendaName())+')에 해당하는 항목만 셉니다</span>',''],
+      ['근거 확인','', '<b>사람이 확인해야 함</b> <span class="dim">— 담보·보증·책임준공·약정·신용은 모델이 확인해 주지 않습니다</span>',''],
+      ['계산 정합성','', (tot? (pass===tot? '<b>'+pass+' / '+tot+' 통과</b>' : '<b class="bad">'+pass+' / '+tot+'</b>') : '<span class="dim">미검증</span>')+
+        (warns.length? ' <span class="bad">· 대사 경고 '+warns.length+'건</span>':''),''],
+      ['거래 위험','', (risk.length? ('<b class="warn">'+risk.length+'건</b> — '+esc(risk[0].e+': '+risk[0].i)+(risk.length>1?(' 외 '+(risk.length-1)+'건'):'')) : '모델이 짚은 위험 없음'),''],
+      ['모델 갱신','', (changed? '<b class="warn">재확인 필요</b> <span class="dim">— 의견을 쓴 뒤 모델 판정이 바뀌었습니다. 내용을 확인한 뒤 아래 버튼을 누르세요.</span> <button type="button" class="btn" id="rptSeenOk">확인함</button>'
+                                : '<span class="dim">'+(seen? '마지막 확인 이후 모델 판정 변화 없음':'아직 확인 기록 없음 — 「확인함」을 누르면 이후 변화를 알려 줍니다')+'</span>'+
+                                  (seen?'':' <button type="button" class="btn" id="rptSeenOk">확인함</button>')),'']
+    ];
+    return card('단계 3 — 확인·내려받기','문서를 내기 전에 이 다섯 줄을 봅니다 — 계산이 맞는 것과 거래가 기준을 넘는 것은 다릅니다',
+      '<div class="body">'+kv2(rows)+'</div>',
+      risk.length? '거래 위험이 남아 있어도 문서는 만들 수 있습니다 — 위험을 심의에 올리는 것도 보고서의 목적입니다. 다만 「이상 없음」으로 적지 마십시오.'
+                 : '입력이 끝났다는 것이 회사의 심의 승인을 뜻하지는 않습니다.');
+  }
+  function summaryCard(M,kind){
+    var V=null; try{ V=E().verdict(M); }catch(e){ V=null; }
+    var C=null; try{ C=E().checks(M); }catch(e){ C=null; }
+    var risk=(C&&C.errs)?C.errs:[];
+    var li='', i;
+    if(V&&V.lines) for(i=0;i<V.lines.length;i++) li+='<li><b>'+esc(V.lines[i].c)+'</b> '+V.lines[i].t+'</li>';
+    var rl='';
+    for(i=0;i<risk.length;i++) rl+='<li>'+esc(risk[i].e+' — '+risk[i].i)+'</li>';
+    return card('심의 요약 (미리보기)','건명·안건·모델 판정·주요 위험 — 1쪽 분량으로 보는 자리',
+      '<div class="body">'+
+      '<div><b>심의 안건</b> '+esc(agendaName())+' · <b>거래 유형</b> '+esc(E().name)+' · <b>대상</b> '+esc(E().assetName()||'—')+'</div>'+
+      (V?'<div style="margin-top:6px"><b>모델 판정</b> '+esc(V.title)+'</div>':'')+
+      (li?'<ul class="rpt-ol">'+li+'</ul>':'')+
+      '<div style="margin-top:6px"><b>주요 위험</b></div>'+
+      (rl?'<ul class="rpt-ol">'+rl+'</ul>':'<div class="dim">모델이 짚은 위험 없음 — 담보·약정·신용 등 사람이 확인할 위험은 별도입니다.</div>')+
+      '<div class="dim" style="margin-top:8px">운용사 의견·승인 요청 조건은 「주요 위험·대응」 절에서 직접 씁니다. 이 요약은 그 내용을 대신 쓰지 않습니다.</div>'+
+      '</div>');
+  }
   function pane(M,kind){
     var f=FUND();
     var mode=(G.rptMode==='abs')?'abs':'deal';
     var effKind=(mode==='abs')?'abs':kind;
     LAST.M=M; LAST.kind=effKind;
-    var body=sections(M,effKind);
-    /* 요약 카드는 절을 다 만든 뒤에 만든다 — 세는 대상이 곧 지금 만든 절이다.
-       펀드 프로필 카드·모드 토글에는 빈칸(.rpt-blank)이 없으므로 셈에 끼지 않는다. */
-    return '<div id="rptBody">'+imCard(effKind)+modeToggle(mode)+fundEditCard(f)+dlCard()+
-      fillCard(collectFills(body),reconWarns(M,effKind))+body+'</div>';
+    var parts=[];
+    var body=sections(M,effKind,parts);
+    /* 요약 카드는 절을 다 만든 뒤에 만든다 — 세는 대상이 곧 지금 만든 절이다. */
+    var fills=collectFills(body), warns=reconWarns(M,effKind);
+    var step=rptStep();
+    var h='<div id="rptBody">'+stepBar(step);
+    if(step===1){
+      h+=agendaCard()+(principal()==='fund'? fundEditCard(f):'')+modeToggle(mode)+imCard(effKind);
+    }else if(step===2){
+      var cur=+G.rptSec||0; if(cur<0||cur>=parts.length) cur=0;
+      h+=tocCard(parts,cur)+fillCard(fills,warns,M)+(parts[cur]?parts[cur].h:'');
+    }else{
+      h+=statusCard(M,effKind,fills,warns)+summaryCard(M,effKind)+dlCard()+
+         card('전체 보고서 (미리보기)','내려받는 문서와 같은 내용입니다','<div class="body dim">아래에 전체 절이 이어집니다.</div>')+body;
+    }
+    return h+'</div>';
   }
 
   /* == 워드 내려받기 ==========================================
@@ -10526,6 +10944,14 @@ var REPORT=(function(){
     } else if(el.name==='rptMode'){
       G.rptMode=el.value;
       saveState(); render(true);
+    } else if(el.name==='rptAgenda'){
+      /* 안건을 바꿔도 이미 쓴 내용(G.rptText)은 건드리지 않는다 — 안건 전환으로
+         조용히 지워지면 사람이 다시 쓰게 된다. 보이는 항목만 달라진다. */
+      G.rptAgenda=el.value;
+      saveState(); render(true);
+    } else if(el.name==='rptPrin'){
+      G.rptPrincipal=el.value;
+      saveState(); render(true);
     }
   });
 
@@ -10583,6 +11009,16 @@ var REPORT=(function(){
       return;
     }
     if(el.closest('#imAll')){ e.preventDefault(); imPutAll(); return; }
+
+    /* 3단계 이동 · 절 선택 · 모델 갱신 확인 */
+    var sb=el.closest('[data-rstep]');
+    if(sb){ e.preventDefault(); G.rptStep=+sb.getAttribute('data-rstep'); saveState(); render(true); return; }
+    var sc=el.closest('[data-rsec]');
+    if(sc){ e.preventDefault(); G.rptSec=+sc.getAttribute('data-rsec'); saveState(); render(true); return; }
+    if(el.closest('#rptSeenOk')){
+      e.preventDefault();
+      G.rptSeen=modelFinger(LAST.M); saveState(); render(true); return;
+    }
 
     var a=el.closest('[data-goto]');
     if(!a) return;
@@ -10879,6 +11315,15 @@ document.getElementById('side').addEventListener('change', function(ev){
    준비 중인 유형(호텔·리테일·임대주택·데이터센터)은 표시하지 않는다.
    첫 화면에서 못 하는 것부터 보여줄 이유가 없다. 유형을 늘릴 때는
    엔진을 만들어 DEALORDER에 넣으면 알약이 저절로 생긴다. */
+/* P1-3 / Modelter 참고: 「예시값 사용 중」을 결과보다 먼저 보이게. 엑셀 진입도
+   헤더뿐 아니라 결과 가까이에 한 번 더 둔다(결과를 본 자리에서 바로 내려받게). */
+function renderSampleBar(){
+  var el=document.getElementById('samplebar'); if(!el) return;
+  el.innerHTML='<span class="sb-tag">예시 모델</span>'+
+    '<span class="sb-t">실제 거래 자료가 아닙니다 — 값은 모두 바꿔 쓰는 기본 예시입니다.</span>'+
+    '<span class="sb-d">분석 기준일 '+esc(G.asOf||'—')+'</span>'+
+    '<button type="button" class="sb-x" id="sbXlsx">엑셀 내려받기</button>';
+}
 function renderDealBar(){
   var h='', ready=DEALORDER.filter(function(k){ return DEAL[k]; });
   ready.forEach(function(k,i){
@@ -10935,6 +11380,7 @@ function render(skipSide){
   document.getElementById('hdUnit').textContent=(G.ccy||'KRW')+' '+(G.unit||'');
   if(!skipSide) renderSide();
   renderDealBar();
+  renderSampleBar();
   var tabs=eng.tabs.concat([{id:'mkt',t:'시장 지표'}]);
   /* 인쇄 전용 머리글. 종이에는 상단바·탭이 안 나오므로 이게 없으면
      무슨 딜의 어떤 시나리오인지 알 수 없는 문서가 된다. */
@@ -11038,6 +11484,15 @@ function toast(msg){
   el.textContent=msg; el.classList.add('on');
   setTimeout(function(){ el.classList.remove('on'); }, 2800);
 }
+/* 결과 가까이 둔 엑셀 버튼은 헤더 버튼과 같은 일을 한다 — 두 경로가 갈리지
+   않도록 헤더 버튼을 그대로 누른다. */
+document.addEventListener('click', function(e){
+  var t=e.target;
+  if(t&&t.closest&&t.closest('#sbXlsx')){
+    e.preventDefault();
+    var b=document.getElementById('btnXlsx'); if(b) b.click();
+  }
+});
 document.getElementById('btnXlsx').addEventListener('click', function(){
   var btn=this, orig=btn.innerHTML;
   btn.disabled=true; btn.textContent='생성 중…';
@@ -11310,11 +11765,18 @@ window.__gotoTab=function(id){ TAB=id; render(true); };
    저장된 선택을 덮어쓰면 안 된다. */
 function dealFromHash(){
   try{
-    var m=/[#&]deal=([a-z]+)/.exec(location.hash||'');
-    if(m&&DEAL[m[1]]){
+    /* P0-1: 딜 키는 absCost·absSale처럼 대문자가 섞인다 — [a-z]+였을 때는
+       'abscost'까지만 잡혀 DEAL['abscost']가 없으니 조용히 무시되고 저장된
+       마지막 선택값(또는 기본값)으로 빠졌다. 대소문자를 그대로 잡고,
+       실제 DEAL 키와 정확히 일치할 때만 반영한다(임의 문자열을 딜로 해석 안 함). */
+    var m=/[#&]deal=([a-zA-Z]+)/.exec(location.hash||'');
+    if(!m) return;
+    if(DEAL[m[1]]){
       G.deal=m[1]; saveState();
-      if(history.replaceState) history.replaceState(null,'',location.pathname+location.search);
+    } else {
+      toast('알 수 없는 딜 유형 링크입니다 — 마지막으로 보던 화면을 엽니다');
     }
+    if(history.replaceState) history.replaceState(null,'',location.pathname+location.search);
   }catch(e){}
 }
 function boot(){

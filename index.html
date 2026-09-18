@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>자산운용 실무 도구</title>
-<meta name="description" content="재무모델 빌더와 업무 캘린더 — 브라우저 안에서만 도는 실무 도구. 써 보시고 개선안을 보내 주세요.">
+<meta name="description" content="재무모델 빌더 · 업무 캘린더 · 지식관리 — 자산운용 실무 도구 세 가지. 써 보시고 개선안을 보내 주세요.">
 <meta name="theme-color" content="#0B3B5C">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230B3B5C'/%3E%3Cpath d='M14 44V27l10-7 10 7v17h-7V33h-6v11z' fill='%2312B981'/%3E%3Cpath d='M38 44V20l12 8v16z' fill='%23fff' opacity='.85'/%3E%3C/svg%3E">
 <style>
@@ -20,16 +20,22 @@ body{margin:0;font-family:'SUIT',Pretendard,-apple-system,"Segoe UI","Malgun Got
 h1{font-size:clamp(28px,4vw,44px);line-height:1.15;letter-spacing:-.03em;margin:0 0 14px;font-weight:800}
 h1 em{font-style:normal;color:var(--accent)}
 .lead{font-size:17px;color:rgba(255,255,255,.8);max-width:56ch;margin:0}
-.cards{max-width:960px;margin:-48px auto 0;padding:0 24px;display:grid;grid-template-columns:1fr 1fr;gap:20px;position:relative;z-index:2}
+.cards{max-width:960px;margin:-48px auto 0;padding:0 24px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;position:relative;z-index:2}
 .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:28px 26px;text-decoration:none;color:inherit;display:flex;flex-direction:column;box-shadow:0 22px 50px rgba(11,59,92,.14);transition:transform .2s,box-shadow .2s;position:relative;overflow:hidden}
 .card::before{content:"";position:absolute;left:0;top:0;height:3px;width:0;background:var(--accent);transition:width .35s}
 .card:hover{transform:translateY(-4px)}
 .card:hover::before{width:100%}
+.card--static{cursor:default;border-style:dashed}
+.card--static:hover{transform:none;box-shadow:0 22px 50px rgba(11,59,92,.14)}
+.card--static:hover::before{width:0}
 .ico{width:44px;height:44px;border-radius:10px;background:rgba(18,185,129,.12);color:var(--accent);display:grid;place-items:center;margin-bottom:14px}
+.ico--muted{background:rgba(100,116,139,.12);color:var(--ink3)}
 .card h2{font-size:20px;margin:0 0 8px;letter-spacing:-.01em}
 .card p{margin:0;color:var(--ink2);font-size:15px}
 .card .go{margin-top:auto;padding-top:16px;color:var(--accent);font-weight:700;font-size:14px}
 .card .go::after{content:" →"}
+.card .go--muted{color:var(--ink3)}
+.card .go--muted::after{content:""}
 .note{max-width:960px;margin:40px auto 0;padding:0 24px}
 .box{background:#fff;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:18px 20px}
 .box h3{margin:0 0 8px;font-size:15px}
@@ -44,8 +50,8 @@ footer{max-width:960px;margin:40px auto 0;padding:24px;font-size:12px;color:var(
 <section class="hero">
   <div class="wrap">
     <p class="eyebrow">부동산 · 자산운용 · 실무 도구</p>
-    <h1>숫자는 모델로,<br><em>일정은 캘린더로.</em></h1>
-    <p class="lead">둘 다 브라우저 안에서만 돕니다. 서버로 아무것도 보내지 않습니다. 써 보시고 불편한 점을 <b>「개선안」</b> 버튼으로 알려 주세요 — 다음 버전에 반영합니다.</p>
+    <h1>숫자는 모델로, 일정은 캘린더로,<br><em>자료는 지식관리로.</em></h1>
+    <p class="lead">재무모델·캘린더는 브라우저 안에서 계산하고, 입력값은 그 브라우저에만 저장됩니다(서버로 보내지 않고 다른 기기로 이어지지 않습니다). 지식관리는 제작자 PC에서 실행하는 로컬 시연이라 이 페이지에서는 소개만 봅니다. 써 보시고 불편한 점을 <b>「개선안」</b> 버튼으로 알려 주세요 — 다음 버전에 반영합니다.</p>
   </div>
 </section>
 
@@ -53,7 +59,7 @@ footer{max-width:960px;margin:40px auto 0;padding:24px;font-size:12px;color:var(
   <a class="card" href="CRE_재무모델_빌더.html">
     <div class="ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 4 3 5-7"/></svg></div>
     <h2>재무모델 빌더</h2>
-    <p>오피스·물류 매입, 개발 PF를 살아있는 수식 워크북으로. 화면 지표와 엑셀이 같은 값을 냅니다.</p>
+    <p>개발 PF부터 오피스·물류 매입, 공사비채권·분양대금 유동화까지 5개 사업구조. 조건을 바꾸며 수익성과 상환 가능성을 검토하고 엑셀 모델로 이어갑니다.</p>
     <span class="go">모델 만들기</span>
   </a>
   <a class="card" href="업무_캘린더.html">
@@ -62,6 +68,21 @@ footer{max-width:960px;margin:40px auto 0;padding:24px;font-size:12px;color:var(
     <p>할 일·캘린더·정기업무·업무 프로세스를 한 화면에서. 상태와 D-Day는 자동이고, 말하듯 적으면 날짜를 계산해 등록합니다.</p>
     <span class="go">캘린더 열기</span>
   </a>
+  <div class="card card--static">
+    <div class="ico ico--muted" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M6 3h8l5 5v13H6z"/><path d="M9 13h6M9 17h6"/></svg></div>
+    <h2>지식관리</h2>
+    <p>사업장별 자료·이슈·변경 이력을 근거 문서와 함께 정리합니다. 변경 제안·승인 흐름까지 구현했습니다.</p>
+    <span class="go go--muted">로컬 시연 — 공개 주소 없음</span>
+  </div>
+</div>
+
+<div class="note">
+  <div class="box">
+    <h3>쓰는 순서는 셋 다 같습니다</h3>
+    <p><b>1</b> 사업·거래 유형 고르기 &nbsp;→&nbsp; <b>2</b> 핵심 조건 입력 &nbsp;→&nbsp; <b>3</b> 결과·위험 확인하고 내려받기.
+    재무모델은 엑셀과 투자검토보고서로, 캘린더는 일정·절차로 이어집니다.
+    지식관리는 제작자 PC에서만 실행하는 <b>로컬 시연</b>이라 이 페이지에서 눌러 들어가는 주소가 없습니다 — 작동하지 않는 링크를 만들지 않았습니다.</p>
+  </div>
 </div>
 
 <div class="note">
