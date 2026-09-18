@@ -16,19 +16,26 @@
      변수 이름은 그대로 두고 값만 바꾼다 — 두 스타일시트·JS(SERIES·heatColor)
      전역에서 같은 이름을 참조하므로, 값만 바꾸면 화면 전체에 일관되게
      퍼지고 마크업은 하나도 안 건드려도 된다. */
-  --navy-900:#1F2D40;
-  --navy-850:#26364B;
-  --navy-800:#2A3B52;
-  --navy-700:#2A3B52;
-  --navy-600:#1F2D40;
-  --gold:#B98A3C;
-  --gold-dim:#A2762E;
-  --ink:#1C2531;
-  --ink-2:#56606F;
-  --ink-3:#8B95A3;
-  --line:#DDE0E6;
-  --line-soft:#E9EBF0;
-  --page:#F4F5F7;
+  /* C단계 — 네 도구(메인·재무모델·캘린더·지식관리)가 같은 팔레트를 쓰도록
+     값만 맞췄다. 변수 이름·마크업은 그대로다.
+     --gold 는 이름만 남기고 값은 주요 버튼 파랑이다. 이름을 바꾸면 24곳과
+     두 스타일시트를 같이 고쳐야 해서 회귀 위험이 그만큼 커진다.
+     차트 계열색(SERIES·--s1~s3)은 건드리지 않는다 — 그쪽은 서로 구분되는
+     것이 목적이라 팔레트 통일과 목표가 다르다. */
+  --navy-900:#20344A;
+  --navy-850:#26394F;
+  --navy-800:#2A3F56;
+  --navy-700:#2A3F56;
+  --navy-600:#20344A;
+  --gold:#285FD6;        /* 주요 버튼 파랑 */
+  --gold-dim:#1F4EB5;
+  --on-dark:#7FA9F0;     /* 어두운 머리줄 위에서 쓰는 밝은 파랑 */
+  --ink:#243244;
+  --ink-2:#526174;
+  --ink-3:#7C8899;
+  --line:#E3E7EE;
+  --line-soft:#EDF0F5;
+  --page:#F5F7FA;
   --surface:#ffffff;
   --surface-2:#F1F3F6;
   --s1:#1F2D40;   /* 대안 1 */
@@ -508,6 +515,8 @@ td.neg{color:var(--bad)}
   border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:1px 7px;font-weight:500;text-transform:none;
 }
 .cnt.done{color:#8fdcb0;border-color:rgba(143,220,176,.3);background:rgba(143,220,176,.10)}
+/* 상세 가정을 손댔는지 — 접힌 채로도 겉에서 보여야 한다 */
+.cnt.edited{color:#ffd591;border-color:rgba(255,213,145,.35);background:rgba(255,213,145,.12)}
 .prog{padding:14px 18px 15px;border-bottom:1px solid rgba(255,255,255,.08)}
 .pbar{height:4px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden;margin-bottom:8px}
 .pbar i{display:block;height:100%;background:var(--gold);transition:width .25s}
@@ -733,9 +742,12 @@ body.nav-open .backdrop{display:block}
 .more-menu .btn:hover{background:var(--surface-2);color:var(--navy-900)}
 @media print{ .more{display:none} }
 
-/* ── 개선안 보내기 ── */
-.btn.fb{border-color:var(--gold);color:var(--gold)}
-.btn.fb:hover{background:var(--gold);color:#fff}
+/* ── 개선안 보내기 ──
+   이 버튼만 어두운 머리줄 위에 얹힌다. 주요 버튼 파랑(--gold)은 네이비
+   바탕에서 대비가 무너져 비활성처럼 보이므로, 어두운 바탕용 밝은 파랑을
+   따로 쓴다. 밝은 바탕에 놓인 다른 버튼들은 --gold 그대로다. */
+.btn.fb{border-color:var(--on-dark);color:var(--on-dark)}
+.btn.fb:hover{background:var(--on-dark);color:var(--navy-900)}
 .fb-ctx{font-size:11.5px;color:var(--ink-3);background:var(--surface-2);border:1px solid var(--line-soft);
   border-radius:3px;padding:7px 10px;margin:8px 0 10px}
 .fb-text{width:100%;border:1px solid var(--line);border-radius:3px;padding:10px 12px;font-size:13px;
@@ -1264,6 +1276,10 @@ function coverSheet(keyM,info){
    Sensitivity는 다기간 IRR을 단일 셀 수식으로 환원할 수 없어 값으로 적는다고
    시트에 명시돼 있으므로 제외한다 — 다만 그 예외를 여기 적어 둔다. */
 var LAST_HARDCODE={total:0,per:[]};
+/* 엑셀 안에서 월별 엔진이 수식으로 살아 있는 구성이었는지. 개발 PF 빌더가
+   LIVE 를 정할 때 같이 적는다 — 조건을 UI 쪽에 베껴 두면 한쪽만 고쳤을 때
+   화면은 «따라 움직인다» 하고 파일은 안 움직이는 상태가 된다. */
+var LAST_XL_SCOPE=null;
 /* 이름 «전체»가 맞아야 면제다. 부분 일치로 두면 'Cover'가
    'Coverage_Analysis'까지 삼켜, 결과 시트인 커버리지 대비표가 통째로
    실측에서 빠진다 — 하드코딩을 세는 장치가 하드코딩을 숨기는 꼴이다. */
@@ -1396,7 +1412,17 @@ function finishBook(wb,made,title,subject,keyM,info){
     if(refScan) P(made.Cover,['','표지 핵심 지표',
       refScan.linked+' / '+refScan.total+'개가 다른 시트를 참조하는 수식'+
       (refScan.dead.length? (' · 고정값: '+refScan.dead.join(', ')) : '')]);
+    /* 「수식으로 이어져 있다」와 「그 계산이 맞다」는 다른 말이다. 이 검사는
+       앞의 것만 본다 — 뒤의 것까지 본 것처럼 읽히면 안 된다. */
+    P(made.Cover,['','이 검사가 보는 것','셀이 다른 시트를 참조하는 수식인지만 봅니다. 하위 계산이 맞는지까지 검증한 것은 아닙니다.']);
     P(made.Cover,['','주의','고정값 셀은 엑셀에서 가정을 바꿔도 따라 변하지 않습니다. 가정을 크게 바꾼 뒤에는 화면에서 다시 내려받으세요.']);
+    /* 「어떤 가정이 안 따라오는가」는 딜마다 다르다 — 개발 PF 의 항목을 매입·
+       유동화 표지에 그대로 찍으면 그 파일에 없는 개념을 경고하는 꼴이 된다. */
+    if(LAST_HARDCODE.total>0){
+      P(made.Cover,['','바뀌지 않는 가정', G.deal==='dev'
+        ? '본PF 약정액·총사업비 앵커(순환참조를 끊는 자리), 분양 흡수 일정·코호트 가중치, 중도금 무이자 부담. 이 값들을 엑셀에서 바꾸면 하위 시트가 따라오지 않습니다.'
+        : '어느 칸인지는 Validation_Checks 「하드코딩 셀 존재 여부」 행에 시트별로 적혀 있습니다. 그 칸의 가정을 바꾸려면 화면에서 바꾼 뒤 다시 내려받으세요.']);
+    }
   }
   LAST_VERIFY=readVerify(made,order);
   rewriteRefs(made,order);
@@ -2253,20 +2279,27 @@ function methodModal(){
 /* ② 검증 — 두 가지를 섞지 않는다.
    하나는 방금 만든 이 워크북의 실측이고, 다른 하나는 개발 시점에 돌린
    검사 체계다. 후자는 이 파일에 대한 보증이 아니므로 그렇게 적는다. */
+/* 무엇을 어디까지 확인했는지 서로 다른 검사를 한 줄로 뭉치지 않는다.
+   「주요 지표를 대조했다」와 「모델이 정확하다」는 다른 말이고, 뭉치면
+   확인하지 않은 범위까지 통과로 읽힌다. */
 var VERIFY_LOG={
-  date:'2026-09-17',
+  date:'2026-09-18',
   rows:[
-    ['화면 ↔ 엑셀 대사','1555 / 1555 일치',
-     '화면에 뜬 지표를 엑셀에서 실제로 열어 같은 값인지 한 칸씩 맞춰봅니다.'],
-    ['워크북 내부 정합성','50 / 50 통과',
-     '38개 조합의 워크북마다 시트 사이 참조가 끊기거나 어긋나지 않는지 봅니다.'],
-    ['재계산 검사','6 / 7 통과',
-     '엑셀에서 가정값을 20% 올리고 하위 시트가 따라 움직이는지 봅니다. '+
-     '개발 PF의 PF 인출 스케줄 3개 열이 아직 값으로 박혀 있어 1건은 미통과입니다.'],
-    ['실사용 경로','15 / 15 통과',
-     '사람이 실제로 누르는 순서 그대로 눌러보는 검사입니다.'],
-    ['서식 검사','0 건',
-     '숫자 서식·자릿수·색 규칙이 어긋난 칸을 찾습니다.']
+    ['주요 지표 대조 (기본값)','5개 유형 19개 지표 일치',
+     '브라우저가 만든 xlsx 를 실제 Excel(Office 2021)로 열어 전체 재계산한 뒤 화면값과 맞춰봅니다. '+
+     '대조한 것은 이 19개 지표이며, 그 밖의 셀·시트는 대조하지 않았습니다.'],
+    ['주요 지표 대조 (가정 변경)','5개 유형 대표 1건씩 일치',
+     '유형마다 대표 입력을 하나씩 바꿔 화면과 Excel 이 같이 움직이는지 봅니다. '+
+     '예: 개발 PF 공사비 +1% → 사업이익률 6.63%→6.09%, 자기자본 IRR 14.53%→13.49%.'],
+    ['화면 렌더 확인','45 / 45 조합 오류 0',
+     '5개 딜 × 3개 깊이 × 3개 시나리오를 실제로 그려 봅니다. '+
+     '그려진다는 확인이며, 그 안의 계산값을 전부 대조했다는 뜻은 아닙니다.'],
+    ['위험 표시 갱신','발생 → 해소 → 재발 확인',
+     '분양대금 유동화의 납부율만 바꿔 만기 미상환이 3,385 → 0 → 8,740 으로 가고, '+
+     '화면 배지·검증 탭·보고서·내려받은 문서 네 곳이 같이 바뀌는지 봅니다.'],
+    ['Excel 재계산 한계','일부 구성 제한 있음',
+     '지분 층이 있거나 부채 층이 2개 이상인 구성은 월별 엔진이 계산값으로 들어가 '+
+     'Excel 안에서 가정을 바꿔도 따라 움직이지 않습니다. 그 구성은 대조하지 않았습니다.']
   ]
 };
 function verifyModal(){
@@ -2297,7 +2330,7 @@ function verifyModal(){
        '<td class="tm-v">'+esc(r[1])+'</td></tr>';
   });
   h+='</tbody></table></div>';
-  trustModal('mdVerify','검증 — 이 숫자를 믿어도 되는 근거',h);
+  trustModal('mdVerify','검증 — 무엇을 어디까지 확인했는지',h);
 }
 
 /* 용어 — 화면에 영문 약어로만 뜨는 지표를 우리 도구 맥락으로 설명한다.
@@ -4840,7 +4873,7 @@ var FIELDS=[
     {k:'prepayFee',l:'중도상환수수료',t:'pct',u:'%'},
     {k:'comTargetIRR',l:'보통주 목표 IRR',t:'pct',u:'%'}],
     hint:'선순위 LTV의 분모는 <b>감정평가액</b>입니다. 보통주는 잔액(plug)입니다. 선순위 아래 층(중순위·후순위·우선주 등)은 <b>자본구조 탭</b>에서 원하는 만큼 추가·삭제합니다.'},
-  {g:'세무 가정', f:[
+  {g:'세무 가정', detail:true, f:[
     {k:'taxMode',l:'과세 방식',t:'sel',o:[['conduit','도관과세 (리츠·펀드)'],['corp','일반법인 과세']],w:1},
     {k:'taxRate',l:'법인세율',t:'pct',u:'%'},
     {k:'bldgRatio',l:'건물분 비율',t:'pct',u:'%'},
@@ -6391,6 +6424,9 @@ function build(){
   var debtUsed=(s.jr||[]).filter(function(t){ return t.kind!=='pref' && +t.pct>0; });
   var jrLiveIdx=(debtUsed.length===1 && jd0 && debtUsed[0]===jd0.t && debtUsed[0].pik)? jd0.i : -1;
   var LIVE=(prefUsed.length===0) && (debtUsed.length===0 || jrLiveIdx>=0);
+  LAST_XL_SCOPE={ live:LIVE,
+    why: LIVE? '' : (prefUsed.length? '지분 층('+prefUsed.length+'개)이 있어'
+                   : '부채 층이 '+debtUsed.length+'개라') };
   var jrLimF=(jrLiveIdx>=0)? ('$B$'+pfTcR+'*'+R['jrPct'+jrLiveIdx]) : '';
   var lmM=Math.max(1,Math.min(NMO,s.landBalM));
   var srLimF='$B$'+pfTcR+'*'+R.srP;
@@ -6951,7 +6987,7 @@ DEAL.dev={
       {k:'comTargetIRR',l:'목표 IRR',t:'pct',u:'%'},
       {k:'taxRate',l:'법인세율',t:'pct',u:'%'}],
       hint:'선순위 비중은 <b>총사업비 대비 약정 한도</b>입니다. 자금이 모자라면 <b>지분 층 → 자기자본 → 선순위 → 부채 층</b> 순으로 한도까지 끌어쓰고, 여유가 생기면 <b>선순위부터</b> 갚습니다. 선순위 아래 층은 <b>자금 구조 탭</b>에서 원하는 만큼 추가·삭제합니다.'},
-    {g:'Exit', f:[
+    {g:'Exit', detail:true, f:[
       {k:'exitMode',l:'Exit 방식',t:'text',w:1},
       {k:'exitCap',l:'준공후 매각 Cap',t:'pct',u:'%'}],
      hint:'준공후 매각 Cap은 미분양 잔여를 통매각할 때를 가정한 <b>참조값</b>입니다. 이 모델은 분양 완료를 전제로 현금흐름을 짜므로 결과에 반영되지 않습니다.'}
@@ -8059,7 +8095,7 @@ var FIELDS_COST=[G_ASSET, loanGroup(LOAN_HINT),
     {k:'graceM',l:'거치기간',t:'num',u:'개월'},
     {k:'amortN',l:'원금 분할 회수',t:'num',u:'회'}],
    hint:'<b>거치기간 + 분할 회수 = 대출기간</b>이어야 만기에 완제됩니다. 어긋나면 잔액이 남거나 조기 완제되며 입력 경고가 붙습니다.'},
-  {g:'보수 가정', f:[
+  {g:'보수 가정', detail:true, f:[
     {k:'consAmt',l:'일반분양 0% 가정 확보액',t:'num',u:'백만원'},
     {k:'consYM',l:'확보 완료 년월',t:'text',w:1}],
    hint:'일반분양이 하나도 안 되는 것을 가정해도 확보되는 공사비(조합원분 등)를 <b>기표년월부터 확보 완료 년월까지 월 균등</b>으로 깔아, 누적이 대출총액을 언제 넘는지 봅니다. 년월은 <b>YYYY-MM</b> 형식입니다.'}];
@@ -8070,7 +8106,7 @@ var FIELDS_SALE=[G_ASSET, loanGroup(LOAN_HINT),
     {k:'sellRate',l:'분양률',t:'pct',u:'%'},
     {k:'basePayRate',l:'기준 잔금 납부율',t:'pct',u:'%'}],
    hint:'<b>기준 잔금 납부율</b>은 화면 판정과 심의서 기입에 쓰는 값입니다 — 납부율을 흔든 결과는 <b>납부율 시나리오 탭</b>에서 따로 봅니다. 회차 구성·비율·실납부액은 <b>회차·납부 탭</b>에서 넣습니다.'},
-  {g:'이자유보', f:[
+  {g:'이자유보', detail:true, f:[
     {k:'reserveOn',l:'선취 유보이자',t:'sel',o:[[1,'반영'],[0,'미반영']],w:1},
     {k:'reserveM',l:'유보 개월수',t:'num',u:'개월'}],
    hint:'기표 시점에 이자 몇 개월분을 미리 떼어 두는 방식입니다. 유보가 덮은 개월은 회차 이자에서 다시 물리지 않습니다 — 물리면 같은 이자를 두 번 셉니다.'}];
@@ -9214,11 +9250,22 @@ var REPORT=(function(){
     return { name:'', grade:'', commit:'', setDate:'', period:'', feeBp:'',
              /* 약정 조항은 펀드마다 다르다 — 확인하지 않은 상태에서 기본으로 켜 두면
                 모든 펀드에 같은 문장이 «확정 사실»로 실린다. 기본은 미확인이다. */
-             capitalCall:false, settle:false, proprietary:false, guide:[] };
+             capitalCall:false, settle:false, confirmedFor:null, proprietary:false, guide:[] };
   }
   function FUND(){
     if(!G.fund || typeof G.fund!=='object') G.fund=fundDefault();
+    /* 이 기능이 생기기 전에 저장된 상태에는 confirmedFor 가 없다. 그때는 확인
+       표시가 어느 펀드 것인지 알 수 없으므로 «확인함»으로 볼 수 없다. */
+    if(G.fund.confirmedFor===undefined){
+      G.fund.confirmedFor=null;
+      if(G.fund.capitalCall||G.fund.settle){ G.fund.capitalCall=false; G.fund.settle=false; }
+    }
     return G.fund;
+  }
+  /* 문서에 확정 문장으로 실어도 되는가 — 확인 표시가 켜져 있고, 그 표시를 한
+     펀드가 지금 펀드와 같을 때만. 두 조건을 쓰는 곳마다 되풀이하지 않는다. */
+  function fundConfirmed(f,key){
+    return !!f[key] && f.confirmedFor===(f.name||'');
   }
 
   /* ── 규격 문구(상수) — 실물 심의서 견본에서 문장을 옮긴 게 아니라, 스펙
@@ -9261,11 +9308,14 @@ var REPORT=(function(){
       fRow('설정일','setDate',f.setDate)+
       fRow('운용기간','period',f.period)+
       fRow('운용보수(bp)','feeBp',f.feeBp)+
-      fChk('캐피탈콜·재인출 조항 확인함 (확인해야 문서에 실림)','capitalCall',f.capitalCall)+
-      fChk('결산·이익분배 조항 확인함 (확인해야 문서에 실림)','settle',f.settle)+
+      fChk('캐피탈콜·재인출 조항 확인함 (확인해야 문서에 실림)','capitalCall',fundConfirmed(f,'capitalCall'))+
+      fChk('결산·이익분배 조항 확인함 (확인해야 문서에 실림)','settle',fundConfirmed(f,'settle'))+
       fChk('고유재산 투자(펀드 개요 절 생략)','proprietary',f.proprietary)+
       '</tbody></table>';
-    return card('펀드 프로필','한 번 입력하면 저장되어 다음에도 재사용됩니다 · 값을 비우면 표지·펀드 개요에 채울 것으로 표시', tblWrap(t));
+    return card('펀드 프로필',
+      '한 번 입력하면 저장되어 다음에도 재사용됩니다 · 값을 비우면 표지·펀드 개요에 채울 것으로 표시 · '+
+      '약정 조항 확인은 그때의 펀드에만 적용되며, 펀드명을 바꾸면 해제됩니다',
+      tblWrap(t));
   }
 
   /* ── 머리 블록 ──
@@ -9313,8 +9363,8 @@ var REPORT=(function(){
     /* 확인한 펀드에만 그 펀드의 약정 문장을 싣는다. 확인 전에는 문장을 지우는
        대신 «미확인»으로 남긴다 — 조용히 사라지면 확인해야 할 사실이 있다는
        것조차 안 보인다. */
-    body+=fundClause('캐피탈콜·재인출 조항', f.capitalCall, CAPCALL_TEXT);
-    body+=fundClause('결산·이익분배 조항', f.settle, SETTLE_TEXT);
+    body+=fundClause('캐피탈콜·재인출 조항', fundConfirmed(f,'capitalCall'), CAPCALL_TEXT);
+    body+=fundClause('결산·이익분배 조항', fundConfirmed(f,'settle'), SETTLE_TEXT);
     var perfRows=[
       ['SEC','성과보수 (Carried Interest)'],
       ['구간 1 상한','',blank('구간 경계','carry.t1.cap'),''],
@@ -10422,12 +10472,55 @@ var REPORT=(function(){
   /* parts 를 주면 절을 «이름 + HTML» 로 따로 담아 돌려준다 — 작성 화면이 절
      하나씩만 펴서 보여줄 수 있게. 문서(docHtml)는 예전처럼 전부 이어 붙인 값을
      쓴다: 작성 편의로 접은 것이 출력에서 빠지면 안 된다. */
+  /* ── 안건별 심의 사항 ──
+     안건이 달라지면 심의가 요구하는 «사실»이 달라진다. 라디오 이름만 바뀌고
+     받는 칸이 똑같으면, 연장 건에 기존 만기가 없고 추가 대여 건에 누적 노출이
+     없는 문서가 그대로 나간다. 신규 건은 이 절을 두지 않는다 — 나머지 절 전체가
+     곧 신규 조건이라 같은 것을 두 번 받게 된다.
+     딜 유형을 가리지 않는다. 유동화에만 안건 분기가 있던 것이 이 절의 이유다. */
+  function secAgenda(){
+    var k=agendaKey(), rows;
+    if(k==='ext'){
+      rows=[
+        ['SEC','만기 연장 — 심의에 필요한 사실'],
+        ['기존 만기','',blank('기존 만기일','agenda.ext.oldDue'),''],
+        ['연장 후 만기','',blank('연장 후 만기일','agenda.ext.newDue'),''],
+        ['연장 시점 잔액','',blank('원금 잔액 · 미수이자','agenda.ext.bal'),''],
+        ['연장 사유','',blank('왜 연장이 필요한가 — 사업 진행 상황','agenda.ext.why'),''],
+        ['갱신 회수계획','',blank('연장 기간의 상환 재원과 시점','agenda.ext.plan'),'']
+      ];
+    } else if(k==='amend'){
+      rows=[
+        ['SEC','주요 조건 변경 — 심의에 필요한 사실'],
+        ['변경 항목','',blank('무엇을 바꾸는가 — 금리·만기·담보·상환순위 등','agenda.amend.item'),''],
+        ['변경 전 조건','',blank('현재 조건','agenda.amend.before'),''],
+        ['변경 후 조건','',blank('변경하려는 조건','agenda.amend.after'),''],
+        ['변경 사유','',blank('왜 바꾸는가','agenda.amend.why'),''],
+        ['수익·상환 영향','',blank('수익률·상환 가능성에 미치는 영향','agenda.amend.impact'),''],
+        ['담보·보강 영향','',blank('담보가치·신용보강 변동','agenda.amend.coll'),'']
+      ];
+    } else if(k==='add'){
+      rows=[
+        ['SEC','추가 투자·대여 — 심의에 필요한 사실'],
+        ['기존 익스포저','',blank('기존 투자·대출 잔액과 실행일','agenda.add.exist'),''],
+        ['추가 금액','',blank('이번에 추가하는 금액','agenda.add.amt'),''],
+        ['자금 용도','',blank('추가 자금을 어디에 쓰는가','agenda.add.use'),''],
+        ['누적 노출','',blank('기존 + 추가 합계 · 펀드 한도 대비 비중','agenda.add.total'),''],
+        ['회수 순서','',blank('기존분과 추가분의 상환 순위 관계','agenda.add.order'),''],
+        ['기존 조건 변동','',blank('추가로 인해 기존 조건이 바뀌는지 (없으면 «없음»)','agenda.add.chg'),'']
+      ];
+    } else return '';
+    return secPlain('['+agendaName()+']', sub(1,'심의 사항')+tblWrap(kv2(rows)));
+  }
+
   function sections(M,kind,parts){
     var f=FUND();
     var body='';
     function add(t,h){ if(parts) parts.push({t:t,h:h}); body+=h; }
     secReset();                      /* 절 번호는 매번 Ⅰ부터 — pane 과 doc 이 같아야 한다 */
     add('승인 요청·표지', secCover(M,kind));
+    var ag=secAgenda();
+    if(ag) add(agendaName()+' — 심의 사항', ag);
     /* 고유재산 건에는 펀드가 없다 — 펀드 개요·가이드라인의 빈칸을 «미작성»으로
        세면 채울 수 없는 칸을 채우라고 요구하는 셈이다. 절째로 뺀다. */
     if(principal()==='own'){
@@ -10934,7 +11027,20 @@ var REPORT=(function(){
     if(!el || !el.getAttribute) return;
     if(el.hasAttribute('data-fk')){
       var f=FUND(), k=el.getAttribute('data-fk');
-      if(el.type==='checkbox') f[k]=el.checked; else f[k]=safeText(el.value,60);
+      if(el.type==='checkbox'){
+        f[k]=el.checked;
+        /* 확인은 «그 펀드의 약정을 봤다»는 뜻이다. 어느 펀드였는지 같이 적어 두지
+           않으면, 펀드명을 바꿔도 확인 표시가 그대로 남아 다른 펀드의 약정을
+           확인한 것처럼 문서에 실린다. */
+        if(el.checked) f.confirmedFor=f.name||'';
+      } else {
+        var was=f[k];
+        f[k]=safeText(el.value,60);
+        if(k==='name' && was!==f[k] && (f.capitalCall||f.settle)){
+          f.capitalCall=false; f.settle=false; f.confirmedFor='';
+          toast('펀드명이 바뀌어 약정 조항 확인 표시를 해제했습니다 — 새 펀드의 약정을 확인한 뒤 다시 표시해 주세요');
+        }
+      }
       saveState(); render(true);
     } else if(el.hasAttribute('data-gk')){
       var f2=FUND(), gi=+el.getAttribute('data-gk');
@@ -11082,6 +11188,27 @@ function tailGroup(){
     {k:'author', l:'작성자', t:'gtext', w:1}
   ], hint:'현금흐름 주기는 딜 유형에 따라 고정됩니다 (매입·리파이낸싱 연간 / 개발·PF 월별). 회사명은 상단 머리말과 엑셀 Control_Index에 표시됩니다.'};
 }
+/* 지금 접혀 있어야 하는가. G.fold 에 키가 있으면 그것이 사용자의 선택이고,
+   없으면 그룹의 성격(detail)이 정한다. */
+function foldedNow(grp){
+  var k=grp.g;
+  if(G.fold&&Object.prototype.hasOwnProperty.call(G.fold,k)) return !!G.fold[k];
+  return !!grp.detail;
+}
+/* 이 그룹에서 기본값과 달라진 항목 수. 시나리오 조정분(eff)이 아니라 사용자가
+   실제로 고친 값(D())을 엔진 기본값과 견준다 — 시나리오를 Upside 로 바꿨다고
+   «수정됨»이 되면 표시가 거짓말이 된다. */
+function changedFields(grp){
+  var eng=E(), def=eng.defaults||{}, d=D(), n=0;
+  (grp.f||[]).forEach(function(f){
+    if(f.t.charAt(0)==='g') return;             /* 전역 설정은 이 그룹의 가정이 아니다 */
+    if(!Object.prototype.hasOwnProperty.call(def,f.k)) return;
+    var a=d[f.k], b=def[f.k];
+    if(typeof a==='number'&&typeof b==='number'){ if(Math.abs(a-b)>1e-9) n++; }
+    else if(JSON.stringify(a)!==JSON.stringify(b)) n++;
+  });
+  return n;
+}
 /* 입력 단계 목록 — 엔진 필드 그룹 + 본문 입력 단계(대안·명세 등) */
 function stepGroups(){
   var eng=E(), out=[], mi=eng.mainInputs||[];
@@ -11185,8 +11312,10 @@ function renderSide(){
 
   function block(grp,no){
     /* 접힘 상태는 G.fold 에 그룹 이름으로 기억한다 — 다시 그려도 펴 둔 곳은 펴져 있다.
-       머리글 전체가 버튼이라 어디를 눌러도 접힌다. */
-    var key=grp.g, folded=!!(G.fold&&G.fold[key]);
+       머리글 전체가 버튼이라 어디를 눌러도 접힌다.
+       detail 그룹(상세 가정)은 처음에 접어 둔다. 사용자가 한 번이라도 손대면
+       그 선택이 이긴다 — 그래서 «G.fold 에 키가 있는가»로 갈라야 한다. */
+    var key=grp.g, folded=foldedNow(grp);
     var s='<div class="grp'+(folded?' fold':'')+'"><h3 role="button" tabindex="0" data-fold="'+esc(key)+'"'+
       ' aria-expanded="'+(folded?'false':'true')+'">'+
       '<span class="caret" aria-hidden="true">'+(folded?'▸':'▾')+'</span>'+
@@ -11194,7 +11323,16 @@ function renderSide(){
       '<span class="gname">'+esc(grp.g)+'</span>';
     if(grp.f){
       var n=grp.f.length, k=grp.f.filter(isFilled).length;
-      s+='<span class="cnt'+(k===n?' done':'')+'">'+k+'/'+n+'</span>';
+      /* 접어 둔 그룹은 안이 안 보인다 — 「손댄 적 없는 기본값인지」를 겉에
+         적어 주지 않으면 열어 봐야만 알 수 있다. */
+      if(grp.detail){
+        var ch=changedFields(grp);
+        s+='<span class="cnt'+(ch?' edited':' done')+'" title="'+
+           (ch? esc(ch+'개 항목이 기본값과 다릅니다') : '모두 기본값입니다')+'">'+
+           (ch? ch+'개 수정됨' : '기본값')+'</span>';
+      } else {
+        s+='<span class="cnt'+(k===n?' done':'')+'">'+k+'/'+n+'</span>';
+      }
     }
     s+='</h3>';
     if(grp.f&&grp.f.length) s+='<div class="fgrid">';
@@ -11248,7 +11386,11 @@ function renderSide(){
     function flip(){
       if(!G.fold) G.fold={};
       var k=b.getAttribute('data-fold');
-      G.fold[k]=!G.fold[k]; saveState(); renderSide();
+      /* 화면에 보이는 상태를 뒤집는다. G.fold[k] 를 그냥 뒤집으면, 처음부터
+         접혀 있던 detail 그룹은 첫 클릭이 undefined→true 가 되어 그대로 접혀 있다. */
+      var el=b.parentNode;
+      G.fold[k]=!(el&&el.className.indexOf('fold')>=0);
+      saveState(); renderSide();
     }
     b.addEventListener('click',flip);
     b.addEventListener('keydown',function(e){
@@ -11498,6 +11640,7 @@ document.getElementById('btnXlsx').addEventListener('click', function(){
   btn.disabled=true; btn.textContent='생성 중…';
   setTimeout(function(){
     try{
+      LAST_XL_SCOPE=null;            /* 이번 빌드가 정한다 — 앞 딜의 값이 남으면 안 된다 */
       var eng=E(), wb=eng.build();
       var dep=eng.depths[G.depth];
       var nm=(G.firm?G.firm.replace(/[\\\/:*?"<>|\s]/g,'')+'_':'')+
@@ -11506,7 +11649,15 @@ document.getElementById('btnXlsx').addEventListener('click', function(){
       var how=saveBook(wb, nm);
       /* 'async'는 window.claude.downloads 경로 — 결과를 그쪽이 알린다. */
       if(how!=='embedded' && how!=='async'){
-        toast('엑셀 파일을 생성했습니다 — '+eng.name+' / '+dep.name+' '+dep.sheets.length+'개 시트, 수식·서식 포함');
+        /* 「수식 포함」만 말하면 엑셀에서 무엇을 바꿔도 따라온다고 읽힌다.
+           안 따라오는 구성이면 그 자리에서 말한다. */
+        if(LAST_XL_SCOPE && !LAST_XL_SCOPE.live){
+          toast('엑셀 파일을 생성했습니다 — '+eng.name+' / '+dep.name+' '+dep.sheets.length+'개 시트. '+
+                '다만 '+LAST_XL_SCOPE.why+' 월별 자금수지가 계산값으로 들어갑니다 — '+
+                '엑셀에서 가정을 바꿔도 그 부분은 따라 움직이지 않습니다 (표지 「이 파일의 수식 범위」 참조)');
+        } else {
+          toast('엑셀 파일을 생성했습니다 — '+eng.name+' / '+dep.name+' '+dep.sheets.length+'개 시트, 수식·서식 포함');
+        }
       }
     }catch(err){ console.error(err); toast('엑셀 생성 중 오류: '+err.message); }
     btn.disabled=false; btn.innerHTML=orig;

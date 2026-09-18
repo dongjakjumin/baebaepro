@@ -16,12 +16,14 @@
 :root{
   /* 1B(정통 금융권 · 정보밀도 단위) — Claude Design 에서 확정한 팔레트.
      빌더와 변수 이름을 그대로 맞춘다. 값만 바꾼다. */
-  --navy-900:#1F2D40; --navy-850:#26364B; --navy-800:#2A3B52;
-  --navy-700:#2A3B52; --navy-600:#1F2D40;
-  --gold:#B98A3C; --gold-dim:#A2762E;
-  --ink:#1C2531; --ink-2:#56606F; --ink-3:#8B95A3;
-  --line:#DDE0E6; --line-soft:#E9EBF0;
-  --page:#F4F5F7; --surface:#ffffff; --surface-2:#F1F3F6;
+  /* C단계 — 네 도구가 같은 팔레트를 쓰도록 값만 맞췄다(이름·마크업 불변).
+     --gold 는 이름만 남기고 값은 주요 버튼 파랑, --on-dark 는 어두운 머리줄용. */
+  --navy-900:#20344A; --navy-850:#26394F; --navy-800:#2A3F56;
+  --navy-700:#2A3F56; --navy-600:#20344A;
+  --gold:#285FD6; --gold-dim:#1F4EB5; --on-dark:#7FA9F0;
+  --ink:#243244; --ink-2:#526174; --ink-3:#7C8899;
+  --line:#E3E7EE; --line-soft:#EDF0F5;
+  --page:#F5F7FA; --surface:#ffffff; --surface-2:#F2F5F9;
   --good:#2B6350; --good-bg:rgba(43,99,80,.09);
   --bad:#A4342F;  --bad-bg:rgba(164,52,47,.09);
   --warn:#8D6714; --warn-bg:rgba(141,103,20,.09);
@@ -33,11 +35,13 @@ html,body{margin:0;padding:0}
 body{
   background:var(--page); color:var(--ink);
   font-family:'SUIT',Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","맑은 고딕",system-ui,sans-serif;
-  font-size:11px;line-height:1.45;-webkit-font-smoothing:antialiased;letter-spacing:-0.005em;
+  /* 11px 은 회사 모니터에서 읽기 버거웠다. 표 밀도를 지키는 선에서 올린다 —
+     15~16px 로 가면 한 화면에 들어오던 일정이 절반으로 준다. */
+  font-size:12.5px;line-height:1.5;-webkit-font-smoothing:antialiased;letter-spacing:-0.005em;
 }
 h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-.01em}
 button,input,select,textarea{font-family:inherit;font-size:inherit}
-table{border-collapse:collapse;width:100%;font-size:11px}
+table{border-collapse:collapse;width:100%;font-size:12px}
 
 /* ── 상단바 ─────────────────────────────── */
 .topbar{background:var(--navy-900);
@@ -306,6 +310,10 @@ table.cal td.is-today{background:#fffaf0;box-shadow:inset 0 0 0 2px var(--gold)}
 .share-chk{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-2);margin:10px 0}
 .share-import{margin-top:16px;padding-top:14px;border-top:1px solid var(--line-soft)}
 .share-import h4{font-size:12px;color:var(--navy-800);margin-bottom:4px}
+/* 복원은 지금 데이터를 지운다 — 겹쳐 보기와 눈으로도 구분되어야 한다 */
+.share-restore{margin-top:16px;padding:12px 13px;border:1px solid rgba(141,103,20,.30);
+  border-radius:8px;background:var(--warn-bg)}
+.share-restore h4{font-size:12px;color:var(--navy-800);margin-bottom:4px}
 .share-none{font-size:11px;color:var(--ink-3);margin:8px 0 0}
 .share-row{display:flex;align-items:center;justify-content:space-between;gap:10px;
   padding:8px 0;border-bottom:1px solid var(--line-soft);font-size:11.5px}
@@ -316,7 +324,7 @@ table.cal td.is-today{background:#fffaf0;box-shadow:inset 0 0 0 2px var(--gold)}
   border-radius:3px;padding:7px 10px;margin:0}
 /* 확인 대화상자 — 머리글 없이 문장과 두 버튼만 */
 .cfm-box{max-width:420px}
-.cfm-msg{margin:2px 0 0;font-size:13px;line-height:1.65;color:var(--ink)}
+.cfm-msg{margin:2px 0 0;font-size:13px;line-height:1.65;color:var(--ink);white-space:pre-line}
 
 /* ── 수행의 원장 (RUN) ──────────────────────
    카탈로그 STEP 표가 체크·산출물·담당이 기록되는 원장으로 바뀐다.
@@ -3688,6 +3696,7 @@ var CAL_YM=null;                 /* 캘린더가 보고 있는 달 {y,m} */
 var PROC_PICK=0;                 /* 프로세스 뷰어가 고른 업무 */
 var RUN_PICK=0;                  /* 실행 모드로 열어 둔 RUN id (0 = 카탈로그 모드) */
 var TASK_FILTER='open';          /* open | all | late */
+var EDIT_ID=0;                   /* 「자세히 등록」 폼이 수정 중인 업무 id (0 = 새로 등록) */
 
 var GUBUN=['수익자보고','내부보고','공문','결산','검토','제세공과금','기타'];
 var PRIORITY=['높음','보통','낮음'];
@@ -4390,6 +4399,22 @@ function findTask(id){
   for(var i=0;i<S.tasks.length;i++) if(S.tasks[i].id===id) return S.tasks[i];
   return null;
 }
+/* 등록한 업무의 내용만 고친다 — id·완료·보류는 건드리지 않는다.
+   검사 규칙은 addTask 와 같아야 한다. 한쪽만 고치면 등록은 막히는 값이
+   수정으로는 들어간다. */
+function updateTask(id,o){
+  var t=findTask(id); if(!t) return false;
+  var due=cleanYmd(o.due);
+  if(o.due&&!due) toast('마감일 형식을 읽지 못해 비워 두었습니다 (yyyy-mm-dd)');
+  var kind=(o.kind==='absence')? 'absence' : '';
+  var until=cleanYmd(o.until);
+  if(kind!=='absence' || !due || (until && until<due)) until='';
+  t.gubun=pick(GUBUN,o.gubun,'기타'); t.pri=pick(PRIORITY,o.pri,'보통');
+  t.task=safeText(o.task,120); t.fund=safeText(o.fund,60); t.note=safeText(o.note,120);
+  t.due=due; t.kind=kind; t.until=until;
+  save();
+  return true;
+}
 
 /* ══ 수행의 원장 (RUN) ═══════════════════════════════════════
    카탈로그(PROCS)가 "어떻게 하는 일인가"라면 RUN 은 "지금 실제로 굴리고
@@ -4991,25 +5016,35 @@ function paneTask(){
       '<td><div class="racts">'+
         '<button class="rbtn'+(t.done?' on':'')+'" data-act="done" data-id="'+t.id+'">'+(t.done?'완료 취소':'완료')+'</button>'+
         '<button class="rbtn" data-act="hold" data-id="'+t.id+'">'+(t.hold?'보류 해제':'보류')+'</button>'+
+        '<button class="rbtn'+(EDIT_ID===t.id?' on':'')+'" data-act="edit" data-id="'+t.id+'">수정</button>'+
         '<button class="rbtn del" data-act="del" data-id="'+t.id+'">삭제</button>'+
       '</div></td></tr>';
   });
   h+='</tbody></table></div></div></div>';
 
-  /* 자세히 넣기 */
-  h+='<div class="card noprint"><header><h2>자세히 등록</h2>'+
-     '<span class="desc">날짜를 직접 지정하거나 구분·중요도를 함께 넣을 때</span></header>'+
+  /* 자세히 넣기 — EDIT_ID 가 있으면 같은 폼이 그 업무의 수정 폼이 된다.
+     따로 만들지 않는 이유: 칸이 똑같은데 폼을 둘로 두면 한쪽만 고치는 일이 생긴다. */
+  var ed=EDIT_ID? findTask(EDIT_ID) : null;
+  if(EDIT_ID&&!ed) EDIT_ID=0;              /* 수정하던 업무가 지워졌으면 등록 모드로 */
+  h+='<div class="card noprint"'+(ed?' id="taskForm"':'')+'><header><h2>'+(ed?'업무 수정':'자세히 등록')+'</h2>'+
+     '<span class="desc">'+(ed? '완료·보류 상태와 등록 순서는 그대로 두고 내용만 바꿉니다'
+                              : '날짜를 직접 지정하거나 구분·중요도를 함께 넣을 때')+'</span></header>'+
      '<div class="body"><div class="fgrid">'+
-     fld('업무명','<input type="text" id="fTask" maxlength="120">')+
-     fld('관련 펀드 / 사업장','<input type="text" id="fFund" maxlength="60">')+
-     fld('마감일','<input type="date" id="fDue">')+
-     fld('구분','<select id="fGubun">'+GUBUN.map(function(g){return '<option>'+esc(g)+'</option>';}).join('')+'</select>')+
-     fld('중요도','<select id="fPri">'+PRIORITY.map(function(p){return '<option'+(p==='보통'?' selected':'')+'>'+esc(p)+'</option>';}).join('')+'</select>')+
-     fld('종류','<select id="fKind"><option value="">업무</option><option value="absence">부재</option></select>')+
-     fld('종료일 (부재·선택)','<input type="date" id="fUntil">')+
-     fld('비고','<input type="text" id="fNote" maxlength="120">')+
-     '</div><div style="margin-top:11px"><button class="qbtn" id="fAdd">등록</button></div>'+
-     '</div></div>';
+     fld('업무명','<input type="text" id="fTask" maxlength="120" value="'+(ed?esc(ed.task):'')+'">')+
+     fld('관련 펀드 / 사업장','<input type="text" id="fFund" maxlength="60" value="'+(ed?esc(ed.fund):'')+'">')+
+     fld('마감일','<input type="date" id="fDue" value="'+(ed?esc(ed.due):'')+'">')+
+     fld('구분','<select id="fGubun">'+GUBUN.map(function(g){
+        return '<option'+(ed&&ed.gubun===g?' selected':'')+'>'+esc(g)+'</option>'; }).join('')+'</select>')+
+     fld('중요도','<select id="fPri">'+PRIORITY.map(function(p){
+        return '<option'+((ed? ed.pri===p : p==='보통')?' selected':'')+'>'+esc(p)+'</option>'; }).join('')+'</select>')+
+     fld('종류','<select id="fKind"><option value=""'+(ed&&ed.kind!=='absence'?' selected':'')+'>업무</option>'+
+        '<option value="absence"'+(ed&&ed.kind==='absence'?' selected':'')+'>부재</option></select>')+
+     fld('종료일 (부재·선택)','<input type="date" id="fUntil" value="'+(ed?esc(ed.until):'')+'">')+
+     fld('비고','<input type="text" id="fNote" maxlength="120" value="'+(ed?esc(ed.note):'')+'">')+
+     '</div><div style="margin-top:11px">'+
+     (ed? '<button class="qbtn" id="fSave">저장</button> <button class="rbtn" id="fCancel">취소</button>'
+        : '<button class="qbtn" id="fAdd">등록</button>')+
+     '</div></div></div>';
   return h;
 }
 /* label 이 입력을 가리켜야 스크린리더가 읽고, 라벨 클릭으로 포커스도 간다.
@@ -5331,6 +5366,11 @@ function paneCal(){
    "완료 하나 눌렀을 뿐인데 적던 게 사라졌다"가 된다. 값과 커서 위치를
    붙들었다가 되돌린다. */
 var KEEP_INPUTS=['qIn','fTask','fFund','fDue','fGubun','fPri','fNote','fKind','fUntil'];
+/* 「자세히 등록」 칸만 따로 — 등록↔수정으로 폼의 정체가 바뀐 렌더에서는
+   이 값들을 되돌리면 안 된다. 되돌리면 수정 대상의 프리필을 직전 폼의
+   값이 덮어쓴다. 빠른등록(qIn)은 폼과 무관하므로 그대로 둔다. */
+var FORM_INPUTS=['fTask','fFund','fDue','fGubun','fPri','fNote','fKind','fUntil'];
+var FORM_ID=0;                   /* 지금 화면에 그려져 있는 폼이 맡고 있는 업무 id */
 function grabInputs(){
   var out={}, act=document.activeElement;
   KEEP_INPUTS.forEach(function(id){
@@ -5396,6 +5436,10 @@ function renderDept(){
 
 function render(){
   var keep=grabInputs();
+  if(FORM_ID!==EDIT_ID){
+    FORM_INPUTS.forEach(function(id){ delete keep[id]; });
+    FORM_ID=EDIT_ID;
+  }
   document.getElementById('hdToday').textContent=ymdw(ymd(today()));
   renderDept();
   renderTabs();
@@ -5446,16 +5490,31 @@ function bind(){
     });
   }
 
-  var fa=document.getElementById('fAdd');
-  if(fa) fa.addEventListener('click',function(){
-    var t=document.getElementById('fTask').value.trim();
-    if(!t){ toast('업무명을 입력해 주세요'); document.getElementById('fTask').focus(); return; }
-    addTask({ task:t, fund:document.getElementById('fFund').value,
+  /* 등록·수정이 같은 칸을 쓰므로 읽는 것도 한 군데서 한다 */
+  function readForm(){
+    return { task:document.getElementById('fTask').value.trim(),
+      fund:document.getElementById('fFund').value,
       due:document.getElementById('fDue').value, gubun:document.getElementById('fGubun').value,
       pri:document.getElementById('fPri').value, note:document.getElementById('fNote').value,
-      kind:document.getElementById('fKind').value, until:document.getElementById('fUntil').value });
+      kind:document.getElementById('fKind').value, until:document.getElementById('fUntil').value };
+  }
+  var fa=document.getElementById('fAdd');
+  if(fa) fa.addEventListener('click',function(){
+    var o=readForm();
+    if(!o.task){ toast('업무명을 입력해 주세요'); document.getElementById('fTask').focus(); return; }
+    addTask(o);
     toast('등록했습니다'); render();
   });
+  var fs=document.getElementById('fSave');
+  if(fs) fs.addEventListener('click',function(){
+    var o=readForm();
+    if(!o.task){ toast('업무명을 입력해 주세요'); document.getElementById('fTask').focus(); return; }
+    if(updateTask(EDIT_ID,o)){ EDIT_ID=0; toast('수정했습니다'); }
+    else { EDIT_ID=0; toast('수정하려던 업무를 찾지 못했습니다'); }
+    render();
+  });
+  var fc=document.getElementById('fCancel');
+  if(fc) fc.addEventListener('click',function(){ EDIT_ID=0; toast('수정을 취소했습니다'); render(); });
 
   document.querySelectorAll('[data-filt]').forEach(function(b){
     b.addEventListener('click',function(){ TASK_FILTER=b.getAttribute('data-filt'); render(); });
@@ -5476,6 +5535,17 @@ function bind(){
       if(a==='done'){ t.done=t.done? '' : ymd(today()); if(t.done) t.hold=false;
         toast(t.done?'완료 처리했습니다 — '+t.done:'완료를 취소했습니다'); }
       else if(a==='hold'){ t.hold=!t.hold; if(t.hold) t.done=''; toast(t.hold?'보류로 두었습니다':'보류를 해제했습니다'); }
+      else if(a==='edit'){
+        /* 이미 그 업무를 수정 중이면 토글로 닫는다 */
+        EDIT_ID=(EDIT_ID===t.id)? 0 : t.id;
+        render();
+        if(EDIT_ID){
+          var f=document.getElementById('taskForm');
+          if(f&&f.scrollIntoView) f.scrollIntoView({block:'center'});
+          var ti=document.getElementById('fTask'); if(ti) ti.focus();
+        }
+        return;
+      }
       else if(a==='del'){
         /* 확인은 비동기다 — 여기서 끝내고 승낙했을 때만 지운다 */
         askConfirm('삭제합니다: '+t.task,function(){
@@ -5809,15 +5879,99 @@ function buildExport(opts){
   if(opts.withRuns) o.runs=RUNS.items;
   return o;
 }
-function downloadExport(o){
+function downloadExport(o,name){
   var short=(DEPTS[DEPT]||{}).short||DEPT;
-  var name='업무캘린더_'+short+'_'+ymd(today())+'.json';
+  name=name||('업무캘린더_'+short+'_'+ymd(today())+'.json');
   var blob=new Blob([JSON.stringify(o,null,2)],{type:'application/json'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a'); a.href=url; a.download=name;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+/* ── 내 데이터 복원 ────────────────────────────────────────
+   「동료 일정 겹쳐 보기」와 「내 데이터 되돌리기」는 다른 일이다. 같은 파일
+   고르기 버튼에 둘을 묶으면 «불러왔습니다» 토스트만 보고 복원된 줄 안다.
+   그래서 형식·버튼·확인 문구를 전부 나눈다.
+
+   공유 파일(jb-work-shared)에는 수행 원장·프로세스 수정이 없다. 그것까지
+   되돌리려면 백업 파일(jb-work-backup)이 필요하다. 공유 파일로도 복원은
+   되게 하되 «무엇이 안 들어 있는지»를 확인창에서 먼저 말한다. */
+var BACKUP_FORMAT='jb-work-backup';
+function buildBackup(){
+  return { format:BACKUP_FORMAT, ver:1, madeAt:new Date().toISOString(),
+    deptKey:DEPT, deptName:(DEPTS[DEPT]||{}).name||'',
+    tasks:S.tasks, regs:S.regs, runs:RUNS.items, procEdits:PROC_EDITS };
+}
+function downloadBackup(){
+  var short=(DEPTS[DEPT]||{}).short||DEPT;
+  downloadExport(buildBackup(),'업무캘린더_백업_'+short+'_'+ymd(today())+'.json');
+}
+/* 후보를 읽기만 한다 — 여기서는 아무것도 바꾸지 않는다. 다 읽고 검사한
+   뒤에야 교체하므로, 중간에 무엇이 실패해도 지금 데이터가 남는다. */
+function parseRestore(txt){
+  if(typeof txt!=='string') return {ok:false,why:'파일을 읽지 못했습니다'};
+  if(txt.length>SHARED_MAX) return {ok:false,why:'파일이 너무 큽니다 (1MB 초과)'};
+  if(txt.charCodeAt(0)===0xFEFF) txt=txt.slice(1);
+  var o;
+  try{ o=JSON.parse(txt); }catch(e){ return {ok:false,why:'JSON 형식이 아닙니다'}; }
+  if(!o||typeof o!=='object') return {ok:false,why:'JSON 형식이 아닙니다'};
+  var kind;
+  if(o.format===BACKUP_FORMAT) kind='backup';
+  else if(o.format==='jb-work-shared') kind='shared';
+  else return {ok:false,why:'이 도구가 만든 파일이 아닙니다'};
+  if(o.ver!==1) return {ok:false,why:'새 버전 파일입니다 — 앱을 갱신해 주세요'};
+  if(!(o.tasks instanceof Array)||!(o.regs instanceof Array))
+    return {ok:false,why:'할 일·정기업무가 들어 있지 않습니다'};
+  var tasks=o.tasks.map(normTask).filter(isTask);
+  var regs=o.regs.map(normReg).filter(isReg);
+  if(!tasks.length&&!regs.length) return {ok:false,why:'되돌릴 내용이 없습니다'};
+  /* 원장은 백업 파일에만 있다. 공유 파일에서 읽으면 «원장까지 되돌렸다»는
+     오해가 생기므로 아예 보지 않는다. */
+  var runs=null;
+  if(kind==='backup'&&o.runs instanceof Array) runs=o.runs.map(normRun).filter(function(r){ return !!r; });
+  var edits=null;
+  if(kind==='backup'&&o.procEdits&&typeof o.procEdits==='object'&&!(o.procEdits instanceof Array)) edits=o.procEdits;
+  return { ok:true, kind:kind, tasks:tasks, regs:regs, runs:runs, edits:edits,
+    dropped:(o.tasks.length-tasks.length)+(o.regs.length-regs.length),
+    madeAt:o.madeAt||'', deptName:safeText(o.deptName,40) };
+}
+/* 검사를 통과한 것만 들어온다. id 재발급은 load() 와 같은 규칙을 쓴다 —
+   겹친 id 를 그대로 두면 삭제·완료가 엉뚱한 행을 건드린다. */
+function applyRestore(r){
+  var tasks=r.tasks.slice(), seen={}, maxId=0, i, id;
+  for(i=0;i<tasks.length;i++){ id=tasks[i].id;
+    if(!id||seen[id]) tasks[i].id=0; else { seen[id]=1; if(id>maxId) maxId=id; } }
+  for(i=0;i<tasks.length;i++) if(!tasks[i].id) tasks[i].id=++maxId;
+  S.tasks=tasks; S.regs=r.regs.slice(); S.seq=maxId+1;
+  save();
+  if(r.runs){
+    var rmax=0;
+    r.runs.forEach(function(x){ if(x.id>rmax) rmax=x.id; });
+    r.runs.forEach(function(x){ if(!x.id) x.id=++rmax; });
+    RUNS.items=r.runs; RUNS.seq=rmax+1; saveRuns();
+  }
+  if(r.edits){ PROC_EDITS=r.edits; saveProcEdits(); }
+  EDIT_ID=0; RUN_PICK=0; PROC_EDIT=false;
+  render();
+}
+function restoreFromText(txt){
+  var r=parseRestore(txt);
+  if(!r.ok){ toast(r.why+' — 지금 데이터는 그대로 둡니다'); return false; }
+  var what='되돌릴 내용: 할 일 '+r.tasks.length+'건 · 정기업무 '+r.regs.length+'건'+
+           (r.runs? ' · 수행 원장 '+r.runs.length+'건' : '')+
+           (r.dropped>0? '  (형식이 달라 '+r.dropped+'건 제외)' : '');
+  var now='지금 이 브라우저: 할 일 '+S.tasks.length+'건 · 정기업무 '+S.regs.length+'건';
+  var note=(r.kind==='shared')
+    ? '이 파일은 동료에게 보내는 «공유 파일»입니다. 수행 원장과 프로세스 수정은 들어 있지 않아 지금 것이 그대로 남습니다.'
+    : '수행 원장과 프로세스 수정까지 파일 내용으로 바뀝니다.';
+  askConfirm(what+'\n'+now+'\n\n지금 내용을 지우고 파일 내용으로 바꿉니다. '+note+
+             '\n\n되돌린 뒤에는 취소할 수 없습니다. 계속할까요?',function(){
+    applyRestore(r);
+    toast('되돌렸습니다 — 할 일 '+S.tasks.length+'건 · 정기업무 '+S.regs.length+'건');
+  });
+  return true;
+}
+
 function shareModal(){
   var old=document.getElementById('mdShare'); if(old) old.parentNode.removeChild(old);
   var d=document.createElement('div'); d.className='fbm'; d.id='mdShare';
@@ -5832,12 +5986,24 @@ function shareModal(){
         '<div class="fb-acts"><button class="btn primary" id="shExport">내보내기</button></div>'+
       '</section>'+
       '<section class="share-import">'+
-        '<h4>동료 일정 불러오기</h4>'+
+        '<h4>동료 일정 겹쳐 보기</h4>'+
         '<p class="fbm-lead">받은 파일을 열면 내 달력 위에 <b>겹쳐서</b> 보입니다. '+
           '내 일정과 섞이지 않고, 지워도 내 것은 그대로 남습니다.</p>'+
         '<div class="fb-acts"><button class="btn" id="shPick">파일 고르기</button>'+
           '<input type="file" id="shFile" accept=".json,application/json" hidden></div>'+
         '<div id="shList"></div>'+
+      '</section>'+
+      /* 복원은 지금 데이터를 지운다 — 겹쳐 보기와 같은 자리에 두면 안 된다 */
+      '<section class="share-restore">'+
+        '<h4>내 데이터 복원</h4>'+
+        '<p class="fbm-lead">백업 파일로 <b>이 브라우저의 내 데이터를 되돌립니다.</b> '+
+          '위의 «겹쳐 보기»와 달리 <b>지금 할 일·정기업무를 지우고 파일 내용으로 바꿉니다.</b> '+
+          '되돌리기 전에 몇 건이 바뀌는지 확인 창에서 보여 드립니다.</p>'+
+        '<div class="fb-acts">'+
+          '<button class="btn" id="shBackup">지금 상태 백업</button>'+
+          '<button class="btn" id="shRestorePick">백업 파일로 되돌리기</button>'+
+          '<input type="file" id="shRestoreFile" accept=".json,application/json" hidden></div>'+
+        '<p class="share-warn">되돌린 뒤에는 취소할 수 없습니다 — 먼저 지금 상태를 백업해 두세요</p>'+
       '</section>'+
     '</div></div>';
   var opener=document.activeElement;
@@ -5897,6 +6063,22 @@ function shareModal(){
     var o=buildExport({sender:sender,withRuns:withRuns});
     downloadExport(o);
     toast('내보냈습니다');
+  });
+
+  document.getElementById('shBackup').addEventListener('click',function(){
+    downloadBackup();
+    toast('백업했습니다 — 할 일 '+S.tasks.length+'건 · 정기업무 '+S.regs.length+'건');
+  });
+  var resInp=document.getElementById('shRestoreFile');
+  document.getElementById('shRestorePick').addEventListener('click',function(){ resInp.click(); });
+  resInp.addEventListener('change',function(){
+    var f=resInp.files&&resInp.files[0];
+    if(!f){ resInp.value=''; return; }
+    var rd=new FileReader();
+    /* 확인 창이 비동기라 여기서는 읽어 넘기기만 한다 — 교체는 승낙 뒤에 */
+    rd.onload=function(){ restoreFromText(String(rd.result)); resInp.value=''; };
+    rd.onerror=function(){ toast('파일을 읽지 못했습니다 — 지금 데이터는 그대로 둡니다'); resInp.value=''; };
+    rd.readAsText(f);
   });
 }
 
@@ -6054,8 +6236,11 @@ window.__cal={ S:S, nlParse:nlParse, statusOf:statusOf, holidaysOf:holidaysOf,
   reset:function(){ fillSample(); save(); saveRuns(); render(); },
   /* 공유 레이어 */
   shared:function(){ return SHARED.bundles; },
-  exportObj:buildExport,
-  importText:function(txt){ var r=importSharedText(txt); render(); return r; } };
+  importText:function(txt){ var r=importSharedText(txt); render(); return r; },
+  /* 복원 레이어 — 겹쳐 보기와 다른 경로라 따로 낸다 */
+  backupObj:buildBackup,
+  restoreText:function(txt){ return restoreFromText(txt); },
+  parseRestore:parseRestore };
 
 })();
 </script>
