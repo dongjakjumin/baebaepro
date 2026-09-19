@@ -125,7 +125,10 @@ button,input,select{font-family:inherit;font-size:inherit}
 }
 .side::-webkit-scrollbar{width:8px}
 .side::-webkit-scrollbar-thumb{background:#123256;border-radius:4px}
-.main{flex:1;min-width:0;padding:18px 22px 60px}
+/* 본문 최대 폭 — 없으면 2560px 모니터에서 카드가 2260px 까지 늘어나
+   지표 한 줄을 읽으려고 고개를 돌려야 하고, 차트는 배율 2.0 으로 부푼다.
+   재무 화면은 숫자를 «비교»하는 곳이라 한눈에 들어오는 폭이 있다. */
+.main{flex:1;min-width:0;padding:18px 22px 60px;max-width:1440px;margin:0 auto}
 
 .grp{border-bottom:1px solid rgba(255,255,255,.08);padding:13px 16px 15px}
 .grp>h3{
@@ -200,6 +203,27 @@ button,input,select{font-family:inherit;font-size:inherit}
 .card>header .desc{font-size:11.5px;color:var(--ink-3);flex:1}
 .card>.body{padding:14px 16px}
 .card>.body.flush{padding:0}
+
+/* 좁은 화면 전용 접기 — 손잡이는 좁을 때만 만들어진다(mfold 참조) */
+.mfold{margin-bottom:16px}
+.mfold>summary{
+  list-style:none;cursor:pointer;display:flex;align-items:center;gap:7px;
+  padding:11px 14px;font-size:12.5px;font-weight:600;color:var(--navy-900);
+  background:var(--surface);border:1px solid var(--line);border-radius:5px;
+}
+.mfold>summary::-webkit-details-marker{display:none}
+.mfold>summary::after{content:'▾';margin-left:auto;font-weight:400;color:var(--ink-3)}
+.mfold:not([open])>summary::after{content:'▸'}
+.mfold[open]>summary{border-radius:5px 5px 0 0;border-bottom-color:var(--line-soft)}
+.mfold>summary:focus-visible{outline:2px solid var(--navy-600);outline-offset:1px}
+.mfold>.qadj{margin-top:0;border-top-left-radius:0;border-top-right-radius:0}
+/* 카드 안(역할 설명)에서는 카드 테두리와 겹치지 않게 얇게 */
+.mfold.in{margin:0}
+.mfold.in>summary{
+  border:0;border-bottom:1px solid var(--line-soft);border-radius:0;
+  background:#fbfcfe;font-size:11.5px;font-weight:600;color:var(--ink-2);padding:9px 14px;
+}
+.mfold.in[open]>summary{border-bottom-color:var(--line-soft)}
 
 .rolebar{
   display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--line-soft);
@@ -488,8 +512,23 @@ td.neg{color:var(--bad)}
 .chart-row>.card:nth-child(1){grid-column:span 8}
 .chart-row>.card:nth-child(2){grid-column:span 4}
 .chart-row .card{display:flex;flex-direction:column}
+/* 격자 칸은 기본이 min-width:auto 라 안에 든 표의 최소 폭 아래로 줄지
+   않는다. 카드 안에 .tbl-wrap 이 있어도 카드 자체가 안 줄면 문서가 넓어져
+   화면 전체가 가로로 스크롤된다(민감도 표에서 실제로 그랬다). */
+.chart-row>.card{min-width:0}
 .chart-row .card .viz{flex:1}
-@media(max-width:1180px){.chart-row>.card{grid-column:1/-1}}
+/* 1500px 미만에서는 한 줄에 하나 (2026-09-19 사용자 결정).
+   1366×768 에서 사이드바를 빼면 본문이 1022px 뿐이라, 8열/4열로 나누면
+   구성 차트 칸이 300px — 휴대폰과 같은 폭이 되어 글자가 7.4px 로 떨어졌다.
+   위아래로 두면 둘 다 1.25배(11.9px)로 읽힌다. 대신 한 카드 높이만큼 더 스크롤한다.
+   nth-child 로 준 span 을 되돌리는 것이므로 여기서도 nth-child 로 써야 한다 —
+   미디어쿼리는 특이도를 더해 주지 않아서 «.chart-row>.card» 로 적으면
+   위 8/4 규칙에 진다(실제로 졌었다). */
+@media(max-width:1500px){
+  .chart-row{grid-template-columns:1fr}
+  .chart-row>.card:nth-child(1),
+  .chart-row>.card:nth-child(2){grid-column:1/-1}
+}
 /* 핵심 가정 요약 — 이름과 상태만 읽는 목록이라 표로 만들지 않는다 */
 .asm-body{padding:6px 16px 12px}
 .asm-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
@@ -653,7 +692,8 @@ body.nav-open .backdrop{display:block}
 }
 @media(max-width:1024px){
   .topbar{height:56px;padding:0 10px;gap:8px;overflow:hidden}
-  .brand{flex:1 1 auto;min-width:0}
+  /* 0 까지 눌리면 마크가 제 칸을 넘어 옆 버튼 위에 그려진다 — 마크 폭은 남긴다 */
+  .brand{flex:1 1 auto;min-width:30px}
   .brand>div{min-width:0}
   .brand h1{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #btnXlsx{flex:0 0 auto;white-space:nowrap}
@@ -680,7 +720,6 @@ body.nav-open .backdrop{display:block}
   .dealpill{padding:7px 13px;font-size:12.5px}
   .tab{white-space:nowrap;padding:9px 11px}
   .rolebar{grid-template-columns:1fr 1fr}
-  .chart-row>.card{grid-column:1/-1}
   .chipgrp{margin-right:8px}
 }
 @media(max-width:620px){
@@ -1855,23 +1894,96 @@ function kpiTile(o){
     (o.sub?'<div class="sub">'+o.sub+'</div>':'')+
   '</div>';
 }
+/* 좁은 화면의 기본 구성 차트는 가로막대다.
+   세로막대는 항목 이름을 막대 밑에 넣는데, 이름이 길면 자리가 없어 옆 범례로
+   밀려나고 그때 차트가 470 단위로 넓어진다 — 휴대폰(내용 폭 362)에서는 옆으로
+   밀어야 범례가 보인다. 가로막대는 이름이 행마다 붙어 380 단위로 끝난다.
+   사용자가 토글을 한 번이라도 누르면 그 선택이 이긴다(G.compoPick). */
+function compoModeNow(){
+  var m=G.compoMode||'col';
+  if(!G.compoPick && isNarrow()) return 'bar';
+  return m;
+}
 /* 구성 비중 — 세로막대 / 가로막대 / 원형 전환 */
 function compoHeader(title,desc){
-  var m=G.compoMode||'col';
+  var m=compoModeNow();
   return '<div class="card"><header><h2>'+esc(title)+'</h2><span class="desc">'+esc(desc)+'</span>'+
     '<div class="seg mini">'+
     '<button data-compo="col" class="'+(m==='col'?'on':'')+'">세로막대</button>'+
     '<button data-compo="bar" class="'+(m==='bar'?'on':'')+'">가로막대</button></div></header>';
 }
+/* 세로막대에 이름을 막대 밑에 넣을 수 있는가 — drawColumns 의 판정과 같은
+   규칙이다(그쪽은 줄바꿈 결과까지 쓰므로 계산을 그대로 두고, 여기서는
+   «되는가»만 본다). 규칙을 고치면 두 곳을 같이 고쳐야 한다. */
+function compoNeedsLegend(segs){
+  var list=(segs||[]).filter(function(s){ return s.v>0; });
+  if(!list.length) return false;
+  var band=(380-52-8)/list.length, ok=false;
+  [9.5,9,8.5,8].forEach(function(fs){
+    if(ok) return;
+    if(list.every(function(s){ return wrapTo(s.n,band-5,fs,2)!==null; })) ok=true;
+  });
+  return !ok;
+}
+/* 옆 범례가 붙으면 도안이 470 단위로 넓어진다. 4열 카드는 1600px 화면에서
+   내용 폭이 385px 라 배율이 0.82 까지 떨어져 범례 숫자를 못 읽었다. */
+function compoLegendFits(host){
+  var cs=getComputedStyle(host);
+  var hw=host.clientWidth-(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0);
+  return !(hw>0 && hw < 470*0.9);
+}
+/* 그린 것과 토글의 활성 표시가 어긋나면 안 된다 */
+function markCompo(host,mode){
+  var card=host&&host.closest? host.closest('.card') : null;
+  if(!card) return;
+  card.querySelectorAll('[data-compo]').forEach(function(b){
+    b.classList.toggle('on', b.getAttribute('data-compo')===mode); });
+}
 function drawCompoAuto(host,segs,totLabel){
   if(!host) return;                       /* 활성 탭만 그리므로 빈 자리가 온다 */
   /* 원형은 뺐다 — 조각마다 칸 크기가 달라져 항목 간 비교가 안 된다.
      저장값에 'donut' 이 남아 있어도 세로막대로 떨어진다. */
-  var m=G.compoMode||'col';
+  var m=compoModeNow();
+  /* 칸이 좁아 세로막대가 안 들어가면 가로막대로 — 이름이 행마다 붙어
+     380 단위로 끝난다. 사용자가 직접 고른 경우는 그 선택을 지킨다. */
+  if(!G.compoPick && m==='col' && compoNeedsLegend(segs) && !compoLegendFits(host)) m='bar';
   if(m==='bar') drawCompo(host,segs,totLabel);
   else drawColumns(host,segs,totLabel);
+  markCompo(host,m);
 }
 /* 텍스트 폭 추정 (한글 전각 · 영숫자 반각) */
+/* 차트를 화면 폭에 맞춰 줄이면 축·범례 글자가 같이 줄어든다. 휴대폰에서는
+   배율이 0.5까지 떨어져 9.5px 로 그린 눈금이 4.9px 로 렌더된다 — 숫자를
+   못 읽는다. 그래서 좁을 때는 줄이지 않고 설계 폭 그대로 두고 카드 안에서만
+   옆으로 민다(넓은 표에 쓰는 방식과 같다).
+   문턱은 0.9 다. 축 눈금이 9.5px 로 그려지므로 0.9 아래로 눌리면 8.5px 밑으로
+   떨어진다. clientWidth 는 좌우 패딩(28px)을 품고 있어 그대로 쓰면 여유를
+   과대평가한다 — 실제 내용 폭으로 잰다.
+
+   반대쪽도 막는다. .main 에 최대 폭이 없어서 2560px 모니터에서는 카드가
+   1438px 이 되고 차트가 배율 2.0 으로 렌더됐다 — 막대 다섯 개가 1438px 에
+   흩어지고 축 글자가 19px 이 되어 «크기 조절이 안 된다»는 말이 나왔다.
+   1.25 배까지만 키우고 남는 자리는 비운다(가운데 정렬). 차트는 고정 도안이라
+   늘린다고 정보가 늘지 않는다 — 표와 다르다. */
+var VZ_MAX=1.25;
+function vzFit(host,svg,W){
+  if(!host||!svg||!W) return;
+  var cs=getComputedStyle(host);
+  var hw=host.clientWidth-(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0);
+  svg.style.margin=''; svg.style.maxWidth=''; svg.style.width='';
+  host.style.overflowX='';
+  if(hw<=0) return;
+  /* 옆으로 미는 대체는 «좁은 화면» 전용이다. 데스크톱에서도 걸리게 뒀더니
+     4열 카드(내용 422px)가 문턱 423px 를 1px 밑돌아 스크롤로 떨어지면서
+     총사업비 범례가 잘렸다. 넓은 화면에서는 조금 줄여 그리는 편이 낫다. */
+  if(hw < W*0.9 && isNarrow()){
+    svg.style.width=W+'px'; svg.style.maxWidth='none';
+    host.style.overflowX='auto';
+  } else if(hw > W*VZ_MAX){
+    svg.style.width=Math.round(W*VZ_MAX)+'px'; svg.style.maxWidth='none';
+    svg.style.margin='0 auto';
+  }
+}
 function txtW(s,fs){
   var w=0;
   for(var i=0;i<s.length;i++){
@@ -1988,7 +2100,7 @@ function drawColumns(host,segs,totLabel){
       t2.textContent=f0(s.v); svg.appendChild(t2);
     });
   }
-  host.appendChild(svg);
+  host.appendChild(svg); vzFit(host,svg,W);
 }
 function drawDonut(host,segs,totLabel){
   if(!host) return;
@@ -2032,7 +2144,7 @@ function drawDonut(host,segs,totLabel){
     var t3=svgEl('text',{x:W-2,y:y,'text-anchor':'end','font-size':VZ.fs,fill:VZ.tick});
     t3.textContent=fp(s.v/tot,1); svg.appendChild(t3);
   });
-  host.appendChild(svg);
+  host.appendChild(svg); vzFit(host,svg,W);
 }
 /* 구성 비중 차트 — 가로 누적 막대 + 정렬된 범례 */
 function drawCompo(host,segs,totLabel){
@@ -2077,13 +2189,39 @@ function drawCompo(host,segs,totLabel){
   svg.appendChild(tl);
   var tv=svgEl('text',{x:W-m.r-44,y:ly+17,'text-anchor':'end','font-size':10,fill:VZ.bold,'font-weight':'700'});
   tv.textContent=f0(tot); svg.appendChild(tv);
-  host.appendChild(svg);
+  host.appendChild(svg); vzFit(host,svg,W);
 }
 
 /* ══ 4. 화면 공통 조각 ═════════════════════════════════════ */
+
+/* ── 좁은 화면에서만 접는 조각 ──
+   휴대폰에서는 조작 패널(즉석 조정)과 설명(역할·주요 입력…)이 한 화면을
+   통째로 먹어서 정작 결과 숫자를 보려면 두 번 넘겨야 했다. 좁을 때만
+   접어 두고 결과를 먼저 보인다. 넓은 화면에서는 감싸지도 않는다 —
+   내보내는 HTML이 지금과 한 글자도 다르지 않게 하려는 것이다.
+   편 상태는 MFOLD 에 기억한다. 값을 하나 조정할 때마다 도로 접히면
+   쓸 수가 없다. 역할 설명은 키를 하나로 공유한다(카드마다 따로 여는
+   물건이 아니라 «설명을 보겠다»는 한 가지 선택이다). */
+var MFOLD={};
+function isNarrow(){
+  try{ return window.matchMedia('(max-width:1024px)').matches; }catch(e){ return false; }
+}
+function mfold(key,label,html,inCard){
+  if(!html||!isNarrow()) return html;
+  return '<details class="mfold'+(inCard?' in':'')+'" data-mfold="'+esc(key)+'"'+
+    (MFOLD[key]?' open':'')+'><summary>'+esc(label)+'</summary>'+html+'</details>';
+}
+document.addEventListener('toggle',function(e){
+  /* toggle 은 거품이 일지 않는다 — 캡처로 받아야 한다 */
+  var d=e.target;
+  if(d&&d.classList&&d.classList.contains('mfold')) MFOLD[d.getAttribute('data-mfold')]=d.open;
+},true);
+
 function role(a,b,c,d){
-  return '<div class="rolebar"><div><b>역할</b>'+esc(a)+'</div><div><b>주요 입력</b>'+esc(b)+
-         '</div><div><b>주요 출력</b>'+esc(c)+'</div><div><b>다음 단계로 넘기는 값</b>'+esc(d)+'</div></div>';
+  return mfold('role','이 표의 역할 · 입력 · 출력 보기',
+    '<div class="rolebar"><div><b>역할</b>'+esc(a)+'</div><div><b>주요 입력</b>'+esc(b)+
+    '</div><div><b>주요 출력</b>'+esc(c)+'</div><div><b>다음 단계로 넘기는 값</b>'+esc(d)+'</div></div>',
+    true);
 }
 function card(title,desc,inner,noteTxt,roleBar){
   return '<div class="card"><header><h2>'+esc(title)+'</h2><span class="desc">'+esc(desc)+'</span></header>'+
@@ -3905,7 +4043,7 @@ function drawNOI(host,M){
     var vl=svgEl('text',{x:lx,y:Y(last.noi)-7,'text-anchor':'middle','font-size':VZ.fsm,fill:VZ.bold,'font-weight':'600'});
     vl.textContent=f0(last.noi); svg.appendChild(vl);
   }
-  host.appendChild(svg);
+  host.appendChild(svg); vzFit(host,svg,W);
 }
 function drawStack(host,M){
   /* 층이 없으면(금액 0) 칸을 만들지 않는다 — 빈 칸이 있으면 있는 층처럼 읽힌다 */
@@ -5708,7 +5846,7 @@ function drawCF(host,M){
     tip.style.left=lx+'px'; tip.style.top=(m.t*sc+6)+'px';
   });
   hit.addEventListener('mouseleave',function(){ tip.style.opacity=0; });
-  host.appendChild(svg); host.appendChild(tip);
+  host.appendChild(svg); host.appendChild(tip); vzFit(host,svg,Wd);
 }
 function drawCostAuto(host,M){
   var s=M.s;
@@ -11394,7 +11532,10 @@ var NUDGE={
   /* % 입력의 눈금은 전부 0.1%p — 실무자 지정 (2026-09-01) */
   pfRate   :{d:0.001, t:'0.1%p'},
   brRate   :{d:0.001, t:'0.1%p'},
-  finalSell:{d:0.001, t:'0.1%p', max:1}   /* 100%를 넘겨 팔 수는 없다 */
+  /* 분양률만 1%p 다 (2026-09-19 실무자 재지정). 금리는 0.1%p 가 실제 협의
+     단위지만 분양률은 그렇지 않다 — 100%에서 85%까지 보려면 0.1%p 로는
+     150번을 눌러야 해서 회의 중에 쓸 수가 없었다. */
+  finalSell:{d:0.01,  t:'1%p',   max:1}   /* 100%를 넘겨 팔 수는 없다 */
 };
 /* 값을 한 칸 민다. 화면에 보이는 정밀도로 스냅해서, 눌러 나온 숫자와
    입력칸에 적힌 숫자가 달라지지 않게 한다. */
@@ -11677,9 +11818,10 @@ function paneHtml(id,M){
   }
   return h;
 }
-/* 첫 번째 카드(차트·표) 앞에 끼운다 — 타일 바로 다음 자리다. */
+/* 첫 번째 카드(차트·표) 앞에 끼운다 — 타일 바로 다음 자리다.
+   좁은 화면에서는 접어서 넣는다: 결과가 먼저 보여야 한다. */
 function insertQadj(h){
-  var card=quickAdjCard(); if(!card) return h;
+  var card=mfold('qadj','즉석 조정 — 핵심 변수 바로 바꾸기',quickAdjCard()); if(!card) return h;
   var at=h.indexOf('<div class="chart-row"');
   if(at<0) at=h.indexOf('<div class="card"');
   return at<0 ? h+card : h.slice(0,at)+card+h.slice(at);
@@ -11756,7 +11898,9 @@ function render(skipSide){
   var rst=document.querySelector('#panes .qa-rst');
   if(rst&&!rst.disabled) rst.addEventListener('click', qadjReset);
   document.getElementById('panes').querySelectorAll('[data-compo]').forEach(function(b){
-    b.addEventListener('click',function(){ G.compoMode=b.getAttribute('data-compo'); saveState(); render(true); });
+    b.addEventListener('click',function(){
+      /* 직접 고른 순간부터는 좁은 화면 기본값이 끼어들지 않는다 */
+      G.compoMode=b.getAttribute('data-compo'); G.compoPick=1; saveState(); render(true); });
   });
   var pmb=document.querySelector('#panes #btnPrompt');
   if(pmb) pmb.addEventListener('click', promptModal);
@@ -11817,6 +11961,16 @@ document.getElementById('btnMenu').addEventListener('click',function(){
 document.getElementById('backdrop').addEventListener('click',closeNav);
 document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeNav(); });
 window.addEventListener('resize',function(){ if(window.innerWidth>900) closeNav(); });
+/* 접기(1024)와 차트 배치(1500)는 그릴 때 결정된다 — 경계를 넘나들면 다시
+   그려야 손잡이가 생기거나 없어지고, 차트도 새 칸 폭에 맞게 다시 그려진다.
+   폭이 바뀔 때마다가 아니라 경계를 넘을 때만 돈다. */
+try{
+  var onMQ=function(){ try{ render(); }catch(e){} };
+  ['(max-width:1024px)','(max-width:1500px)'].forEach(function(q){
+    var mq=window.matchMedia(q);
+    if(mq.addEventListener) mq.addEventListener('change',onMQ); else mq.addListener(onMQ);
+  });
+}catch(e){}
 
 /* ── 엑셀 ── */
 function toast(msg){
@@ -12053,6 +12207,36 @@ document.getElementById('btnVerify').addEventListener('click', verifyModal);
 document.getElementById('btnGlossary').addEventListener('click', glossaryModal);
 document.getElementById('btnFeedback').addEventListener('click', feedbackModal);
 document.getElementById('btnPrint').addEventListener('click', printDialog);
+
+/* 좁은 화면 상단바 — 버튼 일곱이 412px 에 들어가지 않는다. 실측하면
+   브랜드 칸이 0px 로 눌려 「RE」 마크가 「산식」 위로 넘치고, 정작 주 출력인
+   「엑셀 내려받기」가 오른쪽에서 잘렸다(390·620px). 자주 안 쓰는 셋을
+   더보기 안으로 «옮긴다» — 지우는 게 아니라 옮기는 것이라 id 도 이벤트도
+   그대로다. 넓어지면 원래 자리·원래 순서로 되돌린다.
+   분기점은 1024px — 사이드바가 서랍으로 바뀌는 지점과 같다. 620px 로 뒀더니
+   768px 태블릿에서 엑셀이 그대로 잘렸다. */
+var TOPBAR_PACK=['btnMethod','btnVerify','btnGlossary'];
+function packTopbar(){
+  var menu=document.getElementById('moreMenu'), wrap=document.getElementById('moreWrap'),
+      fb=document.getElementById('btnFeedback');
+  if(!menu||!wrap||!fb) return;
+  var narrow=false;
+  try{ narrow=window.matchMedia('(max-width:1024px)').matches; }catch(e){}
+  var at=narrow? menu.firstChild : null;
+  TOPBAR_PACK.forEach(function(id){
+    var b=document.getElementById(id); if(!b) return;
+    if(narrow){
+      if(b.parentElement!==menu){ b.setAttribute('role','menuitem'); menu.insertBefore(b,at); }
+    } else if(b.parentElement===menu){
+      b.removeAttribute('role'); fb.parentElement.insertBefore(b,fb);
+    }
+  });
+}
+packTopbar();
+try{
+  var MQT=window.matchMedia('(max-width:1024px)');
+  if(MQT.addEventListener) MQT.addEventListener('change',packTopbar); else MQT.addListener(packTopbar);
+}catch(e){}
 
 /* 더보기 메뉴 — 자주 안 쓰는 넷을 접어 둔다. 바깥 클릭·ESC로 닫히고,
    안의 항목을 누르면(그 동작이 실행된 뒤) 닫는다. */

@@ -377,6 +377,11 @@ table.cal td:focus-visible{outline:2px solid var(--navy-600);outline-offset:-2px
   .tbl-free table{min-width:0}
   .pv-step{min-width:820px}
   .topbar{height:52px;padding:0 12px;gap:10px}
+  /* 브랜드 칸이 0px 까지 눌려 제목이 옆 도구 메뉴 위에 겹쳐 찍혔다.
+     도구 메뉴 손잡이가 이미 「도구 · 업무 캘린더」라고 적고 있으므로
+     제목은 접고 마크만 남긴다. */
+  .brand{flex:0 0 auto;min-width:26px}
+  .brand h1{display:none}
   .brand .sub{display:none}
   .topbar .clock{display:none}
   .tabs{top:52px;padding:0 12px}
@@ -386,6 +391,12 @@ table.cal td:focus-visible{outline:2px solid var(--navy-600);outline-offset:-2px
   table.cal td{height:auto;min-height:62px}
   .ev{white-space:normal}
   .proclist{max-height:340px}
+}
+/* 360px 짜리 화면에서는 9px 이 모자라 상단바가 그대로 넘쳤다 — 간격만 줄인다 */
+@media (max-width:400px){
+  .topbar{gap:6px;padding:0 8px}
+  .topbar .btn{padding:6px 9px;font-size:12px}
+  .toolmenu>summary{padding:6px 9px;font-size:12px}
 }
 @media print{
   .topbar,.tabs,.quick,.racts,.calnav .btn,.seg,.noprint,.pv-pick,.proclist,.cs-foot{display:none!important}
@@ -421,6 +432,16 @@ table.cal td:focus-visible{outline:2px solid var(--navy-600);outline-offset:-2px
 .toolmenu-list a:hover{background:var(--surface-2);color:var(--ink)}
 .toolmenu-list .cur{background:#E8F0FD;color:var(--gold);font-weight:700}
 @media(max-width:1180px){ .toolnav{display:none} .toolmenu{display:block} }
+/* 좁은 화면 전용 더보기 — 넓은 화면에서는 버튼이 상단바에 그대로 있으므로 숨긴다 */
+.toolmenu.moretools{display:none;margin-left:0}
+@media(max-width:900px){ .toolmenu.moretools{display:block} }
+/* 상단바 오른쪽 끝에 있는 메뉴다 — 왼쪽 기준으로 열면 화면 밖으로 나간다 */
+.toolmenu.moretools .toolmenu-list{left:auto;right:0}
+.toolmenu-list .btn{display:block;width:100%;text-align:left;margin:0 0 4px;
+  border:0;background:none;padding:9px 12px;border-radius:7px;
+  font-size:13.5px;color:var(--ink-2);cursor:pointer;white-space:nowrap}
+.toolmenu-list .btn:last-child{margin-bottom:0}
+.toolmenu-list .btn:hover{background:var(--surface-2);color:var(--ink)}
 @media print{ .toolnav,.toolmenu{display:none} }
 
 /* 빈 상태 안내 — 왜 비었는지·다음 행동 */
@@ -586,6 +607,11 @@ tr.run-done td{background:var(--good-bg)}
   <button class="btn" id="btnSample">예시 다시 채우기</button>
   <button class="btn" id="btnShare" title="동료에게 보낼 파일 만들기 · 내 데이터 백업·복원">공유 · 백업</button>
   <button class="btn" id="btnPrint">인쇄</button>
+  <!-- 좁은 화면 전용 — 위 버튼 셋이 여기로 «옮겨진다»(packCalTop). 넓어지면 돌아간다 -->
+  <details class="toolmenu moretools" id="moreTools">
+    <summary aria-label="추가 동작 메뉴">더보기 ▾</summary>
+    <div class="toolmenu-list" id="moreToolsList"></div>
+  </details>
 </header>
 
 <nav class="tabs" id="tabs"></nav>
@@ -6672,6 +6698,37 @@ document.getElementById('btnSample').addEventListener('click',function(){
     fillSample(); save(); saveRuns(); render(); toast('예시 데이터로 되돌렸습니다');
   });
 });
+
+/* 좁은 화면 상단바 정리 —
+   412px 에서 실측하면 문서 폭이 530 으로 벌어져 「공유 · 백업」과 「인쇄」가
+   화면 밖으로 나가고, 브랜드 칸이 0 으로 눌려 제목이 도구 메뉴 위에 겹쳐
+   찍혔다. 버튼을 지우지 않고 더보기 안으로 «옮긴다» — id 가 그대로라
+   위에서 건 이벤트는 손댈 필요가 없다. 넓어지면 원래 자리·순서로 돌린다. */
+var CAL_PACK=['btnSample','btnShare','btnPrint'];
+function packCalTop(){
+  var list=document.getElementById('moreToolsList'),
+      wrap=document.getElementById('moreTools');
+  if(!list||!wrap) return;
+  var narrow=false;
+  try{ narrow=window.matchMedia('(max-width:900px)').matches; }catch(e){}
+  CAL_PACK.forEach(function(id){
+    var b=document.getElementById(id); if(!b) return;
+    if(narrow){ if(b.parentElement!==list) list.appendChild(b); }
+    else if(b.parentElement===list) wrap.parentElement.insertBefore(b,wrap);
+  });
+}
+packCalTop();
+(function(){
+  var list=document.getElementById('moreToolsList'),
+      wrap=document.getElementById('moreTools');
+  /* 안의 것을 누르면(그 동작이 실행된 뒤) 닫는다 */
+  if(list&&wrap) list.addEventListener('click',function(){
+    setTimeout(function(){ wrap.open=false; },0); });
+  try{
+    var MQC=window.matchMedia('(max-width:900px)');
+    if(MQC.addEventListener) MQC.addEventListener('change',packCalTop); else MQC.addListener(packCalTop);
+  }catch(e){}
+})();
 
 /* 본부를 먼저 정한다 — 그래야 어느 저장소를 읽을지 안다 */
 setDept(pickDept());
