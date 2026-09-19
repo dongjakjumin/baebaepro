@@ -108,9 +108,15 @@ table{border-collapse:collapse;width:100%;font-size:12px}
 .tile.done{border-left-color:var(--good)}   .tile.done .val{color:var(--good)}
 
 /* ── 표 ─────────────────────────────────── */
-th,td{padding:8px 10px;border-bottom:1px solid var(--line-soft);text-align:left;vertical-align:middle}
-thead th{background:var(--surface-2);color:var(--ink-2);font-weight:500;font-size:10px;
+th,td{padding:9px 11px;border-bottom:1px solid var(--line-soft);text-align:left;vertical-align:middle}
+thead th{background:var(--surface-2);color:var(--ink-2);font-weight:500;font-size:12px;
   white-space:nowrap;position:sticky;top:0;border-bottom:1px solid var(--line)}
+/* 읽어야 하는 것과 곁들이는 것의 크기를 다르게 둔다. 표 전체를 한 크기로
+   키우면 한 화면에 들어오던 일정이 줄고, 한 크기로 줄이면 정작 업무명이
+   안 읽힌다. 업무명·마감일은 키우고 보조 메타는 그대로 둔다. */
+td.task{font-size:14.5px;line-height:1.45}
+td.due{font-size:14px;font-variant-numeric:tabular-nums}
+td.dday{font-size:13px;font-variant-numeric:tabular-nums}
 tbody tr:hover{background:var(--surface-2)}
 td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 td.mid{text-align:center;white-space:nowrap}
@@ -119,7 +125,7 @@ tr.is-done .task{text-decoration:line-through;text-decoration-color:#c3ccd8}
 tr.is-late td.dday,tr.is-late td.st{color:var(--bad);font-weight:700}
 
 /* ── 상태 배지 ──────────────────────────── */
-.badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:500;white-space:nowrap}
+.badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:12px;font-weight:500;white-space:nowrap}
 .badge.wait{background:var(--line-soft);color:var(--ink-3)}
 .badge.run {background:#e7f0fb;color:var(--navy-700)}
 .badge.late{background:var(--bad-bg);color:var(--bad)}
@@ -136,8 +142,9 @@ tr.is-late td.dday,tr.is-late td.st{color:var(--bad);font-weight:700}
 .quick h3{font-size:12.5px;color:var(--navy-800);margin-bottom:3px}
 .quick .hint{font-size:11px;color:var(--ink-3);margin-bottom:9px}
 .qrow{display:flex;gap:8px;flex-wrap:wrap}
-.qrow input[type=text]{flex:1 1 340px;min-width:0;padding:9px 11px;border:1px solid var(--line);
-  border-radius:3px;background:var(--surface-2)}
+/* 사람이 값을 쳐 넣는 칸은 읽으면서 고치는 자리다 — 표보다 크게 */
+.qrow input[type=text]{flex:1 1 340px;min-width:0;padding:10px 12px;border:1px solid var(--line);
+  border-radius:3px;background:var(--surface-2);font-size:14.5px}
 .qrow input[type=text]:focus{outline:2px solid var(--navy-600);outline-offset:-1px;background:#fff}
 .qbtn{border:1px solid var(--navy-800);background:var(--navy-800);color:#fff;padding:9px 16px;
   border-radius:3px;cursor:pointer;font-weight:600;flex:0 0 auto}
@@ -156,13 +163,13 @@ tr.is-late td.dday,tr.is-late td.st{color:var(--bad);font-weight:700}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
 .fld{display:flex;flex-direction:column;gap:3px}
 .fld label{font-size:11px;color:var(--ink-3)}
-.fld input,.fld select,.fld textarea{padding:7px 9px;border:1px solid var(--line);border-radius:3px;
-  background:var(--surface-2);width:100%}
+.fld input,.fld select,.fld textarea{padding:8px 10px;border:1px solid var(--line);border-radius:3px;
+  background:var(--surface-2);width:100%;font-size:14px}
 .fld input:focus,.fld select:focus,.fld textarea:focus{outline:2px solid var(--navy-600);outline-offset:-1px;background:#fff}
 
 /* ── 행 안 버튼 ─────────────────────────── */
 .rbtn{border:1px solid var(--line);background:var(--surface);color:var(--ink-2);
-  padding:3px 8px;border-radius:3px;cursor:pointer;font-size:11px;white-space:nowrap}
+  padding:4px 9px;border-radius:3px;cursor:pointer;font-size:12.5px;white-space:nowrap}
 .rbtn:hover{background:var(--navy-900);border-color:var(--navy-900);color:#fff}
 .rbtn.on{background:var(--good-bg);border-color:var(--good);color:var(--good)}
 .rbtn.del:hover{background:var(--bad);border-color:var(--bad)}
@@ -422,7 +429,7 @@ tr.run-done td{background:var(--good-bg)}
   <div class="clock">오늘<b id="hdToday">—</b></div>
   <button class="btn fb" id="btnFeedback" title="써 보고 불편한 점·틀린 것·바라는 기능을 보내 주세요">개선안</button>
   <button class="btn" id="btnSample">예시 다시 채우기</button>
-  <button class="btn" id="btnShare">공유</button>
+  <button class="btn" id="btnShare" title="동료에게 보낼 파일 만들기 · 내 데이터 백업·복원">공유 · 백업</button>
   <button class="btn" id="btnPrint">인쇄</button>
 </header>
 
@@ -5008,7 +5015,7 @@ function paneTask(){
       '<td class="mid"><span class="pri '+pc+'">'+esc(t.pri)+'</span></td>'+
       '<td class="task">'+esc(t.task)+'</td>'+
       '<td>'+esc(t.fund)+'</td>'+
-      '<td class="mid">'+esc(t.due?ymdw(t.due):'—')+'</td>'+
+      '<td class="mid due">'+esc(t.due?ymdw(t.due):'—')+'</td>'+
       '<td class="mid dday">'+esc(ddayText(t))+'</td>'+
       '<td class="mid st"><span class="badge '+BADGE[st]+'">'+st+'</span></td>'+
       '<td class="mid">'+esc(t.done||'—')+'</td>'+
@@ -5937,22 +5944,54 @@ function parseRestore(txt){
 }
 /* 검사를 통과한 것만 들어온다. id 재발급은 load() 와 같은 규칙을 쓴다 —
    겹친 id 를 그대로 두면 삭제·완료가 엉뚱한 행을 건드린다. */
+/* 복원은 저장 키를 셋(할일·원장·프로세스 수정)까지 건드린다. 하나씩 쓰다가
+   가운데서 실패하면 «할 일은 옛날 것, 원장은 새 것»인 상태로 남는다 —
+   되돌리려던 사람이 더 망가진 데이터를 갖게 된다.
+   그래서 쓰기 전에 세 키의 원본을 들고 있다가, 하나라도 실패하면 전부
+   되돌린다. 저장 함수들은 실패를 삼키므로 여기서는 setItem 을 직접 쓴다. */
 function applyRestore(r){
   var tasks=r.tasks.slice(), seen={}, maxId=0, i, id;
   for(i=0;i<tasks.length;i++){ id=tasks[i].id;
     if(!id||seen[id]) tasks[i].id=0; else { seen[id]=1; if(id>maxId) maxId=id; } }
   for(i=0;i<tasks.length;i++) if(!tasks[i].id) tasks[i].id=++maxId;
-  S.tasks=tasks; S.regs=r.regs.slice(); S.seq=maxId+1;
-  save();
+
+  var nextS={ tasks:tasks, regs:r.regs.slice(), seq:maxId+1 };
+  var nextR=null;
   if(r.runs){
     var rmax=0;
     r.runs.forEach(function(x){ if(x.id>rmax) rmax=x.id; });
     r.runs.forEach(function(x){ if(!x.id) x.id=++rmax; });
-    RUNS.items=r.runs; RUNS.seq=rmax+1; saveRuns();
+    nextR={ items:r.runs, seq:rmax+1 };
   }
-  if(r.edits){ PROC_EDITS=r.edits; saveProcEdits(); }
+  var nextE=r.edits||null;
+
+  /* 쓸 것과 되돌릴 것을 먼저 다 모은다 */
+  var plan=[[lsKey(), JSON.stringify(nextS)]];
+  if(nextR) plan.push([runsKey(), JSON.stringify(nextR)]);
+  if(nextE) plan.push([procEditsKey(), JSON.stringify(nextE)]);
+  var undo=[], ok=true;
+  try{
+    for(i=0;i<plan.length;i++){
+      undo.push([plan[i][0], localStorage.getItem(plan[i][0])]);
+      localStorage.setItem(plan[i][0], plan[i][1]);
+    }
+  }catch(e){ ok=false; }
+  if(!ok){
+    /* 되돌리기는 이미 쓴 만큼만. 이것마저 실패하면 더 할 수 있는 게 없다. */
+    for(i=undo.length-1;i>=0;i--){
+      try{ if(undo[i][1]==null) localStorage.removeItem(undo[i][0]);
+           else localStorage.setItem(undo[i][0], undo[i][1]); }catch(e2){}
+    }
+    toast('복원에 실패해 이전 상태로 되돌렸습니다 — 브라우저 저장 공간을 확인해 주세요');
+    return false;
+  }
+  /* 저장이 끝난 뒤에야 메모리를 바꾼다 */
+  S.tasks=nextS.tasks; S.regs=nextS.regs; S.seq=nextS.seq;
+  if(nextR){ RUNS.items=nextR.items; RUNS.seq=nextR.seq; }
+  if(nextE) PROC_EDITS=nextE;
   EDIT_ID=0; RUN_PICK=0; PROC_EDIT=false;
   render();
+  return true;
 }
 function restoreFromText(txt){
   var r=parseRestore(txt);
@@ -5966,8 +6005,10 @@ function restoreFromText(txt){
     : '수행 원장과 프로세스 수정까지 파일 내용으로 바뀝니다.';
   askConfirm(what+'\n'+now+'\n\n지금 내용을 지우고 파일 내용으로 바꿉니다. '+note+
              '\n\n되돌린 뒤에는 취소할 수 없습니다. 계속할까요?',function(){
-    applyRestore(r);
-    toast('되돌렸습니다 — 할 일 '+S.tasks.length+'건 · 정기업무 '+S.regs.length+'건');
+    /* 실패하면 applyRestore 가 이전 상태로 돌려놓고 그 사실을 말한다 —
+       여기서 «되돌렸습니다»를 덧붙이면 실패한 복원을 성공으로 알린다. */
+    if(applyRestore(r))
+      toast('되돌렸습니다 — 할 일 '+S.tasks.length+'건 · 정기업무 '+S.regs.length+'건');
   });
   return true;
 }
@@ -5976,7 +6017,7 @@ function shareModal(){
   var old=document.getElementById('mdShare'); if(old) old.parentNode.removeChild(old);
   var d=document.createElement('div'); d.className='fbm'; d.id='mdShare';
   d.innerHTML='<div class="fbm-box" role="dialog" aria-modal="true" aria-label="공유">'+
-    '<header><b>공유</b><button class="fbm-x" aria-label="닫기">✕</button></header>'+
+    '<header><b>공유 · 백업</b><button class="fbm-x" aria-label="닫기">✕</button></header>'+
     '<div class="fbm-body">'+
       '<section class="share-export">'+
         '<p class="fbm-lead">이 화면의 할 일·정기업무를 파일로 내보냅니다. 사내 공유 폴더로 전달해 주세요.</p>'+

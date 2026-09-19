@@ -554,9 +554,18 @@ td.neg{color:var(--bad)}
 .sb-tag{font-weight:700;color:var(--warn);border:1px solid rgba(141,103,20,.35);
   border-radius:2px;padding:1px 7px;font-size:11px;letter-spacing:.02em}
 .sb-d{margin-left:auto;color:var(--ink-3)}
+/* 엑셀 재계산 제한 — 내려받기 버튼 바로 옆에 붙어 받기 전에 읽힌다 */
+.sb-lim{font-weight:700;color:var(--bad);border:1px solid rgba(164,52,47,.35);
+  background:rgba(164,52,47,.07);border-radius:2px;padding:1px 7px;font-size:11px}
 .sb-x{border:1px solid var(--line);background:#fff;border-radius:3px;padding:3px 10px;
   font-size:11.5px;cursor:pointer;color:var(--ink-2)}
 .sb-x:hover{border-color:var(--gold);color:var(--ink)}
+/* 판정 근거 접기 — 펴 둔 상태는 G.vOpen 에 기억해 다시 그려도 유지한다 */
+details.vfold{margin:8px 0 2px}
+details.vfold>summary{cursor:pointer;font-size:12px;color:var(--ink-2);padding:3px 0;list-style:none}
+details.vfold>summary::-webkit-details-marker{display:none}
+details.vfold>summary::before{content:"▸ ";color:var(--ink-3)}
+details.vfold[open]>summary::before{content:"▾ "}
 details.rxfold{border:1px solid var(--line);border-radius:3px;margin:0 0 14px;background:#fff}
 details.rxfold>summary{cursor:pointer;padding:9px 13px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
 details.rxfold[open]>summary{border-bottom:1px solid var(--line-soft)}
@@ -1276,9 +1285,30 @@ function coverSheet(keyM,info){
    Sensitivity는 다기간 IRR을 단일 셀 수식으로 환원할 수 없어 값으로 적는다고
    시트에 명시돼 있으므로 제외한다 — 다만 그 예외를 여기 적어 둔다. */
 var LAST_HARDCODE={total:0,per:[]};
-/* 엑셀 안에서 월별 엔진이 수식으로 살아 있는 구성이었는지. 개발 PF 빌더가
-   LIVE 를 정할 때 같이 적는다 — 조건을 UI 쪽에 베껴 두면 한쪽만 고쳤을 때
-   화면은 «따라 움직인다» 하고 파일은 안 움직이는 상태가 된다. */
+/* 엑셀 안에서 월별 자금수지를 수식으로 펼 수 있는 구성인가 — 개발 PF 전용.
+   PF_Drawdown 빌더가 LIVE 를 정할 때 이 함수를 쓰고, 화면도 같은 함수를 물어본다.
+   조건을 두 군데 적으면 한쪽만 고쳤을 때 «화면은 된다고 하는데 파일은 안 되는»
+   상태가 된다. 그래서 빌드 전에도 답할 수 있는 순수 함수로 둔다.
+
+   펼 수 있는 범위: 지분 층이 없고, 부채 층은 최대 한 개(그리고 PIK).
+   층이 «정의만» 되어 있고 비중이 0이면 실제로는 인출되지 않으므로 없는 것과 같다. */
+function xlScopeOf(jr){
+  var list=jr||[];
+  var JDx=[]; list.forEach(function(t,i){ if(t.kind!=='pref') JDx.push({i:i,t:t}); });
+  var jd0=JDx[0]||null;
+  var prefUsed=list.filter(function(t){ return t.kind==='pref' && +t.pct>0; });
+  var debtUsed=list.filter(function(t){ return t.kind!=='pref' && +t.pct>0; });
+  var jrLiveIdx=(debtUsed.length===1 && jd0 && debtUsed[0]===jd0.t && debtUsed[0].pik)? jd0.i : -1;
+  var live=(prefUsed.length===0) && (debtUsed.length===0 || jrLiveIdx>=0);
+  return { live:live, jrLiveIdx:jrLiveIdx,
+    why: live? '' : (prefUsed.length? ('지분 층 '+prefUsed.length+'개가 있어')
+                   : ('부채 층이 '+debtUsed.length+'개라')) };
+}
+/* 지금 화면 구성의 엑셀 재계산 범위. 개발 PF 가 아니면 이 제한이 없다(null). */
+function xlScopeNow(){
+  if(G.deal!=='dev') return null;
+  try{ return xlScopeOf(D().jr); }catch(e){ return null; }
+}
 var LAST_XL_SCOPE=null;
 /* 이름 «전체»가 맞아야 면제다. 부분 일치로 두면 'Cover'가
    'Coverage_Analysis'까지 삼켜, 결과 시트인 커버리지 대비표가 통째로
@@ -1525,9 +1555,15 @@ function basisNote(key,v,isPct){
 
 /* 필드 하나로는 판단할 수 없는 것들. 엔진이 cross(d)로 준다. */
 function crossWarns(){
-  var fn=E().cross;
-  if(!fn) return [];
-  try{ return fn(D())||[]; }catch(e){ return []; }
+  var fn=E().cross, out=[];
+  if(fn){ try{ out=fn(D())||[]; }catch(e){ out=[]; } }
+  /* 자금 구조를 바꾼 그 자리에서 «이 구성은 엑셀에서 안 따라온다»를 말한다.
+     다운로드 표시줄에도 같은 사실이 있지만, 층을 추가하는 순간 보이는 편이 낫다. */
+  var xs=xlScopeNow();
+  if(xs&&!xs.live)
+    out=out.concat(['엑셀 재계산 제한 — '+xs.why+' 월별 자금수지가 고정값으로 들어갑니다. '+
+                    '엑셀에서 가정을 바꿔도 그 부분은 따라 움직이지 않습니다.']);
+  return out;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -2641,12 +2677,20 @@ function integrityBadges(C){
     '</div>';
 }
 function verdictCard(V,C){
+  /* 판정 근거 줄(사업이익률·IRR·필요 PF…)은 바로 아래 KPI 카드가 같은 값을
+     더 크게 보여 준다. 둘 다 펴 두면 같은 결과를 두 번 설명하면서 차트를
+     화면 밖으로 민다. 위에는 상태와 유의만 두고 근거는 접는다.
+     계산 정합성 배지와 «통과 ≠ 기준 충족» 설명은 접지 않는다 — 그 둘을
+     헷갈리는 것이 이 화면에서 가장 값비싼 오해다. */
+  var lines=V.lines.map(function(l){
+    return '<li><span class="cri">'+esc(l.c)+'</span><span>'+l.t+'</span></li>'; }).join('');
   return '<div class="verdict"><h3><span class="tagx">판정 요약</span>'+esc(V.title)+
     (G.scen!=='base'?' &middot; '+esc(scenOf().name)+' 시나리오 적용':'')+'</h3>'+
-    integrityBadges(C)+'<ul>'+
-    V.lines.map(function(l){ return '<li><span class="cri">'+esc(l.c)+'</span><span>'+l.t+'</span></li>'; }).join('')+'</ul>'+
+    integrityBadges(C)+
     (V.caution&&V.caution.length?'<div class="cau"><b>유의</b> '+
       V.caution.map(function(c){ return '<span>'+esc(c)+'</span>'; }).join('')+'</div>':'')+
+    '<details class="vfold"'+(G.vOpen?' open':'')+'><summary>판정 근거 '+V.lines.length+'줄 보기'+
+      ' <span class="dim">— 아래 지표 카드와 같은 값입니다</span></summary><ul>'+lines+'</ul></details>'+
     /* 긴 면책은 푸터에 한 번만 적는다. 여기서는 한 마디로 끝낸다. */
     '<div class="cau dim">기준별 산출 결과이며 우선순위가 아닙니다. 계산 정합성 통과는 상환·수익성 기준 충족을 뜻하지 않습니다.</div></div>';
 }
@@ -6420,13 +6464,10 @@ function build(){
      인 경우. 그 이상이면 조달·상환 순서가 층마다 갈라져 한 칸 수식으로 세우기
      어려우므로 기존처럼 계산값을 넣고 시트에 그 사실을 밝힌다.
      층이 «정의만» 되어 있고 비중이 0이면 실제로는 인출되지 않으므로 없는 것과 같다. */
-  var prefUsed=(s.jr||[]).filter(function(t){ return t.kind==='pref' && +t.pct>0; });
-  var debtUsed=(s.jr||[]).filter(function(t){ return t.kind!=='pref' && +t.pct>0; });
-  var jrLiveIdx=(debtUsed.length===1 && jd0 && debtUsed[0]===jd0.t && debtUsed[0].pik)? jd0.i : -1;
-  var LIVE=(prefUsed.length===0) && (debtUsed.length===0 || jrLiveIdx>=0);
-  LAST_XL_SCOPE={ live:LIVE,
-    why: LIVE? '' : (prefUsed.length? '지분 층('+prefUsed.length+'개)이 있어'
-                   : '부채 층이 '+debtUsed.length+'개라') };
+  /* 같은 판단을 화면도 쓴다 — xlScopeOf 한 곳에만 조건이 있다 */
+  var XS=xlScopeOf(s.jr);
+  var jrLiveIdx=XS.jrLiveIdx, LIVE=XS.live;
+  LAST_XL_SCOPE=XS;
   var jrLimF=(jrLiveIdx>=0)? ('$B$'+pfTcR+'*'+R['jrPct'+jrLiveIdx]) : '';
   var lmM=Math.max(1,Math.min(NMO,s.landBalM));
   var srLimF='$B$'+pfTcR+'*'+R.srP;
@@ -10411,12 +10452,24 @@ var REPORT=(function(){
     return out;
   }
   /* 상단 요약 카드 — 절별로 묶어 세고, 항목을 누르면 그 빈칸으로 데려간다. */
-  function fillCard(fills,warns,M){
+  /* curSec — 지금 펴 놓은 절. 그 절의 미작성을 맨 앞에 둔다.
+     전체 합계를 제목에 크게 적으면 «지금 85칸을 다 써야 한다»로 읽힌다.
+     실제로는 절마다 나눠 쓰는 칸이고, 지금 할 일은 이 절뿐이다. */
+  function fillCard(fills,warns,M,curSec){
     var order=[], byS={}, i, f;
     for(i=0;i<fills.length;i++){
       f=fills[i];
       if(!byS[f.sec]){ byS[f.sec]=[]; order.push(f.sec); }
       byS[f.sec].push(f);
+    }
+    /* 목차 제목과 절 제목은 같은 절을 다르게 쓴다 — 목차는 «만기 연장 — 심의 사항»,
+       절의 h2 는 «[만기 연장]». 그대로 비교하면 어느 절도 안 맞아 «지금 절 0건»이
+       된다. 괄호와 부제를 떼고 견준다. */
+    function secNorm(s){ return String(s||'').replace(/[\[\]]/g,'').split(' — ')[0].trim(); }
+    var curKey=secNorm(curSec), curN=0, curName=null;
+    if(curKey){
+      for(i=0;i<order.length;i++) if(secNorm(order[i])===curKey){ curName=order[i]; curN=byS[order[i]].length; break; }
+      if(curName) order=[curName].concat(order.filter(function(s){ return s!==curName; }));
     }
     var h='';
     if(warns.length){
@@ -10429,7 +10482,10 @@ var REPORT=(function(){
       var list=byS[order[i]], k, items=[];
       for(k=0;k<list.length;k++)
         items.push('<li><a href="#" data-goto="'+esc(list[k].key)+'">'+esc(list[k].need)+'</a></li>');
-      h+='<div class="body"><b>'+esc(order[i])+'</b> <span class="dim">'+list.length+'건</span>'+
+      var isCur=(order[i]===curName);
+      h+='<div class="body"><b>'+esc(order[i])+'</b> '+
+         (isCur?'<span class="cri">지금 보는 절</span> ':'')+
+         '<span class="dim">'+list.length+'건</span>'+
          '<ol class="rpt-ol">'+items.join('')+'</ol></div>';
     }
     /* 수치가 맞는 것(대사)과 이 거래가 기준을 넘는 것(위험)은 다른 질문이다.
@@ -10444,8 +10500,10 @@ var REPORT=(function(){
         '<div class="dim" style="margin-top:6px">조건 자체가 기준에 못 미치거나 가정끼리 어긋난 항목입니다. 숨기지 말고 심의에 올리는 것이 보고서의 목적입니다.</div></div>'+h;
     }
     if(!h) h='<div class="body">빈칸도 대사 경고도 거래 위험 표시도 없습니다.</div>';
-    return card('작성 전 확인 — 채울 것 '+fills.length+'건 · 대사 경고 '+warns.length+'건 · 거래 위험 '+risk.length+'건',
-      '빈칸을 누르면 그 자리로 이동합니다 · 대사 경고는 표에도 배지로 붙습니다', h,
+    return card('작성 전 확인 — '+(curSec? '지금 절 '+curN+'건 · ' : '')+
+        '문서 전체 '+fills.length+'건 · 대사 경고 '+warns.length+'건 · 거래 위험 '+risk.length+'건',
+      '빈칸을 누르면 그 자리로 이동합니다 · 대사 경고는 표에도 배지로 붙습니다 · '+
+      '「문서 전체」는 이 안건에서 언젠가 채울 항목의 합계이며 지금 한 번에 쓰는 칸이 아닙니다', h,
       warns.length? '대사 경고가 있어도 문서는 생성됩니다 — 막으면 사람이 우회로를 찾기 때문입니다. 다만 경고가 붙은 표의 숫자는 합계가 맞지 않으므로 그대로 올리지 마십시오.'
         : (risk.length? '모델 대사(Sources=Uses · 사업비 합계 · 조달)는 통과했습니다. 다만 거래 위험 '+risk.length+'건은 그대로 남아 있습니다 — 수치가 맞는 것과 이 거래가 기준을 충족하는 것은 다릅니다.'
                       : '모델 대사(Sources=Uses · 사업비 합계 · 조달)는 통과했고, 모델이 짚은 거래 위험도 없습니다. 남은 것은 사람이 확인할 사실(담보·약정·신용 등)과 판단입니다 — 모델은 그것까지 확인해 주지 않습니다.'));
@@ -10838,7 +10896,7 @@ var REPORT=(function(){
       h+=agendaCard()+(principal()==='fund'? fundEditCard(f):'')+modeToggle(mode)+imCard(effKind);
     }else if(step===2){
       var cur=+G.rptSec||0; if(cur<0||cur>=parts.length) cur=0;
-      h+=tocCard(parts,cur)+fillCard(fills,warns,M)+(parts[cur]?parts[cur].h:'');
+      h+=tocCard(parts,cur)+fillCard(fills,warns,M,(parts[cur]?parts[cur].t:null))+(parts[cur]?parts[cur].h:'');
     }else{
       h+=statusCard(M,effKind,fills,warns)+summaryCard(M,effKind)+dlCard()+
          card('전체 보고서 (미리보기)','내려받는 문서와 같은 내용입니다','<div class="body dim">아래에 전체 절이 이어집니다.</div>')+body;
@@ -11461,9 +11519,14 @@ document.getElementById('side').addEventListener('change', function(ev){
    헤더뿐 아니라 결과 가까이에 한 번 더 둔다(결과를 본 자리에서 바로 내려받게). */
 function renderSampleBar(){
   var el=document.getElementById('samplebar'); if(!el) return;
+  /* 엑셀 재계산 제한은 «받고 나서»가 아니라 «받기 전»에 보여야 한다 —
+     받은 뒤에 알면 이미 그 파일로 가정을 바꿔 본 뒤다. */
+  var xs=xlScopeNow();
   el.innerHTML='<span class="sb-tag">예시 모델</span>'+
     '<span class="sb-t">실제 거래 자료가 아닙니다 — 값은 모두 바꿔 쓰는 기본 예시입니다.</span>'+
     '<span class="sb-d">분석 기준일 '+esc(G.asOf||'—')+'</span>'+
+    ((xs&&!xs.live)? '<span class="sb-lim" title="엑셀에서 가정을 바꿔도 월별 자금수지는 따라 움직이지 않습니다">'+
+        '엑셀 재계산 제한 — '+esc(xs.why)+' 월별 자금수지가 고정값</span>' : '')+
     '<button type="button" class="sb-x" id="sbXlsx">엑셀 내려받기</button>';
 }
 function renderDealBar(){
@@ -11567,6 +11630,11 @@ function render(skipSide){
   });
   var pmb=document.querySelector('#panes #btnPrompt');
   if(pmb) pmb.addEventListener('click', promptModal);
+  /* 판정 근거를 펴 둔 사람은 계속 펴 두고 싶다 — 다시 그려도 잃지 않는다.
+     render 를 다시 부르면 details 가 닫혔다 열려 깜빡이므로 상태만 적는다. */
+  document.querySelectorAll('#panes details.vfold').forEach(function(d){
+    d.addEventListener('toggle',function(){ G.vOpen=d.open; saveState(); });
+  });
   var sph=document.querySelector('#panes #sheetPlanHead');
   if(sph){
     var flipSheet=function(){ G.sheetPlanOpen=!G.sheetPlanOpen; saveState(); render(true); };
