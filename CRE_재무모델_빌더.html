@@ -517,6 +517,29 @@ td.neg{color:var(--bad)}
    화면 전체가 가로로 스크롤된다(민감도 표에서 실제로 그랬다). */
 .chart-row>.card{min-width:0}
 .chart-row .card .viz{flex:1}
+/* 구성 카드 — 카드가 넓으면 차트와 표를 나란히, 좁으면 위아래.
+   화면 폭이 아니라 «카드 폭»이 기준이다(1500px 미만에서는 카드가 전폭,
+   그 이상에서는 4열이라 화면 폭으로 재면 정반대가 된다).
+   컨테이너 질의를 못 읽는 브라우저에서는 위아래로 떨어지고 내용은 그대로다. */
+.compo-card{container-type:inline-size}
+.compo-split{display:grid;grid-template-columns:minmax(0,1fr)}
+@container (min-width:640px){
+  .compo-split{grid-template-columns:minmax(0,42fr) minmax(0,58fr);align-items:stretch}
+  .compo-split>.viz{border-right:1px solid var(--line-soft)}
+}
+.compo-side{padding:12px 16px 14px;min-width:0;overflow-x:auto}
+table.compo-tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.compo-tbl th{padding:0 8px 6px;font-size:10.5px;font-weight:600;color:var(--ink-3);
+  text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+table.compo-tbl th.l,table.compo-tbl td.l{text-align:left}
+table.compo-tbl td{padding:6px 8px;font-size:12px;color:var(--ink);text-align:right;
+  border-bottom:1px solid var(--line-soft);white-space:nowrap}
+table.compo-tbl tr:last-child td{border-bottom:0}
+table.compo-tbl tfoot td{border-top:1px solid var(--line);border-bottom:0;padding-top:8px}
+table.compo-tbl td.dim{color:var(--ink-3);font-size:11.5px;white-space:normal}
+table.compo-tbl .sw{display:inline-grid;place-items:center;width:15px;height:15px;
+  border-radius:999px;margin-right:8px;vertical-align:-3px;
+  font-size:9px;font-weight:700;font-style:normal;color:#fff;line-height:1}
 /* 1500px 미만에서는 한 줄에 하나 (2026-09-19 사용자 결정).
    1366×768 에서 사이드바를 빼면 본문이 1022px 뿐이라, 8열/4열로 나누면
    구성 차트 칸이 300px — 휴대폰과 같은 폭이 되어 글자가 7.4px 로 떨어졌다.
@@ -1904,52 +1927,49 @@ function compoModeNow(){
   if(!G.compoPick && isNarrow()) return 'bar';
   return m;
 }
+/* 구성 차트 옆 표 — 차트는 «모양»을, 표는 «금액·비중·조건»을 읽게 한다.
+   1440px 에서 차트만 두면 카드가 43% 만 차서 절반이 빈 자리였다. 금액과
+   조건을 한 행에서 비교하고 싶다는 요청도 이 표가 받는다. 유동화 2종이
+   이미 요약에 두고 있는 stackCard 와 같은 성격의 읽기 전용 표다 —
+   계산하지 않고 차트가 쓰는 바로 그 값을 옮겨 적는다. */
+function compoSide(segs,opts){
+  var list=(segs||[]).filter(function(x){ return x.v>0.0001; });
+  if(!list.length) return '';
+  var o=opts||{};
+  var tot=list.reduce(function(a,x){ return a+x.v; },0)||1;
+  var hasCond=list.some(function(x){ return x.cond; });
+  var t='<div class="compo-side"><table class="compo-tbl"><thead><tr>'+
+    '<th class="l">'+esc(o.head||'구분')+'</th>'+
+    '<th>금액 ('+esc(G.unit)+')</th><th>비중</th>'+
+    (hasCond?'<th class="l">조건</th>':'')+'</tr></thead><tbody>';
+  /* 번호는 차트 막대 밑의 ①②③ 과 같은 순서다 — 이름이 막대에 안 들어갈 때
+     그 번호로 이 표를 찾아오게 한다. 색도 막대와 같다. */
+  list.forEach(function(x,i){
+    t+='<tr><td class="l"><i class="sw" style="background:'+x.c+'">'+(i+1)+'</i>'+esc(x.n)+'</td>'+
+       '<td>'+f0(x.v)+'</td><td>'+fp(x.v/tot,1)+'</td>'+
+       (hasCond?'<td class="l dim">'+esc(x.cond||'—')+'</td>':'')+'</tr>';
+  });
+  t+='</tbody><tfoot><tr><td class="l"><b>'+esc(o.tot||'합계')+'</b></td>'+
+     '<td><b>'+f0(tot)+'</b></td><td>100.0%</td>'+(hasCond?'<td></td>':'')+
+     '</tr></tfoot></table></div>';
+  return t;
+}
 /* 구성 비중 — 세로막대 / 가로막대 / 원형 전환 */
 function compoHeader(title,desc){
   var m=compoModeNow();
-  return '<div class="card"><header><h2>'+esc(title)+'</h2><span class="desc">'+esc(desc)+'</span>'+
+  return '<div class="card compo-card"><header><h2>'+esc(title)+'</h2><span class="desc">'+esc(desc)+'</span>'+
     '<div class="seg mini">'+
     '<button data-compo="col" class="'+(m==='col'?'on':'')+'">세로막대</button>'+
     '<button data-compo="bar" class="'+(m==='bar'?'on':'')+'">가로막대</button></div></header>';
 }
-/* 세로막대에 이름을 막대 밑에 넣을 수 있는가 — drawColumns 의 판정과 같은
-   규칙이다(그쪽은 줄바꿈 결과까지 쓰므로 계산을 그대로 두고, 여기서는
-   «되는가»만 본다). 규칙을 고치면 두 곳을 같이 고쳐야 한다. */
-function compoNeedsLegend(segs){
-  var list=(segs||[]).filter(function(s){ return s.v>0; });
-  if(!list.length) return false;
-  var band=(380-52-8)/list.length, ok=false;
-  [9.5,9,8.5,8].forEach(function(fs){
-    if(ok) return;
-    if(list.every(function(s){ return wrapTo(s.n,band-5,fs,2)!==null; })) ok=true;
-  });
-  return !ok;
-}
-/* 옆 범례가 붙으면 도안이 470 단위로 넓어진다. 4열 카드는 1600px 화면에서
-   내용 폭이 385px 라 배율이 0.82 까지 떨어져 범례 숫자를 못 읽었다. */
-function compoLegendFits(host){
-  var cs=getComputedStyle(host);
-  var hw=host.clientWidth-(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0);
-  return !(hw>0 && hw < 470*0.9);
-}
-/* 그린 것과 토글의 활성 표시가 어긋나면 안 된다 */
-function markCompo(host,mode){
-  var card=host&&host.closest? host.closest('.card') : null;
-  if(!card) return;
-  card.querySelectorAll('[data-compo]').forEach(function(b){
-    b.classList.toggle('on', b.getAttribute('data-compo')===mode); });
-}
 function drawCompoAuto(host,segs,totLabel){
   if(!host) return;                       /* 활성 탭만 그리므로 빈 자리가 온다 */
   /* 원형은 뺐다 — 조각마다 칸 크기가 달라져 항목 간 비교가 안 된다.
-     저장값에 'donut' 이 남아 있어도 세로막대로 떨어진다. */
-  var m=compoModeNow();
-  /* 칸이 좁아 세로막대가 안 들어가면 가로막대로 — 이름이 행마다 붙어
-     380 단위로 끝난다. 사용자가 직접 고른 경우는 그 선택을 지킨다. */
-  if(!G.compoPick && m==='col' && compoNeedsLegend(segs) && !compoLegendFits(host)) m='bar';
-  if(m==='bar') drawCompo(host,segs,totLabel);
+     저장값에 'donut' 이 남아 있어도 세로막대로 떨어진다.
+     세로막대는 옆 범례를 떼면서 380 단위로 고정됐다 — 칸이 좁다고 가로막대로
+     바꿀 이유가 없어졌다(좁은 화면 기본값은 compoModeNow 가 이미 정한다). */
+  if(compoModeNow()==='bar') drawCompo(host,segs,totLabel);
   else drawColumns(host,segs,totLabel);
-  markCompo(host,m);
 }
 /* 텍스트 폭 추정 (한글 전각 · 영숫자 반각) */
 /* 차트를 화면 폭에 맞춰 줄이면 축·범례 글자가 같이 줄어든다. 휴대폰에서는
@@ -2027,12 +2047,14 @@ function drawColumns(host,segs,totLabel){
     if(all.every(function(x){ return x!==null; })) fit={fs:fs,lines:all};
   });
 
-  var legend=!fit, ph, pw, H, lx=0;
+  /* 이름이 막대 밑에 안 들어가면 번호(①②③)만 달고 이름은 옆 표에 맡긴다.
+     예전에는 차트 오른쪽에 이름·금액 범례를 붙였는데, 이제 같은 카드에
+     구분·금액·비중·조건 표가 나란히 있어 글자 그대로 두 번 적는 꼴이었다.
+     범례를 떼면 도안 폭이 470 → 380 으로 줄어 막대도 그만큼 커진다. */
+  var legend=!fit, ph, pw, H;
   if(legend){
-    W=470; m={t:30,r:8,b:34,l:52};
-    var legW=176; pw=W-m.l-m.r-legW-14; lx=m.l+pw+22;
-    ph=Math.max(150, 26+segs.length*22);
-    H=m.t+ph+m.b;
+    m={t:30,r:8,b:34,l:52};
+    pw=W-m.l-m.r; ph=170; H=m.t+ph+m.b;
   } else {
     var maxLines=Math.max.apply(null,fit.lines.map(function(l){return l.length;}));
     m.b=30+maxLines*(fit.fs+2);
@@ -2085,21 +2107,6 @@ function drawColumns(host,segs,totLabel){
     }
   });
 
-  if(legend){
-    segs.forEach(function(s,i){
-      var y=m.t+16+i*22;
-      svg.appendChild(svgEl('circle',{cx:lx+6,cy:y-3.5,r:6.5,fill:s.c}));
-      var no=svgEl('text',{x:lx+6,y:y,'text-anchor':'middle','font-size':8.5,fill:'#fff','font-weight':'700'});
-      no.textContent=(i+1); svg.appendChild(no);
-      var nmLines=wrapTo(s.n,W-m.r-(lx+18)-2,9.5,2)||[String(s.n)];
-      nmLines.forEach(function(ln,li){
-        var t1=svgEl('text',{x:lx+18,y:y+li*11,'font-size':9.5,fill:VZ.ink});
-        t1.textContent=ln; svg.appendChild(t1);
-      });
-      var t2=svgEl('text',{x:W-m.r,y:y+(nmLines.length>1?11:0),'text-anchor':'end','font-size':9.5,fill:VZ.bold,'font-weight':'600'});
-      t2.textContent=f0(s.v); svg.appendChild(t2);
-    });
-  }
   host.appendChild(svg); vzFit(host,svg,W);
 }
 function drawDonut(host,segs,totLabel){
@@ -4045,21 +4052,32 @@ function drawNOI(host,M){
   }
   host.appendChild(svg); vzFit(host,svg,W);
 }
-function drawStack(host,M){
-  /* 층이 없으면(금액 0) 칸을 만들지 않는다 — 빈 칸이 있으면 있는 층처럼 읽힌다 */
-  var seg=[{n:'선순위 대출',v:M.srLoan,c:STACK[0]}];
+/* 층이 없으면(금액 0) 칸을 만들지 않는다 — 빈 칸이 있으면 있는 층처럼 읽힌다.
+   차트와 옆 표가 같은 목록을 써야 둘이 어긋나지 않으므로 여기서 한 번 만든다.
+   조건 문구는 새로 계산하지 않고 층이 이미 들고 있는 값(rate·pik·cum)만 적는다. */
+function stackSegs(M){
+  var s=M.s;
+  var seg=[{n:'선순위 대출',v:M.srLoan,c:STACK[0],
+    cond:fp(s.srRate,2)+' · '+(M.isAm?'원리금균등':'만기일시')}];
   M.jrDebt.forEach(function(x,i){ if(x.amt>0.0001)
-    seg.push({n:x.n+(x.pik?' · PIK':''),v:x.amt,c:STACK[1+(i%3)]}); });
-  M.jrPref.forEach(function(x){ if(x.amt>0.0001) seg.push({n:x.n,v:x.amt,c:STACK[4]}); });
-  seg.push({n:'승계 보증금',v:M.depSrc,c:STACK[3]});
-  seg.push({n:'보통주 자기자본',v:Math.max(M.common,0),c:SERIES[3]});
-  drawCompoAuto(host,seg,'총 조달');
+    seg.push({n:x.n+(x.pik?' · PIK':''),v:x.amt,c:STACK[1+(i%3)],
+      cond:fp(x.rate,2)+' · '+(x.pik?'PIK 누적':'현금 지급')}); });
+  M.jrPref.forEach(function(x){ if(x.amt>0.0001)
+    seg.push({n:x.n,v:x.amt,c:STACK[4],
+      cond:fp(x.rate,2)+' · '+(x.cum?'누적적':'비누적')}); });
+  seg.push({n:'승계 보증금',v:M.depSrc,c:STACK[3],cond:'임차인 보증금 승계'});
+  seg.push({n:'보통주 자기자본',v:Math.max(M.common,0),c:SERIES[3],
+    cond:'목표 '+fp(s.comTargetIRR,1)+' · 잔여 분배'});
+  return seg;
 }
+function drawStack(host,M){ drawCompoAuto(host,stackSegs(M),'총 조달'); }
 /* ── 패널 ── */
 var PANES={};
 PANES.sum=function(M){
-  var s=M.s, h=verdictCard(verdict(M),checks(M));
-  h+=rxFold(rxBlock(M));
+  /* 숫자가 먼저다. 판정 블록은 제목·배지·근거에서 같은 수치를 세 번 되뇌면서
+     900px 화면에서 지표를 y=517 까지 밀어냈다(지시서 §3 «반복 나열하지 않는다»).
+     판정은 지표 바로 아래에서 해석을 붙이는 자리로 옮긴다. */
+  var s=M.s, h='';
   h+='<div class="tiles">'+
     tile('a1','보통주 세후 IRR',fIrr(M.irrCom,2),'목표 '+fp(s.comTargetIRR,1)+' &middot; '+(M.passTarget?pill(true,'충족'):pill(false,'미달')),
       (M.irrCom==null?null:M.passTarget))+
@@ -4068,11 +4086,13 @@ PANES.sum=function(M){
     tile('a4','최소 DSCR',fx(M.minD),'Debt Yield '+fp(M.dy,2)+' &middot; 선순위 '+f0(M.srLoan),
       (M.minD==null?null:M.minD>=1.20))+
     '</div>';
+  h+=verdictCard(verdict(M),checks(M))+rxFold(rxBlock(M));
   h+='<div class="chart-row"><div class="card"><header><h2>연도별 NOI와 원리금</h2><span class="desc">단위 '+G.unit+' · 막대에 마우스를 올리면 연도별 DSCR이 표시됩니다</span></header>'+
     '<div class="body viz" id="vizNOI"></div><div class="legend"><span><i class="sq" style="background:'+SERIES[0]+'"></i>NOI</span>'+
     '<span><i class="sq" style="background:'+SERIES[1]+'"></i>원리금 (DS)</span></div></div>'+
     compoHeader('자본구조','총 사용액 '+f0(M.uses)+' '+G.unit+' 조달 구성')+
-    '<div class="body viz" id="vizStack"></div></div></div>';
+    '<div class="compo-split"><div class="body viz" id="vizStack"></div>'+
+    compoSide(stackSegs(M),{head:'트랜치',tot:'총 조달'})+'</div></div></div>';
   var rows=[
     ['SEC','취득 · 자산'],
     ['매입가',G.unit,f0(s.price),'입력'],
@@ -5848,9 +5868,10 @@ function drawCF(host,M){
   hit.addEventListener('mouseleave',function(){ tip.style.opacity=0; });
   host.appendChild(svg); host.appendChild(tip); vzFit(host,svg,Wd);
 }
-function drawCostAuto(host,M){
+/* 차트와 옆 표가 같은 목록을 쓰도록 한 번만 만든다 */
+function costSegs(M){
   var s=M.s;
-  drawCompoAuto(host,[
+  return [
     {n:'토지비 · 취득제세',v:s.landCost+M.landTax,c:STACK[0]},
     {n:'도급 공사비',v:s.constCost,c:STACK[1]},
     {n:'설계·감리·예비비',v:M.designAmt+M.contAmt,c:STACK[2]},
@@ -5858,8 +5879,9 @@ function drawCostAuto(host,M){
     {n:'기타 고정비',v:s.fixedCost,c:SERIES[4]},
     {n:'추가 사업비',v:M.extraTot,c:SERIES[2]},
     {n:'금융비용 (이자·수수료)',v:M.finCost+M.midIntTotal,c:SERIES[1]}
-  ],'총사업비');
+  ];
 }
+function drawCostAuto(host,M){ drawCompoAuto(host,costSegs(M),'총사업비'); }
 /* ── 패널 ── */
 /* 추가 사업비의 지출 시점 이름표 — 화면·엑셀이 같은 말을 쓰게 한 곳에 둔다 */
 var WHEN_LAB={pre:'착공 전 일시', const:'공사기간 분산', even:'전 기간 분산'};
@@ -5868,8 +5890,8 @@ function tile(cls,lab,val,sub){
   return '<div class="tile '+cls+'"><div class="lab">'+lab+'</div><div class="val">'+val+'</div><div class="sub">'+sub+'</div></div>';
 }
 PANES.sum=function(M){
-  var s=M.s, h=verdictCard(verdict(M),checks(M));
-  h+=rxFold(rxBlock(M));
+  /* 숫자가 먼저 — 판정은 지표 아래에서 해석을 붙인다(office 요약과 같은 순서) */
+  var s=M.s, h='';
   var peakM=M.rows.reduce(function(a,r){return r.close>a.close?r:a;},M.rows[0]).m;
   var MTGT=0.10;
   h+='<div class="tiles">'+
@@ -5890,11 +5912,14 @@ PANES.sum=function(M){
       sub:'실투입 <b>'+f0(M.eqUsed)+'</b> '+G.unit+' · Multiple '+fx(M.em)})+
     tile('a4','분양수입',f0(M.revenue)+'<small>'+G.unit+'</small>',f0(M.units)+'세대 &middot; 분양률 '+fp(M.absorb,0))+
     '</div>';
+  h+=verdictCard(verdict(M),checks(M))+rxFold(rxBlock(M));
   h+='<div class="chart-row"><div class="card"><header><h2>월별 PF 잔액과 분양수입</h2><span class="desc">사업기간 '+M.T+'개월 · 착공 '+M.startM+'개월차 · 준공 '+M.T+'개월차</span></header>'+
     '<div class="body viz" id="vizCF"></div><div class="legend"><span><i style="background:'+SERIES[1]+'"></i>PF 잔액</span>'+
     '<span><i class="sq" style="background:'+SERIES[2]+';opacity:.55"></i>월별 분양수입</span></div></div>'+
-    compoHeader('총사업비 구성','금융비용 포함 · 단위 '+G.unit)+
-    '<div class="body viz" id="vizCost2"></div></div></div>';
+    /* 오피스 쪽 카드는 머리글에 총액을 적는데 여기만 «단위»만 적고 있었다 — 맞춘다 */
+    compoHeader('총사업비 구성','총사업비 '+f0(M.totalCost)+' '+G.unit+' · 금융비용 포함')+
+    '<div class="compo-split"><div class="body viz" id="vizCost2"></div>'+
+    compoSide(costSegs(M),{head:'비목',tot:'총사업비'})+'</div></div></div>';
   var rows=[
     ['SEC','분양 수입'],
     ['총 세대수','세대',f0(M.units),'Unit_Mix_Pricing 합계'],
@@ -7882,9 +7907,11 @@ function scaleRecv(a,mul){ var r=[],i; for(i=0;i<(a||[]).length;i++) r.push(num(
 
 var PANES={};
 PANES.sum=function(M){
-  var s=M.s, h=verdictCard(verdict(M),checks(M));
-  if(M.kind==='sale') return h+sumSale(M);
+  /* 숫자가 먼저 — 판정 블록(V)은 핵심 지표 카드 아래로 내려 붙인다 */
+  var s=M.s, V=verdictCard(verdict(M),checks(M)), h='';
+  if(M.kind==='sale') return sumSale(M,V);
   if(!M.sched){
+    h+=V;
     h+=card('투자 요약 (준비 중)','단위: '+G.unit+' · 기준일 '+G.asOf+' · 시나리오 '+s.scenName,
       '<div class="body"><p>이 딜의 회수 스케줄 대 상환 스케줄 대비표는 다음 과업에서 이 자리에 들어옵니다. '+
       '기표 '+esc(s.startYM)+' · 대출기간 '+f0(M.termM)+'개월 · 대출총액 '+f0(s.loan)+' '+esc(G.unit)+
@@ -7909,6 +7936,7 @@ PANES.sum=function(M){
     '이며, 거치 구간 평균 '+fx(M.graceAvgCov)+' 는 원금 상환이 없어 부풀어 보이므로 판정에 쓰지 않습니다.',
     role('회수 스케줄 대 상환 스케줄로 상환 가능성 판단','대출조건·회수재원 스케줄',
          '커버리지·채권 기준 LTV·투자자 IRR','보고용 요약·심의서'));
+  h+=V;
   h+=termsCard(M)+stackCard(M);
   return h;
 };
@@ -7994,7 +8022,7 @@ function schedTable(M){
    회차 비율 합이 100%가 아니면 «화면이 먼저 말한다» — 대사 배지와 같은
    취급이다. 합이 안 맞으면 회수 재원이 조용히 비어 커버리지·LTV 가 실제보다
    나쁘게 나오고, 그 숫자로 판정이 나가기 때문이다. */
-function sumSale(M){
+function sumSale(M,V){
   var h='';
   if(!M.pctOK)
     h+='<div class="card"><div class="note"><span class="pill no">회차 비율 합 미달</span> '+
@@ -8015,6 +8043,7 @@ function sumSale(M){
     '이며, 이자만 내는 회차 평균 '+fx(M.graceAvgCov)+' 는 원금 상환이 없어 부풀어 보이므로 판정에 쓰지 않습니다.',
     role('회차별 현금수지로 만기 상환 가능성 판단','분양 회차·유출 4묶음·대출조건',
          '기말현금잔액·납부율 BEP·분양대금 기준 LTV·투자자 IRR','보고용 요약·심의서'));
+  h+=(V||'');
   h+=termsCard(M)+stackCard(M);
   return h;
 }
