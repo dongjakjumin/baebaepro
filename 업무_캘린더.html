@@ -18,48 +18,51 @@
      빌더와 변수 이름을 그대로 맞춘다. 값만 바꾼다. */
   /* C단계 — 네 도구가 같은 팔레트를 쓰도록 값만 맞췄다(이름·마크업 불변).
      --gold 는 이름만 남기고 값은 주요 버튼 파랑, --on-dark 는 어두운 머리줄용. */
-  --navy-900:#20344A; --navy-850:#26394F; --navy-800:#2A3F56;
-  --navy-700:#2A3F56; --navy-600:#20344A;
-  --gold:#285FD6; --gold-dim:#1F4EB5; --on-dark:#7FA9F0;
-  --ink:#243244; --ink-2:#526174; --ink-3:#7C8899;
-  --line:#E3E7EE; --line-soft:#EDF0F5;
-  --page:#F5F7FA; --surface:#ffffff; --surface-2:#F2F5F9;
-  --good:#2B6350; --good-bg:rgba(43,99,80,.09);
-  --bad:#A4342F;  --bad-bg:rgba(164,52,47,.09);
-  --warn:#8D6714; --warn-bg:rgba(141,103,20,.09);
-  --hold:#79828F; --hold-bg:rgba(121,130,143,.09);
-  --done-ink:#8B95A3; --done-bg:#F1F3F6;
+  /* D단계 — 네 도구 공통 토큰(벤토 개편). 이름은 그대로 두고 값만 맞춘다.
+     --gold 는 이름만 남은 «주요 버튼 파랑», --navy-600 은 포커스 링이다. */
+  --navy-900:#142B45; --navy-850:#17304C; --navy-800:#1B3856;
+  --navy-700:#1B3856; --navy-600:#2457C5;
+  --gold:#2457C5; --gold-dim:#1B46A3; --on-dark:#9BB8E8;
+  --ink:#172B43; --ink-2:#58677A; --ink-3:#6E7D90;
+  --line:#DCE3EB; --line-soft:#E8EDF3;
+  --page:#F3F5F8; --surface:#ffffff; --surface-2:#F5F7FA;
+  --good:#1F7A52; --good-bg:#E7F4EC;
+  --bad:#B3261E;  --bad-bg:#FBEAE8;
+  --warn:#8A6116; --warn-bg:#FCF2E0;
+  --hold:#58677A; --hold-bg:#EDF1F6;
+  --done-ink:#8B95A3; --done-bg:#F4F6F9;
+  /* 카드 규격 — 모서리 12 · 내부 여백 20 · 카드 간격 16 */
+  --r-card:12px; --pad-card:20px; --gap-card:16px;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
   background:var(--page); color:var(--ink);
   font-family:'SUIT',Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","맑은 고딕",system-ui,sans-serif;
-  /* 11px 은 회사 모니터에서 읽기 버거웠다. 표 밀도를 지키는 선에서 올린다 —
-     15~16px 로 가면 한 화면에 들어오던 일정이 절반으로 준다. */
-  font-size:12.5px;line-height:1.5;-webkit-font-smoothing:antialiased;letter-spacing:-0.005em;
+  /* 본문 14px. 보조 글자는 아래에서 따로 12px 이상으로 고정한다. */
+  font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;letter-spacing:-0.005em;
 }
 h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-.01em}
 button,input,select,textarea{font-family:inherit;font-size:inherit}
-table{border-collapse:collapse;width:100%;font-size:12px}
+table{border-collapse:collapse;width:100%;font-size:13px}
 
 /* ── 상단바 ─────────────────────────────── */
 .topbar{background:var(--navy-900);
-  color:#eaf0f8;border-bottom:1px solid var(--line);
-  padding:0 18px;height:50px;display:flex;align-items:center;gap:14px;
+  color:#eaf0f8;border-bottom:1px solid var(--navy-850);
+  padding:0 20px;height:56px;display:flex;align-items:center;gap:14px;
   position:sticky;top:0;z-index:50}
 .brand{display:flex;align-items:center;gap:9px;min-width:0}
-.brand .mark{width:22px;height:22px;border:0;background:var(--gold);color:#fff;
-  display:grid;place-items:center;font-size:10px;font-weight:600;border-radius:5px;flex:0 0 auto}
-.brand h1{font-size:13px;color:#fff;white-space:nowrap}
-.brand .sub{font-size:9px;color:#8FA0B8;letter-spacing:.08em;text-transform:uppercase;margin-top:1px}
+.brand .mark{width:26px;height:26px;border:0;background:var(--gold);color:#fff;
+  display:grid;place-items:center;font-size:11px;font-weight:700;border-radius:7px;flex:0 0 auto}
+.brand h1{font-size:15px;color:#fff;white-space:nowrap}
+.brand .sub{font-size:10px;color:#8FA0B8;letter-spacing:.08em;text-transform:uppercase;margin-top:1px}
 .topbar .spacer{flex:1}
 .topbar .btn{white-space:nowrap;flex:0 0 auto}
-.topbar .clock{font-size:10px;color:#8FA0B8;border-left:1px solid rgba(255,255,255,.14);padding-left:14px}
-.topbar .clock b{display:block;color:#fff;font-size:11px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+.topbar .clock{font-size:12px;color:#8FA0B8;border-left:1px solid rgba(255,255,255,.14);padding-left:14px}
+.topbar .clock b{display:block;color:#fff;font-size:13px;font-weight:600;margin-top:1px;font-variant-numeric:tabular-nums}
 
-.btn{border:1px solid rgba(255,255,255,.22);background:transparent;color:#dfe8f4;
-  padding:6px 11px;border-radius:5px;cursor:pointer;font-size:11px;transition:background .12s,border-color .12s}
+.btn{border:1px solid rgba(255,255,255,.26);background:transparent;color:#dfe8f4;
+  padding:8px 13px;border-radius:8px;cursor:pointer;font-size:13px;transition:background .12s,border-color .12s}
 .btn:hover{background:rgba(255,255,255,.1)}
 .btn.primary{background:var(--gold);border-color:var(--gold);color:#FFFFFF;font-weight:600}
 .btn.primary:hover{background:var(--gold-dim)}
@@ -67,57 +70,83 @@ table{border-collapse:collapse;width:100%;font-size:12px}
 .btn[disabled]{opacity:.45;cursor:default}
 
 /* ── 탭 ─────────────────────────────────── */
-.tabs{display:flex;gap:2px;padding:0 18px;background:var(--surface);
-  border-bottom:1px solid var(--line);position:sticky;top:50px;z-index:40;overflow-x:auto}
+.tabs{display:flex;gap:2px;padding:0 20px;background:var(--surface);
+  border-bottom:1px solid var(--line);position:sticky;top:56px;z-index:40;overflow-x:auto}
 .tabs::-webkit-scrollbar{display:none}
-.tab{border:none;background:transparent;padding:11px 15px;font-size:13px;color:var(--ink-3);
+.tab{border:none;background:transparent;padding:13px 16px;font-size:14px;color:var(--ink-2);
   cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
-.tab:hover{color:var(--ink-2)}
-.tab.on{color:var(--navy-800);font-weight:600;border-bottom-color:var(--gold)}
-.tab .n{display:inline-block;margin-left:6px;background:var(--line-soft);color:var(--ink-3);
-  border-radius:9px;padding:0 6px;font-size:10.5px;font-weight:600}
-.tab.on .n{background:var(--navy-900);color:#fff}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--gold);font-weight:700;border-bottom-color:var(--gold)}
+.tab:focus-visible{outline:2px solid var(--navy-600);outline-offset:-2px}
+.tab .n{display:inline-block;margin-left:6px;background:var(--line-soft);color:var(--ink-2);
+  border-radius:9px;padding:0 7px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.tab.on .n{background:var(--gold);color:#fff}
 .tab .n.hot{background:var(--bad);color:#fff}
 
-.wrap{max-width:1360px;margin:0 auto;padding:18px 22px 60px}
+.wrap{max-width:1440px;margin:0 auto;padding:20px 22px 60px}
 .pane{display:none}
 .pane.on{display:block}
 
 /* ── 카드 ───────────────────────────────── */
-.card{background:var(--surface);border:1px solid var(--line);border-radius:5px;margin-bottom:16px;overflow:hidden}
-.card>header{display:flex;align-items:baseline;gap:10px;padding:11px 15px;
-  border-bottom:1px solid var(--line-soft);background:var(--surface-2);flex-wrap:wrap}
-.card>header h2{font-size:13px;color:var(--navy-800)}
-.card>header .desc{font-size:11px;color:var(--ink-3)}
-.card .body{padding:14px 15px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);
+  margin-bottom:var(--gap-card);overflow:hidden}
+.card>header{display:flex;align-items:baseline;gap:10px;padding:14px var(--pad-card);
+  border-bottom:1px solid var(--line-soft);background:var(--surface);flex-wrap:wrap}
+.card>header h2{font-size:15px;color:var(--ink)}
+.card>header .desc{font-size:12px;color:var(--ink-2)}
+.card .body{padding:var(--pad-card)}
 .card .body.flush{padding:0}
 .tbl-wrap{overflow-x:auto}
+/* 행 안에 접이 메뉴가 있는 표는 잘라내면 안 된다 — 가로 스크롤 대신 줄바꿈 */
+.tbl-free{overflow:visible}
+
+/* ── 벤토 그리드 (12열) ─────────────────── */
+.bento{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--gap-card);
+  align-items:start;margin-bottom:var(--gap-card)}
+.bento>.b12{grid-column:span 12}
+.bento>.b8{grid-column:span 8}
+.bento>.b4{grid-column:span 4}
+.bento>*>.card:last-child{margin-bottom:0}
+.bento .card{height:100%;display:flex;flex-direction:column}
+.bento .card>.body{flex:1;min-height:0}
 
 /* ── 지표 타일 ──────────────────────────── */
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px}
-.tile{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--navy-900);
-  border-radius:5px;padding:9px 11px 10px}
-.tile .lab{font-size:10px;color:var(--ink-2);font-weight:600;letter-spacing:.02em}
-.tile .val{font-size:24px;font-weight:700;letter-spacing:-.02em;margin:2px 0 0;line-height:1.1;
-  color:var(--navy-900);font-variant-numeric:tabular-nums}
-.tile .val small{font-size:12px;font-weight:500;color:var(--ink-3);margin-left:3px}
-.tile .sub{font-size:10px;color:var(--ink-3);margin-top:3px}
-.tile.late{border-left-color:var(--bad)}    .tile.late .val{color:var(--bad)}
-.tile.soon{border-left-color:var(--warn)}   .tile.soon .val{color:var(--warn)}
-.tile.hold{border-left-color:var(--hold)}   .tile.hold .val{color:var(--hold)}
-.tile.done{border-left-color:var(--good)}   .tile.done .val{color:var(--good)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--gap-card)}
+.tile{background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-card);padding:16px var(--pad-card) 18px}
+.tile .lab{font-size:13px;color:var(--ink-2);font-weight:600;letter-spacing:.02em}
+.tile .val{font-size:30px;font-weight:700;letter-spacing:-.02em;margin:4px 0 0;line-height:1.1;
+  color:var(--ink);font-variant-numeric:tabular-nums}
+.tile .val small{font-size:14px;font-weight:500;color:var(--ink-2);margin-left:4px}
+.tile .sub{font-size:12px;color:var(--ink-2);margin-top:5px;line-height:1.5}
+/* 상태 타일 — 옅은 바탕 + 상태 글자 */
+.tile.late{background:var(--bad-bg);border-color:#F0CFCB}
+.tile.late .val,.tile.late .lab{color:var(--bad)}
+.tile.soon{background:var(--warn-bg);border-color:#EDDCBC}
+.tile.soon .val,.tile.soon .lab{color:var(--warn)}
+.tile.hold{background:var(--hold-bg);border-color:#D7DEE8}
+.tile.hold .val,.tile.hold .lab{color:var(--hold)}
+.tile.done{background:var(--good-bg);border-color:#C9E3D4}
+.tile.done .val,.tile.done .lab{color:var(--good)}
 
 /* ── 표 ─────────────────────────────────── */
-th,td{padding:9px 11px;border-bottom:1px solid var(--line-soft);text-align:left;vertical-align:middle}
-thead th{background:var(--surface-2);color:var(--ink-2);font-weight:500;font-size:12px;
+th,td{padding:12px 14px;border-bottom:1px solid var(--line-soft);text-align:left;vertical-align:middle}
+thead th{background:var(--surface-2);color:var(--ink-2);font-weight:600;font-size:12.5px;
   white-space:nowrap;position:sticky;top:0;border-bottom:1px solid var(--line)}
+/* 숫자·날짜 열은 자릿수 고정 글꼴로 우측 정렬한다 */
+th.num,th.dday,th.due{text-align:right}
 /* 읽어야 하는 것과 곁들이는 것의 크기를 다르게 둔다. 표 전체를 한 크기로
    키우면 한 화면에 들어오던 일정이 줄고, 한 크기로 줄이면 정작 업무명이
    안 읽힌다. 업무명·마감일은 키우고 보조 메타는 그대로 둔다. */
-td.task{font-size:14.5px;line-height:1.45}
-td.due{font-size:14px;font-variant-numeric:tabular-nums}
-td.dday{font-size:13px;font-variant-numeric:tabular-nums}
-tbody tr:hover{background:var(--surface-2)}
+td.task{font-size:14.5px;line-height:1.45;color:var(--ink);font-weight:500}
+td.due{font-size:14.5px;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+td.dday{font-size:14px;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+/* 업무명 칸 안의 부가 정보 — 구분·관련·비고를 한 줄 아래에 옅게 */
+.t-meta{font-size:12px;color:var(--ink-2);margin-top:3px;line-height:1.5}
+.t-meta .sep{color:var(--line);margin:0 6px}
+.t-today{display:inline-block;margin-left:7px;padding:1px 7px;border-radius:999px;
+  background:var(--gold);color:#fff;font-size:12px;font-weight:700;vertical-align:1px}
+tbody tr.is-today-due td{background:#F2F6FE}
 td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 td.mid{text-align:center;white-space:nowrap}
 tr.is-done td{background:var(--done-bg);color:var(--done-ink)}
@@ -125,101 +154,132 @@ tr.is-done .task{text-decoration:line-through;text-decoration-color:#c3ccd8}
 tr.is-late td.dday,tr.is-late td.st{color:var(--bad);font-weight:700}
 
 /* ── 상태 배지 ──────────────────────────── */
-.badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:12px;font-weight:500;white-space:nowrap}
-.badge.wait{background:var(--line-soft);color:var(--ink-3)}
-.badge.run {background:#e7f0fb;color:var(--navy-700)}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.badge.wait{background:var(--line-soft);color:var(--ink-2)}
+.badge.run {background:#E7EFFC;color:var(--gold)}
 .badge.late{background:var(--bad-bg);color:var(--bad)}
 /* 부재 — 상태가 아니라 «그날 없음» 표시라 다른 계열로 */
 .badge.abs{background:rgba(90,103,120,.12);color:#4A5568}
 .badge.hold{background:var(--hold-bg);color:var(--hold)}
 .badge.done{background:var(--good-bg);color:var(--good)}
-.pri{font-size:11px;font-weight:600}
-.pri.hi{color:var(--bad)} .pri.mid{color:var(--ink-3)} .pri.lo{color:#9aa6b6}
+.pri{font-size:12px;font-weight:700}
+.pri.hi{color:var(--bad)} .pri.mid{color:var(--ink-2)} .pri.lo{color:var(--ink-3)}
 
 /* ── 빠른 등록 ──────────────────────────── */
-.quick{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--gold);
-  border-radius:3px;padding:13px 15px;margin-bottom:16px}
-.quick h3{font-size:12.5px;color:var(--navy-800);margin-bottom:3px}
-.quick .hint{font-size:11px;color:var(--ink-3);margin-bottom:9px}
+.quick{background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-card);padding:var(--pad-card);margin-bottom:var(--gap-card)}
+.bento .quick{margin-bottom:0;height:100%}
+.quick h3{font-size:15px;color:var(--ink);margin-bottom:4px}
+.quick .hint{font-size:12px;color:var(--ink-2);margin-bottom:12px;line-height:1.6}
 .qrow{display:flex;gap:8px;flex-wrap:wrap}
 /* 사람이 값을 쳐 넣는 칸은 읽으면서 고치는 자리다 — 표보다 크게 */
-.qrow input[type=text]{flex:1 1 340px;min-width:0;padding:10px 12px;border:1px solid var(--line);
-  border-radius:3px;background:var(--surface-2);font-size:14.5px}
+.qrow input[type=text]{flex:1 1 300px;min-width:0;padding:11px 13px;border:1px solid var(--line);
+  border-radius:8px;background:var(--surface);font-size:15px;color:var(--ink)}
 .qrow input[type=text]:focus{outline:2px solid var(--navy-600);outline-offset:-1px;background:#fff}
-.qbtn{border:1px solid var(--navy-800);background:var(--navy-800);color:#fff;padding:9px 16px;
-  border-radius:3px;cursor:pointer;font-weight:600;flex:0 0 auto}
-.qbtn:hover{background:var(--navy-700)}
-.qprev{margin-top:9px;font-size:11.5px;color:var(--ink-2);background:var(--surface-2);
-  border:1px dashed var(--line);border-radius:3px;padding:8px 11px;display:none}
+.qbtn{border:1px solid var(--gold);background:var(--gold);color:#fff;padding:0 20px;min-height:42px;
+  border-radius:8px;cursor:pointer;font-weight:700;font-size:14px;flex:0 0 auto}
+.qbtn:hover{background:var(--gold-dim);border-color:var(--gold-dim)}
+.qbtn:focus-visible{outline:2px solid var(--navy-600);outline-offset:2px}
+.qprev{margin-top:12px;font-size:13px;color:var(--ink-2);background:var(--surface-2);
+  border:1px solid var(--line);border-radius:8px;padding:10px 13px;display:none;line-height:1.6}
 .qprev.on{display:block}
-.qprev b{color:var(--navy-800)}
+.qprev b{color:var(--gold)}
 .qprev .warn{color:var(--warn)}
-.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 .chip{border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);
-  font-size:11px;padding:3px 9px;border-radius:11px;cursor:pointer}
-.chip:hover{border-color:var(--navy-600);color:var(--navy-700)}
+  font-size:12.5px;padding:5px 11px;border-radius:999px;cursor:pointer}
+.chip:hover{border-color:var(--gold);color:var(--gold)}
+.chip:focus-visible{outline:2px solid var(--navy-600);outline-offset:1px}
 
 /* ── 입력 폼 ────────────────────────────── */
-.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
-.fld{display:flex;flex-direction:column;gap:3px}
-.fld label{font-size:11px;color:var(--ink-3)}
-.fld input,.fld select,.fld textarea{padding:8px 10px;border:1px solid var(--line);border-radius:3px;
-  background:var(--surface-2);width:100%;font-size:14px}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+.fld{display:flex;flex-direction:column;gap:5px}
+.fld label{font-size:12.5px;color:var(--ink-2);font-weight:600}
+.fld input,.fld select,.fld textarea{padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+  background:var(--surface);width:100%;font-size:15px;color:var(--ink)}
 .fld input:focus,.fld select:focus,.fld textarea:focus{outline:2px solid var(--navy-600);outline-offset:-1px;background:#fff}
 
 /* ── 행 안 버튼 ─────────────────────────── */
 .rbtn{border:1px solid var(--line);background:var(--surface);color:var(--ink-2);
-  padding:4px 9px;border-radius:3px;cursor:pointer;font-size:12.5px;white-space:nowrap}
-.rbtn:hover{background:var(--navy-900);border-color:var(--navy-900);color:#fff}
+  padding:6px 11px;border-radius:7px;cursor:pointer;font-size:13px;white-space:nowrap}
+.rbtn:hover{background:var(--gold);border-color:var(--gold);color:#fff}
+.rbtn:focus-visible{outline:2px solid var(--navy-600);outline-offset:1px}
 .rbtn.on{background:var(--good-bg);border-color:var(--good);color:var(--good)}
 .rbtn.del:hover{background:var(--bad);border-color:var(--bad)}
-.racts{display:flex;gap:4px;justify-content:flex-end}
+.racts{display:flex;gap:6px;justify-content:flex-end;align-items:center}
+/* 보조 동작(보류·삭제)은 접어 둔다. 열림/닫힘과 무관하게 DOM 에 남으므로
+   키보드로도, 스크립트로도 같은 버튼에 닿는다. */
+.rmore{position:relative}
+.rmore>summary{list-style:none;cursor:pointer;border:1px solid var(--line);border-radius:7px;
+  padding:6px 10px;font-size:13px;color:var(--ink-2);background:var(--surface);line-height:1.2}
+.rmore>summary::-webkit-details-marker{display:none}
+.rmore>summary:hover{border-color:var(--gold);color:var(--gold)}
+.rmore>summary:focus-visible{outline:2px solid var(--navy-600);outline-offset:1px}
+.rmore-menu{position:absolute;right:0;top:calc(100% + 5px);z-index:30;background:var(--surface);
+  /* 카드 아래로 넘치면 위로 편다 — .card 가 overflow:hidden 이라 잘린다 */
+  border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 30px -10px rgba(10,30,60,.35);
+  padding:5px;display:flex;flex-direction:column;gap:3px;min-width:132px}
+.rmore.up .rmore-menu{top:auto;bottom:calc(100% + 5px)}
+.rmore-menu .rbtn{border-color:transparent;text-align:left;width:100%}
 
 /* ── 프로세스 뷰어 ──────────────────────── */
 .pv-pick{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
-.pv-pick select{flex:1 1 300px;padding:9px 11px;border:1px solid var(--line);border-radius:3px;
-  background:var(--surface);font-weight:600;color:var(--navy-800)}
+.pv-pick select{flex:1 1 300px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+  background:var(--surface);font-weight:600;color:var(--ink);font-size:14px}
 .pv-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:0;
-  border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-bottom:14px}
-.pv-meta>div{padding:9px 13px;border-bottom:1px solid var(--line-soft);border-right:1px solid var(--line-soft)}
-.pv-meta b{display:block;font-size:10.5px;color:var(--ink-3);font-weight:600;margin-bottom:2px;letter-spacing:.03em}
-.pv-meta span{font-size:12px;color:var(--ink)}
+  border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:16px}
+.pv-meta>div{padding:12px 15px;border-bottom:1px solid var(--line-soft);border-right:1px solid var(--line-soft)}
+.pv-meta b{display:block;font-size:12px;color:var(--ink-2);font-weight:700;margin-bottom:3px;letter-spacing:.03em}
+.pv-meta span{font-size:13.5px;color:var(--ink);line-height:1.6}
 .pv-meta .full{grid-column:1/-1}
-.pv-calc{white-space:pre-wrap;font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--ink-2)}
+.pv-calc{white-space:pre-wrap;font-variant-numeric:tabular-nums;font-size:13px;color:var(--ink-2)}
 .pv-step td{vertical-align:top}
-.pv-step .no{width:44px;text-align:center;font-weight:700;color:var(--navy-700)}
-.pv-chk{background:var(--warn-bg);border:1px solid #f0dcae;border-radius:3px;padding:10px 13px;
-  font-size:12px;color:#6b4c05;line-height:1.7}
+.pv-step .no{width:44px;text-align:center;font-weight:700;color:var(--gold)}
+.pv-chk{background:var(--warn-bg);border:1px solid #EDDCBC;border-radius:10px;padding:13px 15px;
+  font-size:13px;color:#6b4c05;line-height:1.7}
 .pv-chk b{color:#4a3403}
 
 /* 프로세스 수정 — 이 브라우저에서 카탈로그 문구를 고치는 폼 */
-.proc-edited{font-size:10.5px;color:var(--warn);background:var(--warn-bg);
-  border:1px solid rgba(141,103,20,.25);border-radius:3px;padding:2px 8px;white-space:nowrap}
-.pv-edit-tb input,.pv-edit-tb textarea{width:100%;padding:6px 8px;border:1px solid var(--line);
-  border-radius:3px;font-size:11.5px;font-family:inherit;background:var(--surface);color:var(--ink)}
+.proc-edited{font-size:12px;color:var(--warn);background:var(--warn-bg);
+  border:1px solid #EDDCBC;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.pv-edit-tb input,.pv-edit-tb textarea{width:100%;padding:7px 9px;border:1px solid var(--line);
+  border-radius:7px;font-size:13px;font-family:inherit;background:var(--surface);color:var(--ink)}
 .pv-edit-tb textarea{resize:vertical}
 .pv-edit-tb input:focus,.pv-edit-tb textarea:focus{outline:2px solid var(--navy-600);outline-offset:-1px;background:#fff}
 
 /* ── 캘린더 ─────────────────────────────── */
-.calnav{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
-.calnav .btn{white-space:nowrap;border-color:var(--line);color:var(--ink-2)}
-.calnav .btn:hover{background:var(--navy-900);border-color:var(--navy-900);color:#fff}
-.calnav .mn{font-size:15px;font-weight:700;color:var(--navy-900);min-width:132px;font-variant-numeric:tabular-nums}
+.calnav{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.calnav .btn{white-space:nowrap;border-color:var(--line);color:var(--ink-2);background:var(--surface);
+  min-height:38px;padding:0 13px}
+.calnav .btn:hover{background:var(--gold);border-color:var(--gold);color:#fff}
+.calnav .mn{font-size:19px;font-weight:700;color:var(--ink);min-width:150px;text-align:center;
+  font-variant-numeric:tabular-nums}
 .calnav .sp{flex:1}
-table.cal{table-layout:fixed;background:var(--surface);border:1px solid var(--line)}
-table.cal th{background:var(--surface-2);color:var(--ink-2);text-align:center;padding:7px 0;font-size:10px;font-weight:500;position:static;border-bottom:1px solid var(--line)}
+.calnav .note{font-size:12px;color:var(--ink-2);line-height:1.5}
+/* 달력 8~9열 · 선택 날짜 목록 3~4열 */
+.calgrid{display:grid;grid-template-columns:minmax(0,8.5fr) minmax(270px,3.5fr);
+  gap:var(--gap-card);align-items:start}
+table.cal{table-layout:fixed;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-card);overflow:hidden;font-size:13px}
+table.cal th{background:var(--surface-2);color:var(--ink-2);text-align:center;padding:9px 0;font-size:12px;font-weight:600;position:static;border-bottom:1px solid var(--line)}
 table.cal th.sat,table.cal th.sun{color:var(--bad)}
-table.cal td{border:1px solid var(--line-soft);vertical-align:top;height:96px;padding:5px 6px;width:14.28%}
-table.cal td.off{background:var(--surface-2)}
-table.cal td.is-today{background:#fffaf0;box-shadow:inset 0 0 0 2px var(--gold)}
-.dnum{font-size:10.5px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums}
+table.cal td{border:1px solid var(--line-soft);vertical-align:top;height:104px;padding:7px 8px;width:14.28%;
+  cursor:pointer}
+table.cal td.off{background:var(--surface-2);cursor:default}
+/* 주말은 아주 옅게, 오늘은 선명한 테두리, 선택한 날은 연한 블루 */
+table.cal td.we{background:#FAFBFD}
+table.cal td.is-sel{background:#E8F0FD}
+table.cal td.is-today{box-shadow:inset 0 0 0 2px var(--gold)}
+table.cal td.is-today.is-sel{background:#E1EBFC}
+table.cal td:focus-visible{outline:2px solid var(--navy-600);outline-offset:-2px}
+.dnum{font-size:13px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
 .dnum.sat,.dnum.sun{color:var(--bad)}
 /* 공휴일 — 날짜를 빨갛게, 이름을 한 줄로. 한 칸에 다 들어가야 해서 줄인다. */
 .dnum.hol{color:var(--bad)}
-.holn{font-size:9.5px;line-height:1.25;color:var(--bad);font-weight:600;
+.holn{font-size:12px;line-height:1.3;color:var(--bad);font-weight:600;
       margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* 색 배경 칩 대신 왼쪽 얇은 색 막대 + 민무늬 텍스트로 — 정보밀도를 낮춘다 */
-.ev{font-size:10px;line-height:1.35;margin-top:2px;padding:1px 0 1px 7px;border-left:2px solid var(--navy-700);
+.ev{font-size:12px;line-height:1.4;margin-top:3px;padding:1px 0 1px 7px;border-left:3px solid var(--gold);
   background:transparent;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default}
 .ev.late{border-left-color:var(--bad);color:var(--bad)}
 .ev.done{border-left-color:var(--ink-3);color:var(--ink-3);text-decoration:line-through}
@@ -228,36 +288,108 @@ table.cal td.is-today{background:#fffaf0;box-shadow:inset 0 0 0 2px var(--gold)}
 /* 남의 일정 — 읽기 전용이라 눌러도 아무 일이 없다. 내 것과 확실히 달라 보여야 한다 */
 .ev.shared{border-left-style:dotted;border-left-color:var(--navy-600);
   background:var(--surface-2);color:var(--ink-2);opacity:.9}
-.ev.more{background:transparent;color:var(--ink-3);border-left-color:transparent;padding-left:5px}
+.ev.more{background:transparent;color:var(--ink-2);border-left-color:transparent;padding-left:6px;font-weight:600}
+
+/* 선택 날짜의 업무 목록 — 달력 오른쪽 3~4열 */
+.calside{position:sticky;top:104px}
+.calside .body{padding:0}
+.cs-row{display:flex;gap:10px;align-items:flex-start;padding:12px var(--pad-card);
+  border-bottom:1px solid var(--line-soft)}
+.cs-row:last-child{border-bottom:none}
+.cs-bar{flex:0 0 3px;align-self:stretch;border-radius:2px;background:var(--gold);margin-top:2px}
+.cs-bar.late{background:var(--bad)} .cs-bar.done{background:var(--ink-3)}
+.cs-bar.hold{background:var(--hold)} .cs-bar.abs{background:var(--ink-3)}
+.cs-bar.shared{background:var(--line)}
+.cs-main{min-width:0;flex:1}
+.cs-name{font-size:14px;color:var(--ink);line-height:1.45;word-break:break-word;font-weight:500}
+.cs-meta{font-size:12px;color:var(--ink-2);margin-top:3px}
+.cs-src{display:inline-block;font-size:12px;color:var(--ink-2);background:var(--surface-2);
+  border:1px solid var(--line);border-radius:999px;padding:1px 8px;margin-right:6px}
+.cs-foot{padding:14px var(--pad-card);border-top:1px solid var(--line-soft)}
 
 /* ── 기타 ───────────────────────────────── */
-.empty{padding:34px 16px;text-align:center;color:var(--ink-3);font-size:12.5px}
-.foot{margin-top:22px;font-size:11px;color:var(--ink-3);line-height:1.7;text-align:center}
+.empty{padding:34px 16px;text-align:center;color:var(--ink-2);font-size:13.5px}
+.foot{margin-top:24px;font-size:12px;color:var(--ink-2);line-height:1.7;text-align:center}
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);
-  background:var(--navy-900);color:#fff;padding:10px 18px;border-radius:3px;font-size:12.5px;
+  background:var(--navy-900);color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;
   box-shadow:0 6px 20px rgba(0,26,58,.28);opacity:0;transition:opacity .12s;z-index:200;
   pointer-events:none;white-space:nowrap}
 .toast.on{opacity:1}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:3px;overflow:hidden}
-.seg button{border:none;background:var(--surface);color:var(--ink-3);padding:5px 11px;cursor:pointer;font-size:11.5px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:none;background:var(--surface);color:var(--ink-2);padding:7px 14px;cursor:pointer;font-size:13px}
 .seg button+button{border-left:1px solid var(--line)}
-.seg button.on{background:var(--navy-900);color:#fff;font-weight:600}
+.seg button.on{background:var(--gold);color:#fff;font-weight:700}
+.seg button:focus-visible{outline:2px solid var(--navy-600);outline-offset:-2px}
 
+/* ── 상세 등록 패널 (드로어) ───────────────
+   「자세히 등록」 폼을 기본 펼침 대신 오른쪽 패널로. 폼 자체는 그대로
+   재사용하므로 닫혀 있어도 DOM 에 남는다(수정 프리필·스크립트 접근 동일). */
+.drawer{position:fixed;inset:0;z-index:150;visibility:hidden;pointer-events:none}
+.drawer.on{visibility:visible;pointer-events:auto}
+.drawer-veil{position:absolute;inset:0;background:rgba(10,24,45,.38);opacity:0;transition:opacity .16s}
+.drawer.on .drawer-veil{opacity:1}
+.drawer-panel{position:absolute;top:0;right:0;height:100%;width:min(460px,100%);
+  background:var(--surface);box-shadow:-16px 0 40px -18px rgba(10,30,60,.45);
+  display:flex;flex-direction:column;transform:translateX(100%);transition:transform .18s ease}
+.drawer.on .drawer-panel{transform:none}
+.drawer-panel>header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:16px var(--pad-card);
+  background:var(--navy-900);color:#fff;flex:0 0 auto}
+.drawer-panel>header h2{font-size:16px;color:#fff;flex:1 1 auto;min-width:0}
+.drawer-panel>header .desc{font-size:12.5px;color:#A9BCCF;flex:1 1 100%;line-height:1.5;margin:0}
+.drawer-x{background:transparent;border:1px solid rgba(255,255,255,.3);color:#dbe5f2;cursor:pointer;
+  font-size:14px;line-height:1;padding:7px 10px;border-radius:7px}
+.drawer-x:hover{background:rgba(255,255,255,.12);color:#fff}
+.drawer-x:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.drawer-body{padding:var(--pad-card);overflow-y:auto;flex:1}
+.drawer-acts{display:flex;gap:8px;padding:14px var(--pad-card);border-top:1px solid var(--line);
+  background:var(--surface-2);flex:0 0 auto}
+.drawer-acts .qbtn{flex:0 0 auto}
+.drawer-acts .rbtn{min-height:42px;padding:0 16px}
+@media (max-width:640px){ .drawer-panel{width:100%} }
+@media print{ .drawer{display:none!important} }
+
+/* ── 프로세스 선택 목록 ──────────────────── */
+.proclist{display:flex;flex-direction:column;max-height:560px}
+.proclist .pl-find{padding:12px var(--pad-card);border-bottom:1px solid var(--line-soft)}
+.proclist .pl-find input{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;
+  font-size:14px;background:var(--surface);color:var(--ink)}
+.proclist .pl-find input:focus{outline:2px solid var(--navy-600);outline-offset:-1px}
+.pl-scroll{overflow-y:auto;flex:1;min-height:0}
+.pl-item{display:block;width:100%;text-align:left;border:none;background:transparent;cursor:pointer;
+  padding:11px var(--pad-card);font-size:13.5px;color:var(--ink-2);line-height:1.45;
+  border-bottom:1px solid var(--line-soft)}
+.pl-item:hover{background:var(--surface-2);color:var(--ink)}
+.pl-item.on{background:#E8F0FD;color:var(--gold);font-weight:700;
+  box-shadow:inset 3px 0 0 var(--gold)}
+.pl-item:focus-visible{outline:2px solid var(--navy-600);outline-offset:-2px}
+.pl-item .pl-tag{font-size:12px;color:var(--warn);margin-left:5px}
+.pl-none{padding:20px;text-align:center;color:var(--ink-2);font-size:13px}
+
+@media (max-width:1180px){
+  .bento>.b8,.bento>.b4{grid-column:span 12}
+}
+@media (max-width:1023px){
+  .calgrid{grid-template-columns:minmax(0,1fr)}
+  .calside{position:static}
+}
 @media (max-width:900px){
   .tbl-wrap table{min-width:720px}
+  .tbl-free table{min-width:0}
   .pv-step{min-width:820px}
-  .topbar{height:46px;padding:0 12px;gap:10px}
+  .topbar{height:52px;padding:0 12px;gap:10px}
   .brand .sub{display:none}
   .topbar .clock{display:none}
-  .tabs{top:46px;padding:0 12px}
+  .tabs{top:52px;padding:0 12px}
   .wrap{padding:14px 12px 50px}
-  .tiles{grid-template-columns:1fr 1fr;gap:9px}
-  .tile .val{font-size:26px}
+  .tiles{grid-template-columns:1fr 1fr}
+  .tile .val{font-size:28px}
   table.cal td{height:auto;min-height:62px}
   .ev{white-space:normal}
+  .proclist{max-height:340px}
 }
 @media print{
-  .topbar,.tabs,.quick,.racts,.calnav .btn,.seg,.noprint,.pv-pick{display:none!important}
+  .topbar,.tabs,.quick,.racts,.calnav .btn,.seg,.noprint,.pv-pick,.proclist,.cs-foot{display:none!important}
+  .bento{display:block} .calgrid{display:block}
   .tbl-wrap{overflow:visible}
   th,td{print-color-adjust:exact;-webkit-print-color-adjust:exact}
   .wrap{max-width:none;padding:0}
@@ -267,23 +399,35 @@ table.cal td.is-today{background:#fffaf0;box-shadow:inset 0 0 0 2px var(--gold)}
 }
 
 /* ── 도구 간 이동 (상단바) ── */
-.toolnav{display:flex;align-items:center;gap:5px;margin-left:16px;flex:0 0 auto}
-.toolnav .tn{font-size:12px;padding:5px 11px;border-radius:999px;text-decoration:none;white-space:nowrap;border:1px solid transparent;line-height:1.4}
-.toolnav .tn-home{color:#a9bccf;border-color:rgba(255,255,255,.2)}
-.toolnav .tn-home:hover{background:rgba(255,255,255,.1);color:#fff}
-.toolnav .tn-cur{color:#fff;font-weight:600;background:rgba(255,255,255,.12)}
-.toolnav .tn-other{color:#fff;background:var(--gold);border-color:var(--gold);font-weight:600}
-.toolnav .tn-other:hover{filter:brightness(1.08)}
+.toolnav{display:flex;align-items:center;gap:4px;margin-left:16px;flex:0 0 auto}
+.toolnav .tn{font-size:13px;padding:7px 13px;border-radius:8px;text-decoration:none;white-space:nowrap;border:1px solid transparent;line-height:1.4}
+/* 지금 도구는 채워서, 나머지는 조용한 글자 링크로 — 빌더와 같은 규칙 */
+.toolnav .tn-cur{color:#fff;font-weight:700;background:var(--gold);border-color:var(--gold)}
+.toolnav .tn-other{color:#B9CBE4;border-color:transparent}
+.toolnav .tn-other:hover{background:rgba(255,255,255,.12);color:#fff}
 .toolnav .tn:focus-visible{outline:2px solid #fff;outline-offset:1px}
-@media(max-width:1120px){ .toolnav .tn-cur{display:none} }
-@media(max-width:560px){ .toolnav{display:none} }
-@media print{ .toolnav{display:none} }
+/* 좁은 화면 — 도구 전환 메뉴로 접는다 */
+.toolmenu{position:relative;margin-left:12px;flex:0 0 auto;display:none}
+.toolmenu>summary{list-style:none;cursor:pointer;font-size:13px;color:#dfe8f4;white-space:nowrap;
+  border:1px solid rgba(255,255,255,.26);border-radius:8px;padding:8px 12px;line-height:1.2}
+.toolmenu>summary::-webkit-details-marker{display:none}
+.toolmenu>summary:hover{background:rgba(255,255,255,.1)}
+.toolmenu>summary:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.toolmenu-list{position:absolute;left:0;top:calc(100% + 6px);z-index:60;min-width:190px;
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:5px;
+  box-shadow:0 14px 34px -12px rgba(10,30,60,.42);display:flex;flex-direction:column;gap:2px}
+.toolmenu-list a,.toolmenu-list span{display:block;padding:9px 12px;border-radius:7px;font-size:13.5px;
+  color:var(--ink-2);text-decoration:none}
+.toolmenu-list a:hover{background:var(--surface-2);color:var(--ink)}
+.toolmenu-list .cur{background:#E8F0FD;color:var(--gold);font-weight:700}
+@media(max-width:1180px){ .toolnav{display:none} .toolmenu{display:block} }
+@media print{ .toolnav,.toolmenu{display:none} }
 
 /* 빈 상태 안내 — 왜 비었는지·다음 행동 */
 .empty{line-height:1.75}
 .empty b{color:var(--ink-2)}
-.em-act{display:inline-block;margin-top:9px;padding:6px 13px;border:1px solid var(--gold);
-  color:var(--gold);border-radius:999px;font-size:11.5px;font-weight:600;cursor:pointer}
+.em-act{display:inline-block;margin-top:11px;padding:8px 15px;border:1px solid var(--gold);
+  color:var(--gold);border-radius:999px;font-size:13px;font-weight:700;cursor:pointer}
 .em-act:hover{background:var(--gold);color:#fff}
 
 /* 화면에는 안 보이지만 스크린리더는 읽는 라벨 */
@@ -291,8 +435,8 @@ table.cal td.is-today{background:#fffaf0;box-shadow:inset 0 0 0 2px var(--gold)}
     clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
 /* 본부 선택 (본부가 둘 이상일 때만 나타남) */
-.dept-sel{background:transparent;color:#9fb4d0;border:1px solid rgba(255,255,255,.22);border-radius:3px;
-  padding:2px 6px;font-size:11px;letter-spacing:.04em;cursor:pointer;margin-top:1px}
+.dept-sel{background:transparent;color:#9fb4d0;border:1px solid rgba(255,255,255,.22);border-radius:6px;
+  padding:3px 8px;font-size:12px;letter-spacing:.04em;cursor:pointer;margin-top:1px}
 .dept-sel:hover{color:#fff;border-color:rgba(255,255,255,.45)}
 .dept-sel:focus-visible{outline:2px solid #fff;outline-offset:1px}
 .dept-sel option{color:var(--ink);background:#fff}
@@ -301,64 +445,64 @@ table.cal td.is-today{background:#fffaf0;box-shadow:inset 0 0 0 2px var(--gold)}
 .btn.fb{border-color:var(--gold);color:var(--gold)}
 .btn.fb:hover{background:var(--gold);color:#fff}
 .fbm{position:fixed;inset:0;z-index:200;background:rgba(6,16,32,.55);display:grid;place-items:center;padding:18px}
-.fbm-box{background:var(--surface);border-radius:4px;max-width:560px;width:100%;box-shadow:0 18px 48px -12px rgba(0,20,50,.45);overflow:hidden}
+.fbm-box{background:var(--surface);border-radius:12px;max-width:560px;width:100%;box-shadow:0 18px 48px -12px rgba(0,20,50,.45);overflow:hidden}
 .fbm-box header{display:flex;align-items:center;gap:10px;padding:13px 16px;background:var(--navy-900);color:#fff}
-.fbm-box header b{font-size:13.5px;flex:1}
+.fbm-box header b{font-size:15px;flex:1}
 .fbm-x{background:transparent;border:none;color:#c8d4e6;cursor:pointer;font-size:14px;padding:2px 4px}
 .fbm-body{padding:14px 16px 16px}
-.fbm-lead{margin:0 0 10px;font-size:12px;line-height:1.65;color:var(--ink-2)}
-.fb-ctx{font-size:11.5px;color:var(--ink-3);background:var(--surface-2);border:1px solid var(--line-soft);border-radius:3px;padding:7px 10px;margin:0 0 10px}
-.fb-text{width:100%;border:1px solid var(--line);border-radius:3px;padding:10px 12px;font-size:13px;line-height:1.6;resize:vertical;background:var(--surface);color:var(--ink);font-family:inherit}
+.fbm-lead{margin:0 0 10px;font-size:13px;line-height:1.65;color:var(--ink-2)}
+.fb-ctx{font-size:12.5px;color:var(--ink-3);background:var(--surface-2);border:1px solid var(--line-soft);border-radius:3px;padding:7px 10px;margin:0 0 10px}
+.fb-text{width:100%;border:1px solid var(--line);border-radius:8px;padding:11px 13px;font-size:15px;line-height:1.6;resize:vertical;background:var(--surface);color:var(--ink);font-family:inherit}
 .fb-text:focus{outline:2px solid var(--navy-600);outline-offset:-1px}
 .fb-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
 .fb-acts .btn{border-color:var(--line);color:var(--ink-2)}
 .fb-acts .btn.primary{background:var(--gold);border-color:var(--gold);color:#fff}
-.fb-note{font-size:11px;color:var(--ink-3)}
-.share-chk{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-2);margin:10px 0}
+.fb-note{font-size:12px;color:var(--ink-2)}
+.share-chk{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-2);margin:10px 0}
 .share-import{margin-top:16px;padding-top:14px;border-top:1px solid var(--line-soft)}
-.share-import h4{font-size:12px;color:var(--navy-800);margin-bottom:4px}
+.share-import h4{font-size:14px;color:var(--ink);margin-bottom:4px}
 /* 복원은 지금 데이터를 지운다 — 겹쳐 보기와 눈으로도 구분되어야 한다 */
 .share-restore{margin-top:16px;padding:12px 13px;border:1px solid rgba(141,103,20,.30);
   border-radius:8px;background:var(--warn-bg)}
-.share-restore h4{font-size:12px;color:var(--navy-800);margin-bottom:4px}
-.share-none{font-size:11px;color:var(--ink-3);margin:8px 0 0}
+.share-restore h4{font-size:14px;color:var(--ink);margin-bottom:4px}
+.share-none{font-size:12.5px;color:var(--ink-2);margin:8px 0 0}
 .share-row{display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:8px 0;border-bottom:1px solid var(--line-soft);font-size:11.5px}
+  padding:9px 0;border-bottom:1px solid var(--line-soft);font-size:12.5px}
 .share-row:last-child{border-bottom:none}
-.share-row .dim{color:var(--ink-3);font-size:10.5px}
-.share-meta{font-size:10.5px;color:var(--ink-3);margin-top:2px}
-.share-warn{font-size:11.5px;color:var(--warn);background:var(--warn-bg);border:1px solid rgba(141,103,20,.25);
-  border-radius:3px;padding:7px 10px;margin:0}
+.share-row .dim{color:var(--ink-2);font-size:12px}
+.share-meta{font-size:12px;color:var(--ink-2);margin-top:2px}
+.share-warn{font-size:12.5px;color:var(--warn);background:var(--warn-bg);border:1px solid #EDDCBC;
+  border-radius:8px;padding:9px 12px;margin:0}
 /* 확인 대화상자 — 머리글 없이 문장과 두 버튼만 */
 .cfm-box{max-width:420px}
-.cfm-msg{margin:2px 0 0;font-size:13px;line-height:1.65;color:var(--ink);white-space:pre-line}
+.cfm-msg{margin:2px 0 0;font-size:14.5px;line-height:1.65;color:var(--ink);white-space:pre-line}
 
 /* ── 수행의 원장 (RUN) ──────────────────────
    카탈로그 STEP 표가 체크·산출물·담당이 기록되는 원장으로 바뀐다.
    기존 토큰·클래스를 재사용하고 새 클래스는 최소로. */
-.runbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 12px;
-  padding:10px 12px;background:var(--surface-2);border:1px solid var(--line-soft);border-radius:3px}
-.runbar select{flex:0 1 300px;min-width:170px;padding:8px 10px;border:1px solid var(--line);
-  border-radius:3px;background:var(--surface);font-weight:600;color:var(--navy-800)}
-.runbar .rb-note{font-size:11px;color:var(--ink-3)}
+.runbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 16px;
+  padding:13px 15px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px}
+.runbar select{flex:0 1 300px;min-width:170px;padding:9px 11px;border:1px solid var(--line);
+  border-radius:8px;background:var(--surface);font-weight:600;color:var(--ink);font-size:14px}
+.runbar .rb-note{font-size:12.5px;color:var(--ink-2)}
 .run-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 9px}
-#runProg{font-size:12.5px;font-weight:700;color:var(--navy-800);font-variant-numeric:tabular-nums;white-space:nowrap}
-.run-ctx{font-size:11px;color:var(--ink-2)}
+#runProg{font-size:15px;font-weight:700;color:var(--navy-800);font-variant-numeric:tabular-nums;white-space:nowrap}
+.run-ctx{font-size:12.5px;color:var(--ink-2)}
 .run-chk{width:24px;height:24px;padding:0;border:1.5px solid var(--line);border-radius:4px;
   background:var(--surface);cursor:pointer;color:transparent;font-size:13px;line-height:1}
 .run-chk:hover{border-color:var(--good)}
 .run-chk.on{background:var(--good);border-color:var(--good);color:#fff}
 .run-chk:focus-visible{outline:2px solid var(--navy-600);outline-offset:1px}
 tr.run-done td{background:var(--good-bg)}
-.run-cont{font-size:10.5px;color:var(--ink-3);margin-top:2px}
+.run-cont{font-size:12.5px;color:var(--ink-2);margin-top:3px;line-height:1.55}
 .run-ledger input{width:100%;min-width:110px;padding:5px 7px;border:1px solid var(--line);
-  border-radius:3px;background:var(--surface-2);font-size:11px}
+  border-radius:7px;background:var(--surface-2);font-size:13px}
 .run-ledger input:focus{outline:2px solid var(--navy-600);outline-offset:-1px;background:#fff}
 .run-at{font-variant-numeric:tabular-nums;white-space:nowrap}
 .run-trig{margin-top:5px;border-color:var(--gold);color:var(--gold)}
 .run-trig:hover{background:var(--gold);border-color:var(--gold);color:#fff}
 .run-logline{display:inline-block;margin-top:4px;padding:2px 8px;border-radius:3px;
-  font-size:10.5px;color:var(--good);background:var(--good-bg)}
+  font-size:12px;color:var(--good);background:var(--good-bg)}
 /* 대시보드 「진행 중인 프로세스」 — 행 전체가 버튼이다 */
 .run-line{display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%;text-align:left;
   border:none;border-bottom:1px solid var(--line-soft);background:var(--surface);
@@ -366,26 +510,26 @@ tr.run-done td{background:var(--good-bg)}
 .run-line:hover{background:var(--surface-2)}
 .run-line:last-child{border-bottom:none}
 .run-line:focus-visible{outline:2px solid var(--navy-600);outline-offset:-2px}
-.rl-name{font-weight:600;color:var(--navy-800);font-size:12px}
+.rl-name{font-weight:700;color:var(--ink);font-size:14px}
 .rl-fund{color:var(--ink-2);white-space:nowrap}
 .rl-progwrap{display:flex;align-items:center;gap:7px;flex:1 1 150px;min-width:130px}
-.rl-cnt{font-size:10.5px;font-weight:700;color:var(--navy-700);white-space:nowrap;font-variant-numeric:tabular-nums}
+.rl-cnt{font-size:12px;font-weight:700;color:var(--gold);white-space:nowrap;font-variant-numeric:tabular-nums}
 .run-prog{flex:1;height:6px;min-width:56px;background:var(--line-soft);border-radius:3px;overflow:hidden}
 .run-prog i{display:block;height:100%;background:var(--gold)}
-.rl-next{font-size:10.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
-.rl-start{font-size:10.5px;color:var(--ink-3);white-space:nowrap;font-variant-numeric:tabular-nums}
+.rl-next{font-size:12px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+.rl-start{font-size:12px;color:var(--ink-2);white-space:nowrap;font-variant-numeric:tabular-nums}
 
 /* 채울 것 — 사용자가 넣어야 할 자리를 모아 보여주는 줄·배지 */
 .run-needs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 9px;
   padding:7px 10px;background:var(--warn-bg);border:1px solid rgba(141,103,20,.25);border-radius:5px}
-.run-needs b{font-size:10.5px;color:var(--warn);white-space:nowrap}
+.run-needs b{font-size:12px;color:var(--warn);white-space:nowrap}
 .run-need-btn{border:1px solid rgba(141,103,20,.35);background:var(--surface);color:var(--warn);
-  font-size:10px;padding:2px 8px;border-radius:3px;cursor:pointer;white-space:nowrap}
+  font-size:12px;padding:4px 10px;border-radius:7px;cursor:pointer;white-space:nowrap}
 .run-need-btn:hover{background:var(--warn);color:#fff}
-.run-need-btn input{font-size:10px;padding:0 2px;border:1px solid var(--line);border-radius:2px}
-.rl-need{font-size:10px;font-weight:600;color:var(--warn);background:var(--warn-bg);
-  padding:2px 6px;border-radius:3px;white-space:nowrap}
-.trig-needs{margin-top:9px;padding:6px 10px;font-size:10.5px;color:var(--warn);
+.run-need-btn input{font-size:12px;padding:0 2px;border:1px solid var(--line);border-radius:2px}
+.rl-need{font-size:12px;font-weight:700;color:var(--warn);background:var(--warn-bg);
+  padding:2px 8px;border-radius:999px;white-space:nowrap}
+.trig-needs{margin-top:9px;padding:8px 12px;font-size:12px;color:var(--warn);
   background:var(--warn-bg);border:1px solid rgba(141,103,20,.25);border-radius:5px}
 .trig-needs[hidden]{display:none}
 
@@ -393,22 +537,22 @@ tr.run-done td{background:var(--good-bg)}
    결재선·서명은 전부 시연 표시(placeholder)이고 실제 전자결재가 아니다. */
 .fbm-box.doc{max-width:660px}
 .doc-frame{border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin:0 0 12px;background:var(--surface-2)}
-.doc-warn{font-size:10.5px;color:var(--warn);background:var(--warn-bg);
+.doc-warn{font-size:12px;color:var(--warn);background:var(--warn-bg);
   border:1px solid rgba(141,103,20,.25);border-radius:4px;padding:5px 8px;margin:0 0 10px}
 .doc-tbrow{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
-.doc-tb{border-collapse:collapse;font-size:10.5px;flex:1 1 160px}
+.doc-tb{border-collapse:collapse;font-size:12px;flex:1 1 160px}
 .doc-tb th,.doc-tb td{border:1px solid var(--line);padding:5px 8px;text-align:center;color:var(--ink-2)}
 .doc-tb th{background:var(--surface);font-weight:700;color:var(--navy-700)}
-.doc-tb td i{display:block;font-style:normal;font-size:9px;color:var(--ink-3);margin-top:2px}
-.doc-meta{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--ink-2);margin:0 0 8px}
+.doc-tb td i{display:block;font-style:normal;font-size:11px;color:var(--ink-3);margin-top:2px}
+.doc-meta{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2);margin:0 0 8px}
 .doc-meta b{color:var(--navy-800);font-variant-numeric:tabular-nums}
-.doc-line{display:flex;gap:8px;font-size:11.5px;margin:0 0 4px}
+.doc-line{display:flex;gap:8px;font-size:12.5px;margin:0 0 4px}
 .doc-k{flex:0 0 32px;color:var(--ink-3)}
 .doc-v{color:var(--ink);word-break:break-all}
-.doc-title{font-size:13px;font-weight:700;color:var(--navy-800);margin:8px 0 6px}
-.doc-body{font-size:12px;line-height:1.7;color:var(--ink);white-space:pre-wrap;
+.doc-title{font-size:14.5px;font-weight:700;color:var(--ink);margin:8px 0 6px}
+.doc-body{font-size:13px;line-height:1.7;color:var(--ink);white-space:pre-wrap;
   border-top:1px dashed var(--line-soft);padding-top:8px}
-.doc-end{text-align:right;font-size:11px;color:var(--ink-3);margin-top:6px}
+.doc-end{text-align:right;font-size:12px;color:var(--ink-2);margin-top:6px}
 </style>
 </head>
 <body>
@@ -422,9 +566,20 @@ tr.run-done td{background:var(--good-bg)}
     </div>
   </div>
   <nav class="toolnav" aria-label="도구 이동">
-    <span class="tn tn-cur">업무 캘린더</span>
-    <a class="tn tn-other" id="tnOther" href="#">재무모델 →</a>
+    <a class="tn tn-other" data-tool="home" href="index.html">업무지원 홈</a>
+    <a class="tn tn-other" data-tool="model" href="CRE_재무모델_빌더.html">재무모델</a>
+    <span class="tn tn-cur" aria-current="page">업무 캘린더</span>
+    <a class="tn tn-other" data-tool="km" href="knowledge-demo/index.html">지식관리 체험판</a>
   </nav>
+  <details class="toolmenu" id="toolMenu">
+    <summary aria-label="도구 전환 메뉴">도구 · 업무 캘린더 ▾</summary>
+    <div class="toolmenu-list">
+      <a data-tool="home" href="index.html">업무지원 홈</a>
+      <a data-tool="model" href="CRE_재무모델_빌더.html">재무모델</a>
+      <span class="cur" aria-current="page">업무 캘린더</span>
+      <a data-tool="km" href="knowledge-demo/index.html">지식관리 체험판</a>
+    </div>
+  </details>
   <div class="spacer"></div>
   <div class="clock">오늘<b id="hdToday">—</b></div>
   <button class="btn fb" id="btnFeedback" title="써 보고 불편한 점·틀린 것·바라는 기능을 보내 주세요">개선안</button>
@@ -3700,6 +3855,9 @@ function setDept(key){
 function lsKey(){ return 'jb-work-calendar-v2:'+DEPT; }
 var TAB='dash';
 var CAL_YM=null;                 /* 캘린더가 보고 있는 달 {y,m} */
+var CAL_SEL='';                  /* 캘린더에서 고른 날짜 (YYYY-MM-DD) — 보기 전용 상태 */
+var TASK_DRAWER=false;           /* 「상세 등록」 패널이 열려 있는지 */
+var DRAWER_OPENER='';            /* 패널을 연 버튼의 선택자 — 닫을 때 포커스를 돌려준다 */
 var PROC_PICK=0;                 /* 프로세스 뷰어가 고른 업무 */
 var RUN_PICK=0;                  /* 실행 모드로 열어 둔 RUN id (0 = 카탈로그 모드) */
 var TASK_FILTER='open';          /* open | all | late */
@@ -4848,24 +5006,84 @@ function renderTabs(){
   }).join('');
 }
 
-/* ── 대시보드 ──────────────────────────────────────────── */
-function paneDash(){
-  var c=counts(), t0=today();
-  var h='<div class="tiles">'+
-    tile('지연',      c.지연,   '건', '마감이 지났고 아직 미완료', c.지연>0?'late':'')+
-    /* 임박은 «진행 상태»가 아니라 «기한 상태»다 — 진행중 안에 들어 있다.
-       그래서 타일 숫자를 다 더하면 전체 건수보다 크다. 숫자를 바꿔서
-       맞추면 임박이 사라지므로, 포함 관계를 글로 밝혀 둔다. */
-    tile('임박',      c.soon,   '건', '7일 이내 마감 · 진행중에 포함', c.soon>0?'soon':'')+
-    tile('진행중',    c.진행중, '건', '마감일이 남아 있음 · 임박 '+c.soon+'건 포함','')+
-    tile('보류',      c.보류,   '건', '사유가 있어 멈춰 둔 건', c.보류>0?'hold':'')+
-    tile('완료',      c.완료,   '건', '완료일이 기록된 건','done')+
-  '</div>';
+/* 그 달의 마감 건을 날짜별로 모은다. 대시보드의 「월간 일정 요약」과
+   캘린더가 같은 묶음을 봐야 하므로 한 군데서만 만든다 — 부재의 기간
+   펼치기 규칙도 여기 하나뿐이다. 판정 규칙 자체는 바꾸지 않았다. */
+function tasksByDay(y,mo){
+  var byDay={};
+  S.tasks.forEach(function(t){
+    var d=parseYmd(t.due); if(!d) return;
+    if(t.kind==='absence' && t.until){
+      var u=parseYmd(t.until);
+      if(u){
+        var cur=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+        var end=new Date(u.getFullYear(),u.getMonth(),u.getDate());
+        while(cur<=end){
+          if(cur.getFullYear()===y && cur.getMonth()===mo){
+            (byDay[cur.getDate()]=byDay[cur.getDate()]||[]).push(t);
+          }
+          cur=new Date(cur.getFullYear(),cur.getMonth(),cur.getDate()+1);
+        }
+        return;
+      }
+    }
+    if(d.getFullYear()!==y||d.getMonth()!==mo) return;
+    (byDay[d.getDate()]=byDay[d.getDate()]||[]).push(t);
+  });
+  return byDay;
+}
+/* 남의 일정(겹쳐 보기)은 내 것과 «섞지 않는다» — 따로 모아 따로 그린다 */
+function sharedByDay(y,mo){
+  var byDay={};
+  SHARED.bundles.forEach(function(b){
+    b.tasks.forEach(function(t){
+      var sd=parseYmd(t.due); if(!sd) return;
+      if(t.kind==='absence'&&t.until){
+        var su=parseYmd(t.until);
+        if(su){
+          var c2=new Date(sd.getFullYear(),sd.getMonth(),sd.getDate());
+          var e2=new Date(su.getFullYear(),su.getMonth(),su.getDate());
+          while(c2<=e2){
+            if(c2.getFullYear()===y&&c2.getMonth()===mo)
+              (byDay[c2.getDate()]=byDay[c2.getDate()]||[]).push({b:b,t:t});
+            c2=new Date(c2.getFullYear(),c2.getMonth(),c2.getDate()+1);
+          }
+          return;
+        }
+      }
+      if(sd.getFullYear()===y&&sd.getMonth()===mo)
+        (byDay[sd.getDate()]=byDay[sd.getDate()]||[]).push({b:b,t:t});
+    });
+  });
+  return byDay;
+}
 
-  /* 진행 중인 프로세스 — 수행의 원장. 여기서 행을 누르면 그 원장이 열린다. */
+/* ── 대시보드 ──────────────────────────────────────────── */
+/* 빠른 등록 덩어리 — 대시보드(예시 2개)와 할 일 탭(예시 5개)이 같은 칸을
+   쓴다. id 가 하나뿐이어야 하므로 두 패널이 동시에 그려지지 않는다는
+   전제(render 가 비활성 패널을 비운다)에 기댄다. */
+function quickBlock(examples,hint){
+  return '<div class="quick">'+
+    '<h3>빠르게 등록</h3>'+
+    '<div class="hint">'+hint+'</div>'+
+    '<div class="qrow">'+
+      '<label class="sr" for="qIn">할 일 빠르게 등록 (날짜를 함께 적으면 자동으로 계산합니다)</label>'+
+      '<input type="text" id="qIn" placeholder="다음주 금요일까지 B호 수익자보고서" autocomplete="off">'+
+      '<button class="qbtn" id="qAdd">등록</button>'+
+    '</div>'+
+    '<div class="qprev" id="qPrev"></div>'+
+    '<div class="chips">'+
+      examples.map(function(x){
+        return '<button class="chip" data-ex="'+esc(x)+'">'+esc(x)+'</button>'; }).join('')+
+    '</div>'+
+  '</div>';
+}
+
+/* 진행 중인 프로세스 카드 — 수행의 원장. 행을 누르면 그 원장이 열린다. */
+function dashRunsCard(){
   var act=[];
   RUNS.items.forEach(function(r){ if(!r.doneAt) act.push(r); });
-  h+='<div class="card" id="dashRuns"><header><h2>진행 중인 프로세스</h2>'+
+  var h='<div class="card" id="dashRuns"><header><h2>진행 중인 프로세스</h2>'+
      '<span class="desc">업무 프로세스 탭에서 「수행 시작」한 건 · 행을 누르면 그 원장이 열립니다</span></header>'+
      '<div class="body flush">';
   if(!act.length){
@@ -4888,30 +5106,87 @@ function paneDash(){
        '<span class="rl-start">시작 '+esc(r.startedAt||'—')+'</span>'+
        '</button>';
   });
-  h+='</div></div>';
+  return h+'</div></div>';
+}
 
-  /* 우선 확인할 미완료 업무 5건 — 미완료·미보류를 마감일 순으로.
+function paneDash(){
+  var c=counts(), t0=today(), tstr=ymd(t0);
+
+  /* ① 상단 상태 요약 (12열) — 집계 규칙은 counts() 그대로다 */
+  var h='<div class="bento"><div class="b12"><div class="tiles">'+
+    tile('지연',      c.지연,   '건', '마감이 지났고 아직 미완료', c.지연>0?'late':'')+
+    /* 임박은 «진행 상태»가 아니라 «기한 상태»다 — 진행중 안에 들어 있다.
+       그래서 타일 숫자를 다 더하면 전체 건수보다 크다. 숫자를 바꿔서
+       맞추면 임박이 사라지므로, 포함 관계를 글로 밝혀 둔다. */
+    tile('임박',      c.soon,   '건', '7일 이내 마감 · 진행중에 포함', c.soon>0?'soon':'')+
+    tile('진행중',    c.진행중, '건', '마감일이 남아 있음 · 임박 '+c.soon+'건 포함','')+
+    tile('보류',      c.보류,   '건', '사유가 있어 멈춰 둔 건', c.보류>0?'hold':'')+
+    tile('완료',      c.완료,   '건', '완료일이 기록된 건','done')+
+  '</div></div>';
+
+  /* ② 우선 확인할 미완료 업무 5건 (8열) — 미완료·미보류를 마감일 순으로.
      「마감 임박」이라 부르지 않는다. 이 표는 7일 필터를 걸지 않으므로
      마감이 지난 건도 아직 먼 건도 들어온다 — 임박 타일(7일)과 기준이
-     다르다. 이름을 임박이라 붙이면 타일 숫자와 표 내용이 어긋나 보인다. */
+     다르다. 이름을 임박이라 붙이면 타일 숫자와 표 내용이 어긋나 보인다.
+     오늘 마감은 «새 집계»를 만들지 않고 이 목록 안에서 표시만 한다. */
   var soon=S.tasks.filter(function(t){ return !t.done&&!t.hold&&t.due&&t.kind!=='absence'; })
     .sort(function(a,b){ return parseYmd(a.due)-parseYmd(b.due); }).slice(0,5);
-  h+='<div class="card"><header><h2>우선 확인할 미완료 업무 5건</h2>'+
-     '<span class="desc">미완료·미보류 기준 · 마감일 순 (지난 건부터) · 7일 필터 아님</span></header>'+
+  h+='<div class="b8"><div class="card"><header><h2>우선 확인할 미완료 업무 5건</h2>'+
+     '<span class="desc">미완료·미보류 기준 · 마감일 순 (지난 건부터) · 7일 필터 아님 · 오늘 마감은 파랗게</span></header>'+
      '<div class="body flush"><div class="tbl-wrap"><table><thead><tr>'+
-     '<th>업무명</th><th>관련</th><th>마감일</th><th>D-Day</th><th>상태</th>'+
+     '<th>업무명</th><th class="due">마감일</th><th class="dday">D-Day</th><th>상태</th><th></th>'+
      '</tr></thead><tbody>';
   if(!soon.length) h+='<tr><td colspan="5" class="empty">마감을 앞둔 업무가 없습니다.</td></tr>';
   soon.forEach(function(t){
-    var st=statusOf(t);
-    h+='<tr class="'+(st==='지연'?'is-late':'')+'"><td>'+esc(t.task)+'</td>'+
-       '<td>'+esc(t.fund)+'</td><td class="mid">'+esc(ymdw(t.due))+'</td>'+
-       '<td class="mid dday">'+esc(ddayText(t))+'</td>'+
-       '<td class="mid st"><span class="badge '+BADGE[st]+'">'+st+'</span></td></tr>';
+    var st=statusOf(t), isToday=(t.due===tstr);
+    h+='<tr class="'+(st==='지연'?'is-late':'')+(isToday?' is-today-due':'')+'">'+
+       '<td class="task">'+esc(t.task)+(isToday?'<span class="t-today">오늘</span>':'')+
+         (t.fund? '<div class="t-meta">'+esc(t.fund)+'</div>' : '')+'</td>'+
+       '<td class="due">'+esc(ymdw(t.due))+'</td>'+
+       '<td class="dday">'+esc(ddayText(t))+'</td>'+
+       '<td class="mid st"><span class="badge '+BADGE[st]+'">'+st+'</span></td>'+
+       '<td class="mid"><button class="rbtn" data-gotask="'+t.id+'">열기</button></td></tr>';
   });
-  h+='</tbody></table></div></div></div>';
+  h+='</tbody></table></div></div></div></div>';
 
-  /* 구분별 · 이번 달 */
+  /* ③ 빠른 등록 (4열) — 해석 엔진은 그대로, 예시만 둘 */
+  h+='<div class="b4">'+quickBlock(
+      ['다음주 금요일까지 B호 수익자보고서','8.31일 D호 PFV 보고서 작성'],
+      '말하듯 적으면 날짜를 계산해서 넣습니다.')+'</div>';
+
+  /* ④ 월간 일정 요약 (8열) — 캘린더와 같은 묶음(tasksByDay)을 본다.
+     날짜를 누르면 캘린더 탭의 그 날짜로 간다. */
+  var my=t0.getFullYear(), mm=t0.getMonth();
+  var byDay=tasksByDay(my,mm), sh=sharedByDay(my,mm);
+  var dayKeys=Object.keys(byDay).map(Number).sort(function(a,b){ return a-b; });
+  h+='<div class="b8"><div class="card"><header><h2>'+my+'년 '+(mm+1)+'월 일정 요약</h2>'+
+     '<span class="desc">이번 달 마감 '+c.thisMonth+'건 · 날짜를 누르면 캘린더의 그 날로 갑니다'+
+     '</span></header><div class="body flush">';
+  if(!dayKeys.length){
+    h+='<div class="empty">이번 달에 마감이 잡힌 업무가 없습니다.</div>';
+  } else {
+    h+='<div class="tbl-wrap"><table><thead><tr>'+
+       '<th class="due">날짜</th><th class="num">건수</th><th>업무</th><th></th></tr></thead><tbody>';
+    dayKeys.forEach(function(d){
+      var ds=ymd(new Date(my,mm,d)), list=byDay[d], nSh=(sh[d]||[]).length;
+      var late=0, isToday=(ds===tstr);
+      list.forEach(function(t){ if(statusOf(t)==='지연') late++; });
+      h+='<tr class="'+(isToday?'is-today-due':'')+'">'+
+         '<td class="due">'+esc(ymdw(ds))+(isToday?'<span class="t-today">오늘</span>':'')+'</td>'+
+         '<td class="num">'+list.length+'</td>'+
+         '<td class="task">'+esc(list[0].task)+(list.length>1? ' <span style="color:var(--ink-2)">외 '+(list.length-1)+'건</span>':'')+
+           (late||nSh? '<div class="t-meta">'+(late? '지연 '+late+'건':'')+
+             (late&&nSh? '<span class="sep">|</span>':'')+(nSh? '공유 '+nSh+'건(읽기 전용)':'')+'</div>' : '')+'</td>'+
+         '<td class="mid"><button class="rbtn" data-goday="'+ds+'">캘린더</button></td></tr>';
+    });
+    h+='</tbody></table></div>';
+  }
+  h+='</div></div></div>';
+
+  /* ⑤ 진행 중인 프로세스 (4열) */
+  h+='<div class="b4">'+dashRunsCard()+'</div>';
+
+  /* ⑥ 구분별 건수 (12열) */
   var by={}, nWork=0;
   GUBUN.forEach(function(g){ by[g]=0; });
   S.tasks.forEach(function(t){
@@ -4920,15 +5195,15 @@ function paneDash(){
     if(by[t.gubun]!=null) by[t.gubun]++; else by['기타']++;
   });
   var nAbs=S.tasks.length-nWork;
-  h+='<div class="card"><header><h2>구분별 건수</h2>'+
+  h+='<div class="b12"><div class="card"><header><h2>구분별 건수</h2>'+
      '<span class="desc">이번 달 마감 '+c.thisMonth+'건 · 전체 '+nWork+'건'+
      (nAbs? ' · 부재 '+nAbs+'건은 제외' : '')+'</span></header>'+
      '<div class="body flush"><div class="tbl-wrap"><table><thead><tr>'+
      GUBUN.map(function(g){ return '<th class="mid">'+esc(g)+'</th>'; }).join('')+
      '</tr></thead><tbody><tr>'+
-     GUBUN.map(function(g){ return '<td class="mid" style="font-size:15px;font-weight:700">'+by[g]+'</td>'; }).join('')+
-     '</tr></tbody></table></div></div></div>';
-  return h;
+     GUBUN.map(function(g){ return '<td class="mid" style="font-size:20px;font-weight:700;font-variant-numeric:tabular-nums">'+by[g]+'</td>'; }).join('')+
+     '</tr></tbody></table></div></div></div></div>';
+  return h+'</div>';
 }
 function tile(lab,val,unit,sub,cls){
   var n=(typeof val==='number')?val:parseInt(val,10);
@@ -4957,35 +5232,27 @@ function countUpDash(){
 
 /* ── 할 일 ─────────────────────────────────────────────── */
 function paneTask(){
-  var h='<div class="quick">'+
-    '<h3>빠르게 등록</h3>'+
-    '<div class="hint">말하듯 적으면 날짜를 계산해서 넣습니다. '+
-      '<b>다음주 금요일</b> · <b>8.31일</b> · <b>1월에</b>(→ 그 달 말일, 지났으면 내년) · <b>9월초</b> · <b>10일 뒤</b> 같은 표현을 알아듣습니다.</div>'+
-    '<div class="qrow">'+
-      '<label class="sr" for="qIn">할 일 빠르게 등록 (날짜를 함께 적으면 자동으로 계산합니다)</label>'+
-      '<input type="text" id="qIn" placeholder="다음주 금요일까지 B호 수익자보고서" autocomplete="off">'+
-      '<button class="qbtn" id="qAdd">등록</button>'+
-    '</div>'+
-    '<div class="qprev" id="qPrev"></div>'+
-    '<div class="chips">'+
-      ['다음주 금요일까지 B호 수익자보고서',
-       '8.31일 D호 PFV 보고서 작성',
-       '1월에 재산세 납부',
-       '10일 뒤 신규 딜 투자 검토',
-       '분기 말 정기운용보고서 작성'].map(function(x){
-        return '<button class="chip" data-ex="'+esc(x)+'">'+esc(x)+'</button>'; }).join('')+
-    '</div>'+
-  '</div>';
+  var t0=today(), tstr=ymd(t0);
+  var h=quickBlock(
+    ['다음주 금요일까지 B호 수익자보고서',
+     '8.31일 D호 PFV 보고서 작성',
+     '1월에 재산세 납부',
+     '10일 뒤 신규 딜 투자 검토',
+     '분기 말 정기운용보고서 작성'],
+    '말하듯 적으면 날짜를 계산해서 넣습니다. '+
+    '<b>다음주 금요일</b> · <b>8.31일</b> · <b>1월에</b>(→ 그 달 말일, 지났으면 내년) · <b>9월초</b> · <b>10일 뒤</b> 같은 표현을 알아듣습니다.');
 
   var filt=[['open','미완료'],['late','지연만'],['all','전체']];
   h+='<div class="card"><header><h2>할 일 목록</h2>'+
      '<span class="desc">상태와 D-Day는 자동입니다 — 완료일을 넣으면 완료, 마감일이 지나면 지연</span>'+
      '<span style="flex:1"></span><span class="seg">'+
      filt.map(function(f){ return '<button data-filt="'+f[0]+'"'+(TASK_FILTER===f[0]?' class="on"':'')+'>'+f[1]+'</button>'; }).join('')+
-     '</span></header>'+
-     '<div class="body flush"><div class="tbl-wrap"><table><thead><tr>'+
-     '<th>구분</th><th>중요</th><th>업무명</th><th>관련</th><th>마감일</th>'+
-     '<th>D-Day</th><th>상태</th><th>완료일</th><th>비고</th><th></th>'+
+     '</span>'+
+     '<button class="qbtn" id="btnDetail" style="min-height:38px;padding:0 15px">상세 등록</button>'+
+     '</header>'+
+     '<div class="body flush"><div class="tbl-wrap tbl-free"><table><thead><tr>'+
+     '<th>업무명</th><th class="due">마감일</th>'+
+     '<th class="dday">D-Day</th><th>상태</th><th class="due">완료일</th><th></th>'+
      '</tr></thead><tbody>';
 
   var rows=S.tasks.slice().sort(function(a,b){
@@ -5010,38 +5277,55 @@ function paneTask(){
       msg='<b>미완료 업무가 없습니다.</b> 등록된 '+S.tasks.length+'건이 모두 완료·보류 상태입니다.'+
           '<br><span class="em-act" data-filt-jump="all">전체 '+S.tasks.length+'건 보기</span>';
     else msg='해당하는 업무가 없습니다.';
-    h+='<tr><td colspan="10" class="empty">'+msg+'</td></tr>';
+    h+='<tr><td colspan="6" class="empty">'+msg+'</td></tr>';
   }
   rows.forEach(function(t){
     var st=statusOf(t);
     var pc=t.pri==='높음'?'hi':(t.pri==='낮음'?'lo':'mid');
-    h+='<tr class="'+(st==='완료'?'is-done':(st==='지연'?'is-late':''))+'">'+
-      '<td class="mid">'+esc(t.gubun)+'</td>'+
-      '<td class="mid"><span class="pri '+pc+'">'+esc(t.pri)+'</span></td>'+
-      '<td class="task">'+esc(t.task)+'</td>'+
-      '<td>'+esc(t.fund)+'</td>'+
-      '<td class="mid due">'+esc(t.due?ymdw(t.due):'—')+'</td>'+
-      '<td class="mid dday">'+esc(ddayText(t))+'</td>'+
+    var isToday=(t.due===tstr&&st!=='완료');
+    /* 업무명 열을 넓게 쓰고, 구분·중요도·관련·비고는 그 아래 보조 줄로 내린다.
+       열 수를 줄여야 1366 에서 업무명이 안 잘린다 — 지우는 정보는 없다. */
+    var meta=[];
+    meta.push(esc(t.gubun));
+    meta.push('<span class="pri '+pc+'">중요도 '+esc(t.pri)+'</span>');
+    if(t.fund) meta.push(esc(t.fund));
+    if(t.note) meta.push(esc(t.note));
+    h+='<tr class="'+(st==='완료'?'is-done':(st==='지연'?'is-late':''))+(isToday?' is-today-due':'')+'">'+
+      '<td class="task">'+esc(t.task)+(isToday?'<span class="t-today">오늘 마감</span>':'')+
+        '<div class="t-meta">'+meta.join('<span class="sep">|</span>')+'</div></td>'+
+      '<td class="due">'+esc(t.due?ymdw(t.due):'—')+'</td>'+
+      '<td class="dday">'+esc(ddayText(t))+'</td>'+
       '<td class="mid st"><span class="badge '+BADGE[st]+'">'+st+'</span></td>'+
-      '<td class="mid">'+esc(t.done||'—')+'</td>'+
-      '<td>'+esc(t.note)+'</td>'+
+      '<td class="due">'+esc(t.done||'—')+'</td>'+
       '<td><div class="racts">'+
         '<button class="rbtn'+(t.done?' on':'')+'" data-act="done" data-id="'+t.id+'">'+(t.done?'완료 취소':'완료')+'</button>'+
-        '<button class="rbtn" data-act="hold" data-id="'+t.id+'">'+(t.hold?'보류 해제':'보류')+'</button>'+
         '<button class="rbtn'+(EDIT_ID===t.id?' on':'')+'" data-act="edit" data-id="'+t.id+'">수정</button>'+
-        '<button class="rbtn del" data-act="del" data-id="'+t.id+'">삭제</button>'+
+        /* 보조 동작 — 접어 두지만 DOM 에는 늘 있다(키보드·스크린리더 접근 동일).
+           보류 해제와 삭제 확인은 그대로다. */
+        '<details class="rmore"><summary title="더 보기" aria-label="'+esc(t.task)+' 보조 동작">⋯</summary>'+
+        '<div class="rmore-menu">'+
+          '<button class="rbtn" data-act="hold" data-id="'+t.id+'">'+(t.hold?'보류 해제':'보류')+'</button>'+
+          '<button class="rbtn del" data-act="del" data-id="'+t.id+'">삭제</button>'+
+        '</div></details>'+
       '</div></td></tr>';
   });
   h+='</tbody></table></div></div></div>';
 
   /* 자세히 넣기 — EDIT_ID 가 있으면 같은 폼이 그 업무의 수정 폼이 된다.
-     따로 만들지 않는 이유: 칸이 똑같은데 폼을 둘로 두면 한쪽만 고치는 일이 생긴다. */
+     따로 만들지 않는 이유: 칸이 똑같은데 폼을 둘로 두면 한쪽만 고치는 일이 생긴다.
+     기본 펼침 대신 오른쪽 패널(드로어)로 접어 둔다. 닫혀 있어도 DOM 에는 그대로
+     있으므로 프리필·값 읽기·바깥에서의 접근은 전과 같다. */
   var ed=EDIT_ID? findTask(EDIT_ID) : null;
   if(EDIT_ID&&!ed) EDIT_ID=0;              /* 수정하던 업무가 지워졌으면 등록 모드로 */
-  h+='<div class="card noprint"'+(ed?' id="taskForm"':'')+'><header><h2>'+(ed?'업무 수정':'자세히 등록')+'</h2>'+
+  var open=(TASK_DRAWER||!!ed);
+  h+='<div class="drawer noprint'+(open?' on':'')+'" id="taskDrawer">'+
+     '<div class="drawer-veil" id="drawerVeil"></div>'+
+     '<div class="drawer-panel" id="taskForm" role="dialog" aria-modal="false" aria-label="'+(ed?'업무 수정':'상세 등록')+'">'+
+     '<header><h2>'+(ed?'업무 수정':'상세 등록')+'</h2>'+
+     '<button class="drawer-x" id="drawerClose" aria-label="패널 닫기">✕</button>'+
      '<span class="desc">'+(ed? '완료·보류 상태와 등록 순서는 그대로 두고 내용만 바꿉니다'
                               : '날짜를 직접 지정하거나 구분·중요도를 함께 넣을 때')+'</span></header>'+
-     '<div class="body"><div class="fgrid">'+
+     '<div class="drawer-body"><div class="fgrid">'+
      fld('업무명','<input type="text" id="fTask" maxlength="120" value="'+(ed?esc(ed.task):'')+'">')+
      fld('관련 펀드 / 사업장','<input type="text" id="fFund" maxlength="60" value="'+(ed?esc(ed.fund):'')+'">')+
      fld('마감일','<input type="date" id="fDue" value="'+(ed?esc(ed.due):'')+'">')+
@@ -5053,9 +5337,9 @@ function paneTask(){
         '<option value="absence"'+(ed&&ed.kind==='absence'?' selected':'')+'>부재</option></select>')+
      fld('종료일 (부재·선택)','<input type="date" id="fUntil" value="'+(ed?esc(ed.until):'')+'">')+
      fld('비고','<input type="text" id="fNote" maxlength="120" value="'+(ed?esc(ed.note):'')+'">')+
-     '</div><div style="margin-top:11px">'+
+     '</div></div><div class="drawer-acts">'+
      (ed? '<button class="qbtn" id="fSave">저장</button> <button class="rbtn" id="fCancel">취소</button>'
-        : '<button class="qbtn" id="fAdd">등록</button>')+
+        : '<button class="qbtn" id="fAdd">등록</button> <button class="rbtn" id="fClose2">닫기</button>')+
      '</div></div></div>';
   return h;
 }
@@ -5147,9 +5431,22 @@ function requestProcSync(b0){
 function paneProc(){
   var base0=PROCS[PROC_PICK]||PROCS[0];
   var p=effectiveProc(base0);
-  var h='<div class="pv-pick"><select id="pvSel" aria-label="업무 선택">'+
-    PROCS.map(function(x,i){ return '<option value="'+i+'"'+(i===PROC_PICK?' selected':'')+'>'+esc(x.name)+(PROC_EDITS[x.name]?' (수정됨)':'')+'</option>'; }).join('')+
-    '</select><span style="font-size:11.5px;color:var(--ink-3)">업무를 바꿔도 화면이 움직이지 않습니다</span></div>';
+  /* 왼쪽은 고르는 목록, 오른쪽은 고른 절차의 넓은 단계별 보기.
+     정기업무(주기표)와는 다른 것이라 건수를 합치지 않는다. */
+  var h='<div class="bento"><div class="b4"><div class="card proclist">'+
+    '<header><h2>업무 프로세스 '+PROCS.length+'종</h2>'+
+    '<span class="desc">정기업무 '+S.regs.length+'종과는 다른 목록입니다 · 고르면 오른쪽에 절차가 열립니다</span></header>'+
+    '<div class="pl-find"><label class="sr" for="pvFind">프로세스 이름으로 찾기</label>'+
+    '<input type="text" id="pvFind" placeholder="이름으로 찾기" autocomplete="off"></div>'+
+    '<div class="pl-scroll" id="pvList" role="listbox" aria-label="업무 프로세스 목록">'+
+    PROCS.map(function(x,i){
+      return '<button class="pl-item'+(i===PROC_PICK?' on':'')+'" data-procpick="'+i+'"'+
+        ' role="option" aria-selected="'+(i===PROC_PICK?'true':'false')+'"'+
+        ' data-find="'+esc(x.name.toLowerCase())+'">'+esc(x.name)+
+        (PROC_EDITS[x.name]?'<span class="pl-tag">수정됨</span>':'')+'</button>';
+    }).join('')+
+    '<div class="pl-none" id="pvNone" hidden>찾는 이름이 없습니다.</div>'+
+    '</div></div></div><div class="b8">';
 
   /* 실행 모드로 열어 둔 RUN. 이 프로세스 것이 아니면(스테일) 카탈로그 모드다. */
   var run=findRun(RUN_PICK);
@@ -5240,7 +5537,7 @@ function paneProc(){
   } else if(editing){
     /* 수정 모드 — STEP 문구를 이 브라우저에서 직접 고친다 */
     h+='<div class="tbl-wrap"><table class="pv-step pv-edit-tb"><thead><tr>'+
-       '<th style="width:44px">STEP</th><th style="width:150px">단계</th><th>세부 내용</th>'+
+       '<th style="width:44px">STEP</th><th style="width:210px">단계</th><th>세부 내용</th>'+
        '<th style="width:130px">산출물</th><th style="width:110px">담당</th><th style="width:150px">비고</th>'+
        '</tr></thead><tbody>';
     p.steps.forEach(function(s,i){
@@ -5263,7 +5560,7 @@ function paneProc(){
   } else {
     /* 카탈로그 모드 — 기존 표 그대로 */
     h+='<div class="tbl-wrap"><table class="pv-step"><thead><tr>'+
-       '<th style="width:44px">STEP</th><th style="width:150px">단계</th><th>세부 내용</th>'+
+       '<th style="width:44px">STEP</th><th style="width:210px">단계</th><th>세부 내용</th>'+
        '<th style="width:130px">산출물</th><th style="width:110px">담당</th><th style="width:150px">비고</th>'+
        '</tr></thead><tbody>';
     p.steps.forEach(function(s,i){
@@ -5275,7 +5572,7 @@ function paneProc(){
   }
   if(!editing&&p.check) h+='<div style="margin-top:12px" class="pv-chk"><b>체크포인트</b><br>'+esc(p.check)+'</div>';
   h+='</div></div>';
-  return h;
+  return h+'</div></div>';
 }
 
 /* ── 캘린더 ────────────────────────────────────────────── */
@@ -5286,38 +5583,25 @@ function paneCal(){
   var lead=(first.getDay()+6)%7;                 /* 월요일 시작 */
   var HOL=holidaysOf(y);
 
-  /* 그 달의 마감 건을 날짜별로 모은다 */
-  var byDay={};
-  S.tasks.forEach(function(t){
-    var d=parseYmd(t.due); if(!d) return;
-    if(t.kind==='absence' && t.until){
-      var u=parseYmd(t.until);
-      if(u){
-        var cur=new Date(d.getFullYear(),d.getMonth(),d.getDate());
-        var end=new Date(u.getFullYear(),u.getMonth(),u.getDate());
-        while(cur<=end){
-          if(cur.getFullYear()===y && cur.getMonth()===mo){
-            (byDay[cur.getDate()]=byDay[cur.getDate()]||[]).push(t);
-          }
-          cur=new Date(cur.getFullYear(),cur.getMonth(),cur.getDate()+1);
-        }
-        return;
-      }
-    }
-    if(d.getFullYear()!==y||d.getMonth()!==mo) return;
-    (byDay[d.getDate()]=byDay[d.getDate()]||[]).push(t);
-  });
+  /* 그 달의 마감 건·공유 건을 날짜별로 모은다 (대시보드와 같은 helper) */
+  var byDay=tasksByDay(y,mo), shDay=sharedByDay(y,mo);
+
+  /* 보고 있는 달에 선택 날짜가 없으면 오늘(같은 달일 때)·없으면 1일로 둔다.
+     선택은 «보기» 상태일 뿐이라 저장하지 않는다. */
+  var inMonth=CAL_SEL && CAL_SEL.slice(0,7)===(y+'-'+pad2(mo+1));
+  if(!inMonth) CAL_SEL=(y===t0.getFullYear()&&mo===t0.getMonth())? ymd(t0) : ymd(new Date(y,mo,1));
 
   var h='<div class="calnav">'+
     '<button class="btn" id="calPrev">← 이전</button>'+
     '<span class="mn">'+y+'년 '+(mo+1)+'월</span>'+
     '<button class="btn" id="calNext">다음 →</button>'+
-    '<button class="btn" id="calToday">이번 달</button>'+
+    '<button class="btn" id="calToday">오늘로 이동</button>'+
     '<span class="sp"></span>'+
-    '<span style="font-size:11.5px;color:var(--ink-3)">할 일 목록의 마감일이 자동으로 올라옵니다 · 날짜를 두 번 누르면 그 날로 등록합니다'+
+    '<span class="note">할 일 목록의 마감일이 자동으로 올라옵니다 · 날짜를 누르면 오른쪽에 그 날 목록이, 두 번 누르면 그 날로 등록됩니다'+
     (lunarKnown(y)? '' : ' &middot; '+y+'년은 설·추석·부처님오신날이 표에 없어 양력 휴일만 표시합니다')+
     '</span></div>';
 
+  h+='<div class="calgrid"><div>';
   h+='<table class="cal"><thead><tr>'+
      ['월','화','수','목','금','토','일'].map(function(d,i){
        return '<th'+(i===5?' class="sat"':(i===6?' class="sun"':''))+'>'+d+'</th>'; }).join('')+
@@ -5330,35 +5614,23 @@ function paneCal(){
     var wd=(lead+d-1)%7;
     var hol=HOL[ymd(new Date(y,mo,d))];
     var dstr=ymd(new Date(y,mo,d));
-    h+='<td'+(isToday?' class="is-today"':'')+' data-date="'+dstr+'" title="두 번 누르면 '+(mo+1)+'월 '+d+'일로 등록합니다">'+
+    var cls=[];
+    if(wd>=5) cls.push('we');
+    if(isToday) cls.push('is-today');
+    if(dstr===CAL_SEL) cls.push('is-sel');
+    h+='<td class="'+cls.join(' ')+'" data-date="'+dstr+'" tabindex="0" role="button"'+
+       ' aria-pressed="'+(dstr===CAL_SEL?'true':'false')+'"'+
+       ' title="누르면 그 날 목록 · 두 번 누르면 '+(mo+1)+'월 '+d+'일로 등록합니다">'+
        '<div class="dnum'+(hol?' hol':(wd===5?' sat':(wd===6?' sun':'')))+'">'+d+'</div>'+
        (hol? '<div class="holn" title="'+esc(hol.name)+'">'+esc(hol.name)+'</div>' : '');
     var list=byDay[d]||[];
     /* 남의 일정을 겹쳐 얹는다. 내 것 다음에, 회색으로, 보낸이를 붙여서 —
        누구 일정인지 모르게 되면 겹쳐 보이는 의미가 없다. */
-    var shared=[];
-    SHARED.bundles.forEach(function(b){
-      b.tasks.forEach(function(t){
-        var sd=parseYmd(t.due); if(!sd) return;
-        if(t.kind==='absence'&&t.until){
-          var su=parseYmd(t.until);
-          if(su){
-            var c2=new Date(sd.getFullYear(),sd.getMonth(),sd.getDate());
-            var e2=new Date(su.getFullYear(),su.getMonth(),su.getDate());
-            while(c2<=e2){
-              if(c2.getFullYear()===y&&c2.getMonth()===mo&&c2.getDate()===d) shared.push({b:b,t:t});
-              c2=new Date(c2.getFullYear(),c2.getMonth(),c2.getDate()+1);
-            }
-            return;
-          }
-        }
-        if(sd.getFullYear()===y&&sd.getMonth()===mo&&sd.getDate()===d) shared.push({b:b,t:t});
-      });
-    });
+    var shared=shDay[d]||[];
     list.slice(0,3).forEach(function(t){
       var st=statusOf(t);
-      var cls=st==='완료'?'done':(st==='지연'?'late':(st==='보류'?'hold':(st==='부재'?'abs':'')));
-      h+='<div class="ev '+cls+'" title="'+esc(t.task+(t.fund?' · '+t.fund:''))+'">'+esc(t.task)+'</div>';
+      var ec=st==='완료'?'done':(st==='지연'?'late':(st==='보류'?'hold':(st==='부재'?'abs':'')));
+      h+='<div class="ev '+ec+'" title="'+esc(t.task+(t.fund?' · '+t.fund:'')+' · '+st)+'">'+esc(t.task)+'</div>';
     });
     if(list.length>3) h+='<div class="ev more">외 '+(list.length-3)+'건</div>';
     shared.slice(0,2).forEach(function(x){
@@ -5369,8 +5641,78 @@ function paneCal(){
     h+='</td>'; col++;
   }
   while(col<7&&col>0){ h+='<td class="off"></td>'; col++; }
-  h+='</tr></tbody></table>';
+  h+='</tr></tbody></table></div>';
+  h+='<div><div class="card calside" id="calSide">'+calSideInner()+'</div></div></div>';
   return h;
+}
+
+/* 선택한 날짜의 업무 목록 — 달력 칸은 «일부»만 보여주므로 전부는 여기서 본다.
+   공유(남의) 일정은 내 것과 섞지 않고 «받은 일정» 묶음으로 따로, 출처를 붙여
+   읽기 전용으로 둔다. */
+function calSideInner(){
+  var ds=CAL_SEL, dd=parseYmd(ds);
+  var y=dd?dd.getFullYear():0, mo=dd?dd.getMonth():0, dnum=dd?dd.getDate():0;
+  var mine=dd? (tasksByDay(y,mo)[dnum]||[]) : [];
+  var shared=dd? (sharedByDay(y,mo)[dnum]||[]) : [];
+  var h='<header><h2>'+esc(ymdw(ds))+'</h2>'+
+        '<span class="desc">내 일정 '+mine.length+'건'+(shared.length? ' · 받은 일정 '+shared.length+'건':'')+'</span></header>'+
+        '<div class="body flush">';
+  if(!mine.length&&!shared.length){
+    h+='<div class="empty">이 날짜에 마감인 업무가 없습니다.</div>';
+  }
+  mine.forEach(function(t){
+    var st=statusOf(t);
+    var bc=st==='완료'?'done':(st==='지연'?'late':(st==='보류'?'hold':(st==='부재'?'abs':'')));
+    h+='<div class="cs-row"><span class="cs-bar '+bc+'"></span><div class="cs-main">'+
+       '<div class="cs-name">'+esc(t.task)+'</div>'+
+       '<div class="cs-meta"><span class="badge '+BADGE[st]+'">'+st+'</span>'+
+         (t.fund? ' '+esc(t.fund) : '')+(t.note? ' · '+esc(t.note) : '')+'</div>'+
+       '</div><button class="rbtn" data-gotask="'+t.id+'">열기</button></div>';
+  });
+  shared.forEach(function(x){
+    h+='<div class="cs-row"><span class="cs-bar shared"></span><div class="cs-main">'+
+       '<div class="cs-name">'+esc(x.t.task)+'</div>'+
+       '<div class="cs-meta"><span class="cs-src">'+esc(x.b.sender)+' 보냄</span>읽기 전용 · 내 일정이 아닙니다</div>'+
+       '</div></div>';
+  });
+  h+='<div class="cs-foot"><button class="rbtn" id="calSideAdd" data-addon="'+esc(ds)+'">이 날짜로 업무 등록</button></div>';
+  return h+'</div>';
+}
+/* 날짜 선택은 «보기»만 바꾼다. 여기서 render() 를 부르면 방금 누른 칸이
+   사라져서 두 번 누르기(그 날로 등록)가 영영 안 먹는다 — 그래서 옆 카드와
+   칸의 표시만 직접 고친다. */
+function selectCalDate(ds){
+  CAL_SEL=ds;
+  document.querySelectorAll('table.cal td[data-date]').forEach(function(td){
+    var on=(td.getAttribute('data-date')===ds);
+    td.classList.toggle('is-sel',on);
+    td.setAttribute('aria-pressed',on?'true':'false');
+  });
+  var side=document.getElementById('calSide');
+  if(!side) return;
+  side.innerHTML=calSideInner();
+  bindCalSide();
+}
+function bindCalSide(){
+  var side=document.getElementById('calSide'); if(!side) return;
+  side.querySelectorAll('[data-gotask]').forEach(function(b){
+    b.addEventListener('click',function(){ gotoTask(+b.getAttribute('data-gotask')); });
+  });
+  var a=side.querySelector('[data-addon]');
+  if(a) a.addEventListener('click',function(){ quickAddOnDate(a.getAttribute('data-addon')); });
+}
+/* 대시보드·선택 날짜 목록에서 그 업무로 건너가기 — 할 일 탭을 열고 그 행에
+   포커스를 준다. 필터 때문에 안 보이는 일이 없도록 전체로 바꾼다. */
+function gotoTask(id){
+  TAB='task'; TASK_FILTER='all'; render(); window.scrollTo(0,0);
+  var b=document.querySelector('[data-act="edit"][data-id="'+id+'"]');
+  if(b){
+    if(b.scrollIntoView) b.scrollIntoView({block:'center'});
+    try{ b.focus({preventScroll:true}); }catch(e){ b.focus(); }
+    var tr=b.closest? b.closest('tr') : null;
+    if(tr){ tr.style.outline='2px solid var(--gold)'; tr.style.outlineOffset='-2px';
+      setTimeout(function(){ tr.style.outline=''; },1600); }
+  }
 }
 
 /* ── 그리기 ────────────────────────────────────────────── */
@@ -5471,6 +5813,30 @@ function render(){
   if(TAB==='dash') countUpDash();
 }
 
+/* 패널을 닫으면 열었던 버튼으로 포커스를 돌려준다 — 키보드로 쓰던 사람이
+   목록 맨 위로 튕기지 않게. 다시 그린 뒤라 «그 버튼»은 새 요소다. */
+function closeDrawer(){
+  TASK_DRAWER=false;
+  var sel=DRAWER_OPENER; DRAWER_OPENER='';
+  render();
+  if(!sel) return;
+  var el=document.querySelector(sel);
+  if(el){ try{ el.focus({preventScroll:true}); }catch(e){ el.focus(); } }
+}
+/* Esc 로도 닫힌다. 확인 대화상자·모달이 떠 있으면 그쪽이 먼저다. */
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape'&&e.keyCode!==27) return;
+  if(document.querySelector('.fbm')) return;
+  var d=document.getElementById('taskDrawer');
+  if(d&&d.classList.contains('on')){ EDIT_ID=0; closeDrawer(); }
+});
+/* 행 보조 메뉴는 바깥을 누르면 닫는다 */
+document.addEventListener('click',function(e){
+  document.querySelectorAll('details.rmore[open]').forEach(function(dt){
+    if(!dt.contains(e.target)) dt.open=false;
+  });
+});
+
 function bind(){
   document.getElementById('tabs').querySelectorAll('.tab').forEach(function(b){
     b.addEventListener('click',function(){ TAB=b.getAttribute('data-tab'); render(); window.scrollTo(0,0); });
@@ -5523,10 +5889,33 @@ function bind(){
     if(!o.task){ toast('업무명을 입력해 주세요'); document.getElementById('fTask').focus(); return; }
     if(updateTask(EDIT_ID,o)){ EDIT_ID=0; toast('수정했습니다'); }
     else { EDIT_ID=0; toast('수정하려던 업무를 찾지 못했습니다'); }
-    render();
+    closeDrawer();
   });
   var fc=document.getElementById('fCancel');
-  if(fc) fc.addEventListener('click',function(){ EDIT_ID=0; toast('수정을 취소했습니다'); render(); });
+  if(fc) fc.addEventListener('click',function(){ EDIT_ID=0; toast('수정을 취소했습니다'); closeDrawer(); });
+
+  /* 행 보조 메뉴 — 카드 밑으로 넘칠 자리면 위로 편다(카드가 잘라 버린다) */
+  document.querySelectorAll('details.rmore').forEach(function(dt){
+    dt.addEventListener('toggle',function(){
+      if(!dt.open){ dt.classList.remove('up'); return; }
+      var card=dt.closest? dt.closest('.card') : null;
+      var m=dt.querySelector('.rmore-menu');
+      if(!card||!m) return;
+      dt.classList.toggle('up', m.getBoundingClientRect().bottom > card.getBoundingClientRect().bottom);
+    });
+  });
+
+  /* ── 상세 등록 패널 ── */
+  var bd=document.getElementById('btnDetail');
+  if(bd) bd.addEventListener('click',function(){
+    EDIT_ID=0; TASK_DRAWER=true; DRAWER_OPENER='#btnDetail';
+    render();
+    var ti=document.getElementById('fTask'); if(ti) ti.focus();
+  });
+  ['drawerClose','drawerVeil','fClose2'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.addEventListener('click',function(){ EDIT_ID=0; closeDrawer(); });
+  });
 
   document.querySelectorAll('[data-filt]').forEach(function(b){
     b.addEventListener('click',function(){ TASK_FILTER=b.getAttribute('data-filt'); render(); });
@@ -5549,13 +5938,14 @@ function bind(){
       else if(a==='hold'){ t.hold=!t.hold; if(t.hold) t.done=''; toast(t.hold?'보류로 두었습니다':'보류를 해제했습니다'); }
       else if(a==='edit'){
         /* 이미 그 업무를 수정 중이면 토글로 닫는다 */
+        var was=EDIT_ID;
         EDIT_ID=(EDIT_ID===t.id)? 0 : t.id;
-        render();
         if(EDIT_ID){
-          var f=document.getElementById('taskForm');
-          if(f&&f.scrollIntoView) f.scrollIntoView({block:'center'});
+          TASK_DRAWER=true;
+          DRAWER_OPENER='[data-act="edit"][data-id="'+t.id+'"]';
+          render();
           var ti=document.getElementById('fTask'); if(ti) ti.focus();
-        }
+        } else { if(was) DRAWER_OPENER='[data-act="edit"][data-id="'+t.id+'"]'; closeDrawer(); }
         return;
       }
       else if(a==='del'){
@@ -5655,12 +6045,51 @@ function bind(){
 
   var cp=document.getElementById('calPrev');
   if(cp){
-    cp.addEventListener('click',function(){ CAL_YM.m--; if(CAL_YM.m<0){CAL_YM.m=11;CAL_YM.y--;} render(); });
-    document.getElementById('calNext').addEventListener('click',function(){ CAL_YM.m++; if(CAL_YM.m>11){CAL_YM.m=0;CAL_YM.y++;} render(); });
-    document.getElementById('calToday').addEventListener('click',function(){ var n=today(); CAL_YM={y:n.getFullYear(),m:n.getMonth()}; render(); });
+    cp.addEventListener('click',function(){ CAL_YM.m--; if(CAL_YM.m<0){CAL_YM.m=11;CAL_YM.y--;} CAL_SEL=''; render(); });
+    document.getElementById('calNext').addEventListener('click',function(){ CAL_YM.m++; if(CAL_YM.m>11){CAL_YM.m=0;CAL_YM.y++;} CAL_SEL=''; render(); });
+    document.getElementById('calToday').addEventListener('click',function(){
+      var n=today(); CAL_YM={y:n.getFullYear(),m:n.getMonth()}; CAL_SEL=ymd(n); render(); });
   }
   document.querySelectorAll('table.cal td[data-date]').forEach(function(td){
+    /* 한 번 누르면 «고르기»(옆 카드만 갱신), 두 번 누르면 그 날로 등록.
+       고르기에서 render() 를 부르면 이 td 가 사라져 dblclick 이 안 온다. */
+    td.addEventListener('click',function(){ selectCalDate(td.getAttribute('data-date')); });
     td.addEventListener('dblclick',function(){ quickAddOnDate(td.getAttribute('data-date')); });
+    td.addEventListener('keydown',function(e){
+      if(e.key==='Enter'||e.key===' '||e.keyCode===13||e.keyCode===32){
+        e.preventDefault(); selectCalDate(td.getAttribute('data-date'));
+      }
+    });
+  });
+  bindCalSide();
+
+  /* 대시보드에서 항목·날짜로 건너가기 */
+  document.querySelectorAll('#pane-dash [data-gotask]').forEach(function(b){
+    b.addEventListener('click',function(){ gotoTask(+b.getAttribute('data-gotask')); });
+  });
+  document.querySelectorAll('[data-goday]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var ds=b.getAttribute('data-goday'), d=parseYmd(ds); if(!d) return;
+      CAL_YM={y:d.getFullYear(),m:d.getMonth()}; CAL_SEL=ds; TAB='cal';
+      render(); window.scrollTo(0,0);
+    });
+  });
+
+  /* 프로세스 선택 목록 — 고르기는 다시 그리고, 이름 찾기는 그 자리에서
+     항목만 감춘다(다시 그리면 입력 칸이 사라져 한 글자마다 포커스를 잃는다). */
+  document.querySelectorAll('[data-procpick]').forEach(function(b){
+    b.addEventListener('click',function(){
+      PROC_PICK=+b.getAttribute('data-procpick'); RUN_PICK=0; PROC_EDIT=false; render();
+    });
+  });
+  var pf=document.getElementById('pvFind');
+  if(pf) pf.addEventListener('input',function(){
+    var q=pf.value.trim().toLowerCase(), n=0;
+    document.querySelectorAll('#pvList .pl-item').forEach(function(it){
+      var hit=(!q||it.getAttribute('data-find').indexOf(q)>=0);
+      it.hidden=!hit; if(hit) n++;
+    });
+    var none=document.getElementById('pvNone'); if(none) none.hidden=(n>0);
   });
 }
 
@@ -6276,13 +6705,24 @@ if(!load()){
 loadShared();        /* 공유도 별도 키다. 예시로 시작한 경우에도 읽는다 */
 render();
 
-/* 도구 간 이동 링크 — 빌더와 같은 규칙. 포털이 홈이라 '홈'은 없다. */
+/* 도구 간 이동 링크 — 빌더와 같은 규칙. 네 도구를 나란히 두고 지금 도구를
+   채워서 표시한다. 아티팩트로 띄운 경우엔 상대경로가 없으므로 재무모델만
+   아티팩트 주소로 바꾼다(나머지는 원래대로 상대경로). 데이터 연계는 없다. */
 (function setToolNav(){
   var ART_MODEL='https://claude.ai/code/artifact/e045b51f-476d-431c-bc0a-e4af60ebd795';
-  var other=document.getElementById('tnOther'); if(!other) return;
-  var isFile=/^file:/.test(location.protocol) || /.html$/i.test(location.pathname);
-  if(isFile){ other.href='CRE_재무모델_빌더.html'; }
-  else { other.href=ART_MODEL; other.target='_blank'; other.rel='noopener'; }
+  var isFile=/^file:/.test(location.protocol) || /\.html$/i.test(location.pathname);
+  if(isFile) return;
+  document.querySelectorAll('[data-tool="model"]').forEach(function(a){
+    a.href=ART_MODEL; a.target='_blank'; a.rel='noopener';
+  });
+})();
+/* 도구 전환 메뉴 — 바깥을 누르거나 Esc 로 닫는다 */
+(function bindToolMenu(){
+  var m=document.getElementById('toolMenu'); if(!m) return;
+  document.addEventListener('click',function(e){ if(m.open&&!m.contains(e.target)) m.open=false; });
+  document.addEventListener('keydown',function(e){
+    if((e.key==='Escape'||e.keyCode===27)&&m.open){ m.open=false; m.querySelector('summary').focus(); }
+  });
 })();
 
 /* 같은 브라우저의 다른 탭에서 바꿨으면 여기도 따라간다. 안 그러면

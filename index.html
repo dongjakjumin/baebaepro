@@ -11,15 +11,16 @@
 /* 배포용 진입 페이지. 세 도구로 가는 문이고 그 이상은 아니다.
    요약 화면이라 벤토 그리드 — 카드 크기가 곧 중요도다. 재무모델이 가장 크고,
    공개 주소가 없는 지식관리가 가장 작다. */
+/* 통합 UI — 네 도구가 같은 토큰을 쓴다 */
 :root{
-  --bg:#F5F7FA;
+  --bg:#F3F5F8;
   --card:#FFFFFF;
-  --line:#E3E7EE;
-  --navy:#20344A;
-  --blue:#285FD6;
-  --ink:#243244;
-  --ink2:#526174;
-  --ink3:#7C8899;
+  --line:#DCE3EB;
+  --navy:#142B45;
+  --blue:#2457C5;
+  --ink:#172B43;
+  --ink2:#58677A;
+  --ink3:#7E8C9E;
   --warn-bg:#FFF6E8;
   --warn-line:#E8C99A;
   --warn-ink:#8A6524;
@@ -68,8 +69,15 @@ a.card:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .flow li{display:flex;align-items:center;gap:6px}
 .flow li+li::before{content:"→";color:var(--ink3);margin-right:2px}
 
-.go{padding-top:4px;font-weight:700;font-size:15px;color:var(--blue)}
-.go::after{content:" →"}
+/* 바로 누를 수 있는 진입 버튼 — 글자 링크보다 눌러야 할 것이 분명해진다 */
+.go{
+  display:inline-flex;align-items:center;gap:6px;align-self:flex-start;
+  min-height:42px;padding:0 18px;margin-top:4px;
+  background:var(--blue);color:#fff;border-radius:8px;
+  font-weight:700;font-size:15px;
+}
+.go::after{content:"→"}
+a.card:hover .go{background:#1C46A0}
 .state{
   padding:9px 12px;border-radius:8px;font-size:13.5px;font-weight:700;
   background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn-ink);
@@ -123,7 +131,7 @@ footer{margin-top:36px;padding:22px 0 44px;font-size:13px;color:var(--ink3);line
       <li>결과·위험 확인</li>
       <li>엑셀 · 보고서</li>
     </ul>
-    <span class="go">모델 열기</span>
+    <span class="go">재무모델 열기</span>
   </a>
 
   <div class="notes">
@@ -149,7 +157,7 @@ footer{margin-top:36px;padding:22px 0 44px;font-size:13px;color:var(--ink3);line
         <li>상태 · 마감 관리</li>
         <li>절차 확인</li>
       </ul>
-      <span class="go">캘린더 열기</span>
+      <span class="go">업무 캘린더 열기</span>
     </a>
 
     <a class="card" href="knowledge-demo/index.html">
@@ -164,7 +172,7 @@ footer{margin-top:36px;padding:22px 0 44px;font-size:13px;color:var(--ink3);line
       <div class="state">가상 자료 체험판 — AI 미사용
         <span>구성과 업무 흐름을 눌러 보는 체험판입니다. 실제 업무 자료는 제작자 PC의 로컬 실행본에만 있습니다.</span>
       </div>
-      <span class="go">데모 열기</span>
+      <span class="go">지식관리 체험하기</span>
     </a>
 
   </div>

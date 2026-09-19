@@ -22,20 +22,22 @@
      두 스타일시트를 같이 고쳐야 해서 회귀 위험이 그만큼 커진다.
      차트 계열색(SERIES·--s1~s3)은 건드리지 않는다 — 그쪽은 서로 구분되는
      것이 목적이라 팔레트 통일과 목표가 다르다. */
-  --navy-900:#20344A;
-  --navy-850:#26394F;
-  --navy-800:#2A3F56;
-  --navy-700:#2A3F56;
-  --navy-600:#20344A;
-  --gold:#285FD6;        /* 주요 버튼 파랑 */
-  --gold-dim:#1F4EB5;
-  --on-dark:#7FA9F0;     /* 어두운 머리줄 위에서 쓰는 밝은 파랑 */
-  --ink:#243244;
-  --ink-2:#526174;
-  --ink-3:#7C8899;
-  --line:#E3E7EE;
-  --line-soft:#EDF0F5;
-  --page:#F5F7FA;
+  /* 통합 UI — 네 도구(메인·재무모델·캘린더·지식관리 체험판)가 같은 값을 쓴다.
+     변수 이름은 그대로 두고 값만 맞춘다(--gold 는 이름만 남은 주요 버튼 블루). */
+  --navy-900:#142B45;
+  --navy-850:#1B3555;
+  --navy-800:#1F3B5E;
+  --navy-700:#1F3B5E;
+  --navy-600:#142B45;
+  --gold:#2457C5;        /* 주요 버튼·활성 블루 */
+  --gold-dim:#1C46A0;
+  --on-dark:#8AB0F5;     /* 어두운 머리줄 위에서 쓰는 밝은 블루 */
+  --ink:#172B43;
+  --ink-2:#58677A;
+  --ink-3:#7E8C9E;
+  --line:#DCE3EB;
+  --line-soft:#E8EDF3;
+  --page:#F3F5F8;
   --surface:#ffffff;
   --surface-2:#F1F3F6;
   --s1:#1F2D40;   /* 대안 1 */
@@ -80,8 +82,12 @@ button,input,select{font-family:inherit;font-size:inherit}
 }
 .brand .mark.img{background:none;width:auto;min-width:22px;height:24px;padding:0;border-radius:0}
 .brand .mark img{height:24px;width:auto;display:block;object-fit:contain}
-.brand h1{font-size:13px;color:#fff}
-.brand .sub{font-size:9px;color:#8FA0B8;letter-spacing:.08em;text-transform:uppercase;margin-top:1px}
+/* 도구 이동이 4개로 늘면서 브랜드 칸이 눌려 제목이 세 줄로 뭉개졌다.
+   제목은 줄이지 않고, 부제는 자리가 넉넉할 때만 보인다. */
+.brand h1{font-size:13px;color:#fff;white-space:nowrap}
+.brand .sub{font-size:9px;color:#8FA0B8;letter-spacing:.08em;text-transform:uppercase;margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:1500px){ .brand .sub{display:none} }
 .topbar .spacer{flex:1}
 /* 버튼이 늘어나면서 좁은 화면에서 글자가 두 줄로 접혔다.
    접히느니 줄어들게 하고, 자리가 정 없으면 브랜드 부제를 먼저 버린다. */
@@ -96,7 +102,10 @@ button,input,select{font-family:inherit;font-size:inherit}
 }
 @media (max-width:1120px){ .topmeta{display:none} }
 .topmeta{display:flex;gap:22px;align-items:center;font-size:11.5px;color:#a9bcd6;border-left:1px solid rgba(255,255,255,.14);padding-left:20px}
-.topmeta b{display:block;color:#fff;font-size:13px;font-weight:600;margin-top:2px}
+/* 1366px 에서 「개발 · PF」·「2026-07-29」가 글자 단위로 찢어지던 것을 막는다 */
+.topmeta>div{white-space:nowrap}
+.topmeta b{display:block;color:#fff;font-size:13px;font-weight:600;margin-top:2px;white-space:nowrap;
+  font-variant-numeric:tabular-nums}
 .btn{
   border:1px solid rgba(255,255,255,.22);background:transparent;color:#e7eefa;
   padding:6px 12px;border-radius:5px;cursor:pointer;font-size:11px;letter-spacing:-.01em;
@@ -110,7 +119,7 @@ button,input,select{font-family:inherit;font-size:inherit}
 /* ── Layout ──────────────────────────────── */
 .wrap{display:flex;align-items:flex-start;min-height:calc(100vh - 50px)}
 .side{
-  width:320px;flex:0 0 320px;background:var(--navy-900);color:#dbe5f2;
+  width:300px;flex:0 0 300px;background:var(--navy-900);color:#dbe5f2;
   min-height:calc(100vh - 50px);padding:6px 0 40px;
   position:sticky;top:50px;max-height:calc(100vh - 50px);overflow-y:auto;
 }
@@ -159,7 +168,19 @@ button,input,select{font-family:inherit;font-size:inherit}
 .dealpill.on .bdg{background:rgba(255,255,255,.2);color:#dbe5f2}
 
 /* ── Tabs ────────────────────────────────── */
-.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:16px;flex-wrap:wrap}
+/* 탭 두 줄 — 위는 상위 그룹, 아래는 그 그룹의 탭 */
+.tabgrp{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.tabg{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink-2);border-radius:8px;padding:8px 14px;
+  font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.tabg:hover{border-color:var(--gold);color:var(--gold)}
+.tabg.on{background:var(--gold);border-color:var(--gold);color:#fff}
+.tabg-n{font-size:11px;font-weight:500;opacity:.75;
+  background:rgba(0,0,0,.10);border-radius:999px;padding:1px 7px;min-width:18px;text-align:center}
+.tabg.on .tabg-n{background:rgba(255,255,255,.22)}
+.tabg:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.tabrow{display:flex;gap:2px;flex-wrap:wrap}
+.tabs{display:block;border-bottom:1px solid var(--line);margin-bottom:16px;padding-bottom:0}
 .tab{
   border:none;background:transparent;padding:9px 14px;cursor:pointer;color:var(--ink-2);
   font-size:12.5px;border-bottom:2px solid transparent;margin-bottom:-1px;letter-spacing:-.01em;
@@ -460,11 +481,25 @@ td.neg{color:var(--bad)}
 .addbtn:hover{background:#eaf2fd}
 
 /* ── Chart ───────────────────────────────── */
-/* 두 카드를 같은 폭·같은 높이로 — 크기가 다르면 나란히 둔 의미가 없다 */
-.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch}
+/* 결과 영역은 12열 격자다. 시간축을 읽는 현금흐름 차트는 8열, 한 시점의
+   구성비를 읽는 도넛·막대는 4열 — 반대로 두면 넓은 칸이 낭비된다.
+   높이는 맞춘다(align-items:stretch): 크기가 다르면 나란히 둔 의미가 없다 */
+.chart-row{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;align-items:stretch}
+.chart-row>.card:nth-child(1){grid-column:span 8}
+.chart-row>.card:nth-child(2){grid-column:span 4}
 .chart-row .card{display:flex;flex-direction:column}
 .chart-row .card .viz{flex:1}
-@media(max-width:1180px){.chart-row{grid-template-columns:1fr}}
+@media(max-width:1180px){.chart-row>.card{grid-column:1/-1}}
+/* 핵심 가정 요약 — 이름과 상태만 읽는 목록이라 표로 만들지 않는다 */
+.asm-body{padding:6px 16px 12px}
+.asm-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  padding:7px 0;border-bottom:1px solid var(--line-soft)}
+.asm-row:last-of-type{border-bottom:0}
+.asm-n{font-size:13px;color:var(--ink)}
+.asm-t{font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;white-space:nowrap}
+.asm-t.done{color:var(--ink-2)}
+.asm-t.edited{color:var(--gold);font-weight:600}
+.asm-help{margin:10px 0 0;font-size:12px;line-height:1.5;color:var(--ink-3)}
 .viz{background:var(--surface);position:relative;padding:10px 14px 4px}
 .viz svg{display:block;width:100%;height:auto;overflow:visible}
 .legend{display:flex;gap:14px;flex-wrap:wrap;padding:0 16px 12px;font-size:11px;color:var(--ink-3);letter-spacing:0}
@@ -616,7 +651,7 @@ body.nav-open .backdrop{display:block}
 @media(max-width:1180px){
   .tiles{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
 }
-@media(max-width:900px){
+@media(max-width:1024px){
   .topbar{height:56px;padding:0 10px;gap:8px;overflow:hidden}
   .brand{flex:1 1 auto;min-width:0}
   .brand>div{min-width:0}
@@ -632,7 +667,7 @@ body.nav-open .backdrop{display:block}
   .backdrop{top:56px}
   .wrap{display:block;min-height:calc(100vh - 56px)}
   .side{
-    position:fixed;top:56px;left:0;bottom:0;width:min(320px,86vw);
+    position:fixed;top:56px;left:0;bottom:0;width:min(300px,86vw);
     max-height:none;flex:none;transform:translateX(-100%);
     transition:transform .22s ease;z-index:60;box-shadow:6px 0 24px rgba(0,26,58,.3);
   }
@@ -645,7 +680,7 @@ body.nav-open .backdrop{display:block}
   .dealpill{padding:7px 13px;font-size:12.5px}
   .tab{white-space:nowrap;padding:9px 11px}
   .rolebar{grid-template-columns:1fr 1fr}
-  .chart-row{grid-template-columns:1fr}
+  .chart-row>.card{grid-column:1/-1}
   .chipgrp{margin-right:8px}
 }
 @media(max-width:620px){
@@ -732,9 +767,11 @@ body.nav-open .backdrop{display:block}
 .toolnav .tn{font-size:11px;padding:5px 10px;border-radius:4px;text-decoration:none;white-space:nowrap;border:1px solid transparent;line-height:1.4}
 .toolnav .tn-home{color:#a9bccf;border-color:rgba(255,255,255,.2)}
 .toolnav .tn-home:hover{background:rgba(255,255,255,.1);color:#fff}
-.toolnav .tn-cur{color:#fff;font-weight:600;background:rgba(255,255,255,.12)}
-.toolnav .tn-other{color:#fff;background:var(--gold);border-color:var(--gold);font-weight:600}
-.toolnav .tn-other:hover{filter:brightness(1.08)}
+/* 지금 도구는 채워서, 나머지는 조용한 글자 링크로. 넷 다 파란 버튼이면
+   어디에 있는지가 안 보인다. */
+.toolnav .tn-cur{color:#fff;font-weight:700;background:var(--gold);border-color:var(--gold)}
+.toolnav .tn-other{color:#b9cbe4;border-color:transparent}
+.toolnav .tn-other:hover{background:rgba(255,255,255,.12);color:#fff}
 .toolnav .tn:focus-visible{outline:2px solid #fff;outline-offset:1px}
 @media(max-width:1120px){ .toolnav .tn-cur{display:none} }
 @media(max-width:560px){ .toolnav{display:none} }
@@ -833,9 +870,12 @@ body.nav-open .backdrop{display:block}
       <div class="sub" id="brandSub">Commercial Real Estate &middot; Underwriting &amp; Excel Model</div>
     </div>
   </div>
+  <!-- 도구 이동용 — 세 도구가 데이터를 주고받는다는 뜻이 아니다 -->
   <nav class="toolnav" aria-label="도구 이동">
-    <span class="tn tn-cur">재무모델</span>
-    <a class="tn tn-other" id="tnOther" href="#">업무 캘린더 →</a>
+    <a class="tn tn-other" href="index.html">업무지원 홈</a>
+    <span class="tn tn-cur" aria-current="page">재무모델</span>
+    <a class="tn tn-other" href="업무_캘린더.html">업무 캘린더</a>
+    <a class="tn tn-other" href="knowledge-demo/index.html">지식관리 체험판</a>
   </nav>
   <div class="spacer"></div>
   <div class="topmeta">
@@ -11228,6 +11268,47 @@ function applyBrand(){
   sub.textContent=(G.firm? G.firm+' · ':'')+'Commercial Real Estate · Underwriting & Excel Model';
 }
 
+/* ══ 탭 그룹 ═══════════════════════════════════════════════
+   기존 탭 → 새 상위 그룹 매핑. 탭을 없애거나 숨기지 않는다 — 어느 탭도
+   이 표에 없으면 「상세 분석」으로 떨어지므로 막다른 메뉴가 생기지 않는다.
+   딜 유형마다 없는 탭은 그 그룹이 비고, 빈 그룹은 아예 그리지 않는다.
+
+     요약          sum                     (투자 요약 · 사업 수지)
+     현금흐름·자금  cf su pf sched          개발 PF
+                   noi stack debt wf eq    매입
+                   recv rounds cash        유동화(회수 스케줄·회차 납부·현금수지)
+                                           ※ debt 는 매입·유동화가 같은 id 를 쓴다
+     상세 분석      나머지 전부              (분양 조건·흡수·손익분기·수익률·
+                                            민감도·시나리오·검증·시장 지표…)
+     투자검토보고서 rpt
+   ══════════════════════════════════════════════════════════ */
+var TAB_GROUPS=[
+  {k:'sum',  t:'요약',           ids:['sum']},
+  {k:'flow', t:'현금흐름 · 자금', ids:['cf','su','pf','sched','noi','stack','debt','wf','eq',
+                                      'recv','rounds','cash']},
+  {k:'rpt',  t:'투자검토보고서',   ids:['rpt']}
+];
+/* 지금 딜에 실제로 있는 탭만으로 그룹을 만든다 */
+function tabGroups(tabs){
+  var ids=tabs.map(function(t){ return t.id; }), out=[], used={};
+  TAB_GROUPS.forEach(function(g){
+    var list=ids.filter(function(i){ return g.ids.indexOf(i)>=0; });
+    list.forEach(function(i){ used[i]=1; });
+    if(list.length) out.push({k:g.k, t:g.t, list:list});
+  });
+  var rest=ids.filter(function(i){ return !used[i]; });
+  if(rest.length){
+    /* 「상세 분석」은 나머지를 담는 자리다 — 새 탭이 생겨도 사라지지 않는다 */
+    var at=out.length? Math.max(1,out.length-1) : 0;   /* 보고서 앞에 끼운다 */
+    out.splice(at,0,{k:'detail', t:'상세 분석', list:rest});
+  }
+  return out;
+}
+function groupOf(groups,id){
+  for(var i=0;i<groups.length;i++) if(groups[i].list.indexOf(id)>=0) return groups[i].k;
+  return groups.length? groups[0].k : 'sum';
+}
+
 /* ── 사이드바 (단계형 입력) ── */
 var CIRCLE=['①','②','③','④','⑤','⑥','⑦','⑧','⑨'];
 function headGroup(){
@@ -11547,6 +11628,30 @@ function renderDealBar(){
   });
 }
 
+/* ── 핵심 가정 요약 (결과 격자 4열) ──
+   민감도 격자 옆자리다. 새로 계산하는 값은 하나도 없다 — 사이드바가 이미
+   머리글에 달아 주는 «몇 개 채웠나 / 기본값에서 몇 개 바뀌었나»를 결과
+   화면에서도 읽게 옮겨 적는 것뿐이다. 그래서 표시 규칙도 사이드바와 같은
+   isFilled·changedFields 를 쓴다. 두 곳이 어긋나면 어느 쪽도 못 믿는다. */
+function assumeCard(){
+  var rows='';
+  stepGroups().forEach(function(g){
+    if(!g.f||!g.f.length) return;
+    var n=g.f.length, k=g.f.filter(isFilled).length, tag, cls;
+    if(g.detail){ var ch=changedFields(g); tag=ch? ch+'개 수정' : '기본값'; cls=ch?'edited':'done'; }
+    else { tag=k+'/'+n; cls=(k===n?'done':''); }
+    rows+='<div class="asm-row"><span class="asm-n">'+esc(g.g)+'</span>'+
+          '<span class="asm-t '+cls+'">'+esc(tag)+'</span></div>';
+  });
+  if(!rows) return '';
+  return '<div class="card"><header><h2>핵심 가정 요약</h2><span class="desc">'+
+    esc(scenOf().name)+' 시나리오 · 기준일 '+esc(G.asOf||'—')+' · 단위 '+
+    esc((G.ccy||'KRW')+' '+(G.unit||''))+'</span></header>'+
+    '<div class="body asm-body">'+rows+
+    '<p class="asm-help">값은 왼쪽 입력 패널에서 바꿉니다. 「기본값」은 그 그룹을 아직 손대지 않았다는 뜻입니다.</p>'+
+    '</div></div>';
+}
+
 /* ── 탭 · 렌더 ── */
 var TAB=null;
 /* 탭 하나의 내용. 화면과 인쇄가 같은 것을 보도록 한 곳에서 만든다.
@@ -11559,7 +11664,13 @@ function paneHtml(id,M){
     /* 즉석 조정은 지표 바로 아래에, 히트맵은 맨 끝에. 종이에는 조정
        버튼이 의미가 없으므로 인쇄할 때는 뺀다. */
     if(!window.__PRINTING){ try{ h=insertQadj(h); }catch(e){} }
-    try{ h+=heatCard(); }catch(e){}
+    /* 민감도 8열 + 핵심 가정 요약 4열. 민감도가 없는 딜 유형에서는 빈 8열을
+       가짜 카드로 채우지 않고, 가정 요약만 전체 너비로 둔다. */
+    try{
+      var hc=heatCard(), ac=assumeCard();
+      if(hc&&ac) h+='<div class="chart-row">'+hc+ac+'</div>';
+      else h+=(hc||'')+(ac||'');
+    }catch(e){}
     /* 시트 구조는 참고 정보라 진짜 맨 끝, 접힌 채로 둔다.
        엔진이 각자 붙이던 것을 여기로 모았다 — 순서가 엔진마다 어긋나지 않게. */
     try{ h+=sheetPlanCard(); }catch(e2){}
@@ -11600,8 +11711,16 @@ function render(skipSide){
   }
   if(!TAB||!tabs.some(function(t){return t.id===TAB;})) TAB=tabs[0].id;
   var M=eng.model();
-  document.getElementById('tabs').innerHTML=tabs.map(function(t){
-    return '<button class="tab'+(t.id===TAB?' on':'')+'" data-tab="'+t.id+'">'+esc(t.t)+'</button>'; }).join('');
+  /* 탭이 11~13개가 한 줄에 늘어서 있으면 처음 여는 사람은 어디부터 볼지 모른다.
+     상위 그룹을 한 줄 얹고 그 안의 탭만 둘째 줄에 보인다 — 탭 자체는 하나도
+     없애지 않고, 패널·이벤트 구조도 그대로다. */
+  var grp=tabGroups(tabs), gCur=groupOf(grp,TAB);
+  document.getElementById('tabs').innerHTML=
+    '<div class="tabgrp">'+grp.map(function(g){
+      return '<button class="tabg'+(g.k===gCur?' on':'')+'" data-tabg="'+g.k+'">'+esc(g.t)+
+             '<span class="tabg-n">'+g.list.length+'</span></button>'; }).join('')+'</div>'+
+    '<div class="tabrow">'+tabs.filter(function(t){ return groupOf(grp,t.id)===gCur; }).map(function(t){
+      return '<button class="tab'+(t.id===TAB?' on':'')+'" data-tab="'+t.id+'">'+esc(t.t)+'</button>'; }).join('')+'</div>';
   /* 활성 탭만 만든다.
      예전에는 모든 탭의 HTML을 매번 만들었다. 개발 PF는 손익분기 패널 하나가
      319ms, 시나리오가 65ms라 보고 있지도 않은 탭 때문에 딜을 전환할 때마다
@@ -11616,6 +11735,17 @@ function render(skipSide){
       render(true);
       var main=document.querySelector('.main');
       if(main&&window.innerWidth<=900) window.scrollTo(0,0);
+    });
+  });
+  /* 그룹을 누르면 그 그룹의 첫 탭으로 간다 — 그룹 자체는 화면을 갖지 않는다 */
+  document.getElementById('tabs').querySelectorAll('[data-tabg]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var k=b.getAttribute('data-tabg');
+      var g=grp.filter(function(x){ return x.k===k; })[0];
+      if(!g||!g.list.length) return;
+      if(g.list.indexOf(TAB)<0) TAB=g.list[0];
+      closeNav(); render(true);
+      if(window.innerWidth<=900) window.scrollTo(0,0);
     });
   });
   document.getElementById('panes').querySelectorAll('[data-nudge]').forEach(function(b){
