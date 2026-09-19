@@ -3854,8 +3854,13 @@ function parseYmd(s){
   if(!s) return null;
   var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s));
   if(!m) return null;
-  var d=new Date(+m[1],+m[2]-1,+m[3]);
-  return isNaN(d.getTime())? null : d;
+  var y=+m[1], mo=+m[2], da=+m[3];
+  var d=new Date(y,mo-1,da);
+  if(isNaN(d.getTime())) return null;
+  /* Date 는 범위를 벗어난 값을 조용히 굴린다 — 2026-13-99 가 2027-04-08 이 된다.
+     그대로 받으면 마감일이 말없이 몇 달 밀린다. 굴러간 것은 날짜가 아니다. */
+  if(d.getFullYear()!==y || d.getMonth()!==mo-1 || d.getDate()!==da) return null;
+  return d;
 }
 function today(){ var n=new Date(); return new Date(n.getFullYear(),n.getMonth(),n.getDate()); }
 function addDays(d,n){ var x=new Date(d.getTime()); x.setDate(x.getDate()+n); return x; }
@@ -5938,8 +5943,22 @@ function parseRestore(txt){
   if(kind==='backup'&&o.runs instanceof Array) runs=o.runs.map(normRun).filter(function(r){ return !!r; });
   var edits=null;
   if(kind==='backup'&&o.procEdits&&typeof o.procEdits==='object'&&!(o.procEdits instanceof Array)) edits=o.procEdits;
+  /* 못 읽는 날짜는 normTask/normReg 가 조용히 비운다. 되돌린 사람은 마감일이
+     사라진 것을 한참 뒤에나 안다 — 몇 건을 비웠는지 미리 세어 확인창에서 말한다. */
+  var badDates=0;
+  o.tasks.forEach(function(raw,i){
+    var t=tasks[i];
+    if(!t||!raw) return;
+    if(raw.due && !t.due) badDates++;
+    if(raw.until && !t.until && (raw.kind==='absence')) badDates++;
+  });
+  o.regs.forEach(function(raw,i){
+    var g=regs[i];
+    if(g && raw && raw.next && !g.next) badDates++;
+  });
   return { ok:true, kind:kind, tasks:tasks, regs:regs, runs:runs, edits:edits,
     dropped:(o.tasks.length-tasks.length)+(o.regs.length-regs.length),
+    badDates:badDates,
     madeAt:o.madeAt||'', deptName:safeText(o.deptName,40) };
 }
 /* 검사를 통과한 것만 들어온다. id 재발급은 load() 와 같은 규칙을 쓴다 —
@@ -5951,9 +5970,14 @@ function parseRestore(txt){
    되돌린다. 저장 함수들은 실패를 삼키므로 여기서는 setItem 을 직접 쓴다. */
 function applyRestore(r){
   var tasks=r.tasks.slice(), seen={}, maxId=0, i, id;
+  /* id 가 없거나 겹치면 다시 매긴다 — 안 그러면 완료·삭제가 엉뚱한 행을 건드린다.
+     다만 «다시 매겼다»는 사실은 알린다. 조용히 바꾸면 파일과 화면의 id 가
+     달라진 것을 아무도 모른다. */
+  var reId=0;
   for(i=0;i<tasks.length;i++){ id=tasks[i].id;
-    if(!id||seen[id]) tasks[i].id=0; else { seen[id]=1; if(id>maxId) maxId=id; } }
+    if(!id||seen[id]){ tasks[i].id=0; reId++; } else { seen[id]=1; if(id>maxId) maxId=id; } }
   for(i=0;i<tasks.length;i++) if(!tasks[i].id) tasks[i].id=++maxId;
+  r.reId=reId;
 
   var nextS={ tasks:tasks, regs:r.regs.slice(), seq:maxId+1 };
   var nextR=null;
@@ -6003,12 +6027,24 @@ function restoreFromText(txt){
   var note=(r.kind==='shared')
     ? '이 파일은 동료에게 보내는 «공유 파일»입니다. 수행 원장과 프로세스 수정은 들어 있지 않아 지금 것이 그대로 남습니다.'
     : '수행 원장과 프로세스 수정까지 파일 내용으로 바뀝니다.';
-  askConfirm(what+'\n'+now+'\n\n지금 내용을 지우고 파일 내용으로 바꿉니다. '+note+
+  /* 고쳐서 넣는 것이 있으면 넣기 «전»에 말한다 — 마감일이 조용히 비워지면
+     되돌린 사람은 한참 뒤에나 안다. */
+  var fix=(r.badDates>0)
+    ? '\n\n주의: 날짜 형식을 읽지 못한 '+r.badDates+'건은 날짜를 비운 채로 들어갑니다(내용은 남습니다).'
+    : '';
+  askConfirm(what+'\n'+now+fix+'\n\n지금 내용을 지우고 파일 내용으로 바꿉니다. '+note+
              '\n\n되돌린 뒤에는 취소할 수 없습니다. 계속할까요?',function(){
     /* 실패하면 applyRestore 가 이전 상태로 돌려놓고 그 사실을 말한다 —
        여기서 «되돌렸습니다»를 덧붙이면 실패한 복원을 성공으로 알린다. */
-    if(applyRestore(r))
-      toast('되돌렸습니다 — 할 일 '+S.tasks.length+'건 · 정기업무 '+S.regs.length+'건');
+    if(applyRestore(r)){
+      var msg='되돌렸습니다 — 할 일 '+S.tasks.length+'건 · 정기업무 '+S.regs.length+'건';
+      /* 넣으면서 고친 것을 끝에 덧붙인다. 보정 자체는 필요하지만 말없이 하면 안 된다. */
+      var fixed=[];
+      if(r.badDates>0) fixed.push('날짜를 읽지 못해 비운 '+r.badDates+'건');
+      if(r.reId>0) fixed.push('번호가 겹치거나 없어 다시 매긴 '+r.reId+'건');
+      if(fixed.length) msg+=' · 보정: '+fixed.join(' · ');
+      toast(msg);
+    }
   });
   return true;
 }

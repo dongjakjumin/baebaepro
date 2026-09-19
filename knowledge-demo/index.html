@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>지식관리 — 가상 자료 체험판</title>
+<meta name="description" content="지식관리 도구의 구성과 업무 흐름을 눌러 보는 체험판입니다. 자료는 전부 가상이며 AI를 사용하지 않습니다.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2320344A'/%3E%3Cpath d='M22 16h14l10 10v22H22z' fill='none' stroke='%23fff' stroke-width='3'/%3E%3Cpath d='M36 16v10h10M27 34h12M27 40h12' stroke='%23fff' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="demo.css">
+</head>
+<body>
+
+<!-- 요구 7 — 무엇을 보고 있는지 화면 맨 위에서 먼저 말한다.
+     체험판에서 한 변경은 이 브라우저에만 남고 되돌릴 수 있어야 한다. -->
+<div id="demoBar">
+  <span class="demo-tag">가상 자료 체험판</span>
+  <span class="demo-txt">AI 미사용 · 변경은 이 브라우저에만 저장</span>
+  <span class="demo-sep"></span>
+  <span class="demo-note">실제 사내 자료·공유폴더에 연결되어 있지 않습니다. 눌러 보셔도 됩니다.</span>
+  <a class="demo-home" href="../index.html">← 도구 목록</a>
+  <button id="demoReset" type="button">체험 초기화</button>
+</div>
+
+<header id="topbar">
+  <div id="crumb">펀드 &gt; 사업장</div>
+  <div id="banners">
+    <span class="badge warn">전부 가상 자료 — 실제 사내 자료 아님</span>
+    <span class="badge warn">체험판 — 서버 없이 이 브라우저 안에서만 동작</span>
+  </div>
+</header>
+
+<div id="layout">
+  <!-- 좌: 펀드/사업장 트리 — 아래 현황·자료·이력·갱신 탭이 보여줄 대상을 고르고,
+       검색의 기본 범위도 이 선택을 따른다(전체 검색은 검색창에서 명시적으로 고른다). -->
+  <nav id="sidebar">
+    <div class="side-head">펀드 · 사업장</div>
+    <div id="tree"></div>
+    <div id="teamLink" class="tree-team">팀 공통 지식</div>
+  </nav>
+
+  <!-- 중앙: 검색창과 결과가 먼저, 그 아래에 현황·자료·이력·갱신 작업 자리 -->
+  <main id="center">
+    <section id="searchBar">
+      <label class="search-label" for="searchBox">자료 검색</label>
+      <input id="searchBox" type="text" placeholder="제목·본문에서 찾기 (예: 임차인 조건, 회신 예정일)">
+      <div class="search-opts">
+        <label id="searchScopeLabel">범위
+          <select id="searchScope">
+            <option value="scoped">현재 사업장</option>
+            <option value="all">전체 — 모든 펀드·사업장·팀 공통</option>
+          </select>
+        </label>
+        <label id="searchOldVersions"><input type="checkbox" id="includeOldVersions"> 이전 버전 포함</label>
+        <span class="hint">결과마다 소속을 표시합니다. 결과를 누르면 오른쪽에 그 버전의 근거 원문이 열립니다.</span>
+      </div>
+      <div id="searchScopeNote" class="hint"></div>
+      <div id="searchResults"></div>
+    </section>
+
+    <div id="tabs">
+      <button class="tab active" data-tab="status">현황</button>
+      <button class="tab" data-tab="documents">자료</button>
+      <button class="tab" data-tab="activities">업무 이력</button>
+      <button class="tab" data-tab="sync">자료 갱신</button>
+    </div>
+    <div id="panel-status" class="panel active"></div>
+    <div id="panel-documents" class="panel"></div>
+    <div id="panel-activities" class="panel"></div>
+    <div id="panel-sync" class="panel"></div>
+  </main>
+
+  <!-- 우: 선택한 근거 원문·버전·수정일 (넓은 패널). 보조 도구는 그 아래. -->
+  <aside id="side">
+    <section id="evidencePane">
+      <div class="pane-head">
+        <span class="pane-title">근거 원문</span>
+        <span>
+          <button id="viewerCollapse">접기</button>
+          <button id="viewerClose">닫기</button>
+        </span>
+      </div>
+      <div id="viewerEmpty" class="hint">검색 결과나 「근거」 칩을 누르면 그 문서 버전의 원문이 여기에 열립니다 — 버전 번호와 수정일이 함께 표시됩니다.</div>
+      <div id="viewerBody"></div>
+    </section>
+
+    <section id="sideTools">
+      <div id="sideTabs">
+        <button class="sidetab active" data-sidetab="review">변경 검토</button>
+        <button class="sidetab" data-sidetab="ai" id="aiSideTab">AI 질문</button>
+      </div>
+      <div id="side-review" class="sidepanel active">
+        <p class="hint">불러오는 중…</p>
+      </div>
+      <div id="side-ai" class="sidepanel">
+        <p class="hint">불러오는 중…</p>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<!-- 어댑터가 먼저 실행돼 fetch 를 가로챈 뒤에 화면 코드가 돈다.
+     (일반 스크립트는 지연 모듈보다 먼저 실행된다) -->
+<script src="demo-api.js"></script>
+<script type="module" src="app.js"></script>
+<script>
+  document.getElementById('demoReset').addEventListener('click', function () {
+    if (confirm('체험 중 바꾼 내용을 모두 지우고 처음 상태로 되돌립니다.\n(이 브라우저의 체험판 저장값만 지웁니다 — 재무모델·캘린더는 건드리지 않습니다)')) {
+      window.__kmDemoReset();
+    }
+  });
+</script>
+</body>
+</html>

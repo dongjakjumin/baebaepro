@@ -1,0 +1,30 @@
+/* 체험판 전용 덧칠 — style.css 는 로컬 앱과 같은 것을 그대로 쓰고,
+   여기서 상단 안내줄만 더한다. 화면 구조는 건드리지 않는다. */
+#demoBar{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:8px 16px; font-size:12.5px;
+  background:#FFF6E8; border-bottom:1px solid #E8C99A; color:#5B4517;
+}
+.demo-tag{
+  font-weight:700; color:#8A6524; background:#fff;
+  border:1px solid #E0BE86; border-radius:3px; padding:2px 8px;
+}
+.demo-txt{ font-weight:600 }
+.demo-sep{ width:1px; height:14px; background:#E0BE86 }
+.demo-note{ color:#7A6238 }
+.demo-home{
+  margin-left:auto; color:#285FD6; text-decoration:none; font-weight:600;
+}
+.demo-home:hover{ text-decoration:underline }
+#demoReset{
+  border:1px solid #E0BE86; background:#fff; color:#5B4517;
+  border-radius:3px; padding:4px 10px; font-size:12.5px; cursor:pointer;
+  font-family:inherit;
+}
+#demoReset:hover{ background:#8A6524; border-color:#8A6524; color:#fff }
+#demoReset:focus-visible{ outline:2px solid #285FD6; outline-offset:1px }
+
+@media (max-width: 900px){
+  .demo-note{ display:none }
+  .demo-home{ margin-left:0 }
+}
