@@ -9,92 +9,97 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="demo.css">
 </head>
-<body>
-
-<!-- 요구 7 — 무엇을 보고 있는지 화면 맨 위에서 먼저 말한다.
-     체험판에서 한 변경은 이 브라우저에만 남고 되돌릴 수 있어야 한다. -->
-<div id="demoBar">
-  <span class="demo-tag">가상 자료 체험판</span>
-  <span class="demo-txt">AI 미사용 · 변경은 이 브라우저에만 저장</span>
-  <span class="demo-sep"></span>
-  <span class="demo-note">실제 사내 자료·공유폴더에 연결되어 있지 않습니다. 눌러 보셔도 됩니다.</span>
-  <a class="demo-home" href="../index.html">← 도구 목록</a>
-  <button id="demoReset" type="button">체험 초기화</button>
-</div>
-
-<header id="topbar">
-  <div id="crumb">펀드 &gt; 사업장</div>
-  <div id="banners">
-    <span class="badge warn">전부 가상 자료 — 실제 사내 자료 아님</span>
-    <span class="badge warn">체험판 — 서버 없이 이 브라우저 안에서만 동작</span>
-  </div>
-</header>
+<!-- 체험판 전용 루트 클래스 — 화면 개편은 전부 demo.css 안에서 .km-demo 아래로 관리한다.
+     style.css(로컬 앱과 같은 파일)는 건드리지 않는다. -->
+<body class="km-demo">
 
 <div id="layout">
-  <!-- 좌: 펀드/사업장 트리 — 아래 현황·자료·이력·갱신 탭이 보여줄 대상을 고르고,
-       검색의 기본 범위도 이 선택을 따른다(전체 검색은 검색창에서 명시적으로 고른다). -->
-  <nav id="sidebar">
+
+  <!-- 좌: 도구 이름 · 펀드/사업장 트리 · 팀 공통 지식 · 도구 목록으로 돌아가기.
+       여기서 고른 대상이 아래 탭과 검색의 기본 범위를 정한다. -->
+  <nav id="sidebar" aria-label="펀드 · 사업장">
+    <div class="side-brand">
+      <span class="side-brand-name">지식관리</span>
+      <span class="side-brand-sub">가상 자료 체험판</span>
+    </div>
     <div class="side-head">펀드 · 사업장</div>
     <div id="tree"></div>
-    <div id="teamLink" class="tree-team">팀 공통 지식</div>
+    <button id="teamLink" class="tree-team" type="button">팀 공통 지식</button>
+    <a class="side-back demo-home" href="../index.html">업무지원 도구 목록으로</a>
   </nav>
 
-  <!-- 중앙: 검색창과 결과가 먼저, 그 아래에 현황·자료·이력·갱신 작업 자리 -->
-  <main id="center">
-    <section id="searchBar">
-      <label class="search-label" for="searchBox">자료 검색</label>
-      <input id="searchBox" type="text" placeholder="제목·본문에서 찾기 (예: 임차인 조건, 회신 예정일)">
-      <div class="search-opts">
-        <label id="searchScopeLabel">범위
-          <select id="searchScope">
-            <option value="scoped">현재 사업장</option>
-            <option value="all">전체 — 모든 펀드·사업장·팀 공통</option>
-          </select>
-        </label>
-        <label id="searchOldVersions"><input type="checkbox" id="includeOldVersions"> 이전 버전 포함</label>
-        <span class="hint">결과마다 소속을 표시합니다. 결과를 누르면 오른쪽에 그 버전의 근거 원문이 열립니다.</span>
+  <div id="main">
+
+    <header id="topbar">
+      <div class="top-left">
+        <div id="crumb">펀드 / 사업장</div>
+        <h1 id="pageTitle">사업장 지식관리</h1>
       </div>
-      <div id="searchScopeNote" class="hint"></div>
-      <div id="searchResults"></div>
-    </section>
+      <div class="top-actions">
+        <span class="badge-sample">예시 데이터</span>
+        <button id="demoReset" type="button">체험 초기화</button>
+      </div>
+    </header>
 
-    <div id="tabs">
-      <button class="tab active" data-tab="status">현황</button>
-      <button class="tab" data-tab="documents">자료</button>
-      <button class="tab" data-tab="activities">업무 이력</button>
-      <button class="tab" data-tab="sync">자료 갱신</button>
+    <!-- 얇은 안내줄 — 체험판임을 항상 한 줄로 알린다(경고 띠가 아니다). -->
+    <div id="demoBar">
+      <span class="demo-txt">가상 자료 체험판 · AI 미사용 · 변경은 이 브라우저에만 저장</span>
+      <span id="saveWarn" class="save-warn" hidden>저장 실패 — 이 탭에서만 임시로 유지됩니다. 새로고침하면 사라질 수 있습니다.</span>
     </div>
-    <div id="panel-status" class="panel active"></div>
-    <div id="panel-documents" class="panel"></div>
-    <div id="panel-activities" class="panel"></div>
-    <div id="panel-sync" class="panel"></div>
-  </main>
 
-  <!-- 우: 선택한 근거 원문·버전·수정일 (넓은 패널). 보조 도구는 그 아래. -->
-  <aside id="side">
+    <main id="center">
+      <!-- 검색 — 넓은 입력 하나와 범위·버전 컨트롤을 같은 줄에 둔다.
+           검색어가 있으면 아래 현황 그리드를 접고 결과가 주 작업 영역을 쓴다. -->
+      <section id="searchBar">
+        <div class="km-search-row">
+          <span class="km-search-field">
+            <svg class="km-ico" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            <input id="searchBox" type="text" aria-label="자료 검색" placeholder="제목·본문에서 찾기 (예: 임차인 조건, 회신 예정일)">
+          </span>
+          <label id="searchScopeLabel" class="km-ctl">범위
+            <select id="searchScope">
+              <option value="scoped">현재 사업장</option>
+              <option value="all">전체 — 모든 펀드·사업장·팀 공통</option>
+            </select>
+          </label>
+          <label id="searchOldVersions" class="km-ctl"><input type="checkbox" id="includeOldVersions"> 이전 버전 포함</label>
+          <button id="searchClose" class="km-btn-quiet" type="button" hidden>검색 닫기</button>
+        </div>
+        <div id="searchScopeNote" class="km-help"></div>
+        <div id="searchResults"></div>
+      </section>
+
+      <div id="tabs" role="tablist">
+        <button class="tab active" data-tab="status">현황</button>
+        <button class="tab" data-tab="documents">자료</button>
+        <button class="tab" data-tab="activities">업무 이력</button>
+        <button class="tab" data-tab="sync">갱신 체험</button>
+      </div>
+      <div id="panel-status" class="panel active"></div>
+      <div id="panel-documents" class="panel"></div>
+      <div id="panel-activities" class="panel"></div>
+      <div id="panel-sync" class="panel"></div>
+
+      <!-- 변경 검토 — 탭이 아니라 현황의 「확인할 변경」 카드에서 들어온다. -->
+      <div id="panel-review" class="panel">
+        <div class="km-view-head">
+          <button id="reviewBack" class="km-btn-quiet" type="button">현황으로 돌아가기</button>
+          <h2>변경 검토</h2>
+        </div>
+        <div id="side-review"><p class="hint">불러오는 중…</p></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 우: 근거 원문. 기본은 닫혀 있고 결과·근거 칩을 누를 때만 열린다.
+       넓은 화면에서는 나란히, 좁은 화면에서는 드로어로 뜬다. -->
+  <aside id="side" hidden aria-label="근거 원문">
     <section id="evidencePane">
       <div class="pane-head">
         <span class="pane-title">근거 원문</span>
-        <span>
-          <button id="viewerCollapse">접기</button>
-          <button id="viewerClose">닫기</button>
-        </span>
+        <button id="viewerClose" type="button">닫기</button>
       </div>
-      <div id="viewerEmpty" class="hint">검색 결과나 「근거」 칩을 누르면 그 문서 버전의 원문이 여기에 열립니다 — 버전 번호와 수정일이 함께 표시됩니다.</div>
       <div id="viewerBody"></div>
-    </section>
-
-    <section id="sideTools">
-      <div id="sideTabs">
-        <button class="sidetab active" data-sidetab="review">변경 검토</button>
-        <button class="sidetab" data-sidetab="ai" id="aiSideTab">AI 질문</button>
-      </div>
-      <div id="side-review" class="sidepanel active">
-        <p class="hint">불러오는 중…</p>
-      </div>
-      <div id="side-ai" class="sidepanel">
-        <p class="hint">불러오는 중…</p>
-      </div>
     </section>
   </aside>
 </div>
@@ -108,6 +113,11 @@
     if (confirm('체험 중 바꾼 내용을 모두 지우고 처음 상태로 되돌립니다.\n(이 브라우저의 체험판 저장값만 지웁니다 — 재무모델·캘린더는 건드리지 않습니다)')) {
       window.__kmDemoReset();
     }
+  });
+  /* 요구 5-2 — localStorage 쓰기가 막히면 조용히 넘기지 않고 그대로 알린다.
+     저장 «성공»을 알리는 배지·토스트는 두지 않는다(성공은 기본 기대값이다). */
+  document.addEventListener('km-demo-save-state', function (e) {
+    document.getElementById('saveWarn').hidden = !!(e.detail && e.detail.ok);
   });
 </script>
 </body>

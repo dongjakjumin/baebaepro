@@ -1,30 +1,504 @@
-/* 체험판 전용 덧칠 — style.css 는 로컬 앱과 같은 것을 그대로 쓰고,
-   여기서 상단 안내줄만 더한다. 화면 구조는 건드리지 않는다. */
-#demoBar{
-  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-  padding:8px 16px; font-size:12.5px;
-  background:#FFF6E8; border-bottom:1px solid #E8C99A; color:#5B4517;
-}
-.demo-tag{
-  font-weight:700; color:#8A6524; background:#fff;
-  border:1px solid #E0BE86; border-radius:3px; padding:2px 8px;
-}
-.demo-txt{ font-weight:600 }
-.demo-sep{ width:1px; height:14px; background:#E0BE86 }
-.demo-note{ color:#7A6238 }
-.demo-home{
-  margin-left:auto; color:#285FD6; text-decoration:none; font-weight:600;
-}
-.demo-home:hover{ text-decoration:underline }
-#demoReset{
-  border:1px solid #E0BE86; background:#fff; color:#5B4517;
-  border-radius:3px; padding:4px 10px; font-size:12.5px; cursor:pointer;
-  font-family:inherit;
-}
-#demoReset:hover{ background:#8A6524; border-color:#8A6524; color:#fff }
-#demoReset:focus-visible{ outline:2px solid #285FD6; outline-offset:1px }
+/* ══════════════════════════════════════════════════════════════
+   지식관리 공개 체험판 — 전용 스타일
 
-@media (max-width: 900px){
-  .demo-note{ display:none }
-  .demo-home{ margin-left:0 }
+   · style.css(로컬 앱과 같은 파일)는 건드리지 않는다. 여기서만 덧칠한다.
+   · 모든 규칙은 루트 클래스 .km-demo 아래에 둔다 — ID 선택자보다 특이도가
+     높아지므로 !important 를 쓰지 않고도 style.css 를 덮는다.
+   · 색·간격·크기는 지정된 토큰 값을 그대로 쓴다.
+   ══════════════════════════════════════════════════════════════ */
+
+.km-demo {
+  --km-bg: #F3F5F8;
+  --km-card: #FFFFFF;
+  --km-navy: #142B45;
+  --km-navy-sel: #244362;
+  --km-primary: #2457C5;
+  --km-ink: #172B43;
+  --km-sub: #58677A;
+  --km-line: #DCE3EB;
+  --km-ok-ink: #176B51;
+  --km-ok-bg: #EAF5EF;
+  --km-warn-ink: #8A5A12;
+  --km-warn-bg: #FFF4DF;
+  --km-err-ink: #B42332;
+  --km-err-bg: #FDECEE;
+  --km-r: 12px;
+  --km-rb: 6px;
+
+  background: var(--km-bg);
+  color: var(--km-ink);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.km-demo input, .km-demo select, .km-demo textarea, .km-demo button { font-family: inherit; }
+.km-demo h1, .km-demo h2, .km-demo h3 { margin: 0; }
+.km-demo .hint, .km-demo .km-help { font-size: 13px; color: var(--km-sub); line-height: 1.6; }
+.km-demo [hidden] { display: none !important; }   /* style.css 의 display 선언보다 우선 */
+.km-demo .km-ico { width: 15px; height: 15px; flex: 0 0 auto; }
+.km-demo :focus-visible { outline: 2px solid var(--km-primary); outline-offset: 1px; }
+
+/* ── 전체 틀 ───────────────────────────────────────────────── */
+.km-demo #layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  height: 100vh;
+}
+.km-demo #main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.km-demo #center { display: flex; flex-direction: column; overflow-y: auto; min-height: 0; }
+
+/* ── 사이드바 ─────────────────────────────────────────────── */
+.km-demo #sidebar {
+  background: var(--km-navy); border-right: none; color: #C9D6E6;
+  padding: 18px 12px 16px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.km-demo .side-brand { padding: 0 8px 14px; border-bottom: 1px solid rgba(255, 255, 255, .13); margin-bottom: 14px; }
+.km-demo .side-brand-name { display: block; font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -.01em; }
+.km-demo .side-brand-sub { display: block; font-size: 12px; color: #8FA6C2; margin-top: 2px; }
+.km-demo .side-head {
+  font-size: 12px; font-weight: 700; color: #8FA6C2; letter-spacing: .05em;
+  padding: 0 8px; margin: 0 0 8px;
+}
+.km-demo .fund-row {
+  font-size: 12px; font-weight: 700; color: #7E96B5; letter-spacing: .02em;
+  text-transform: none; padding: 0 8px; margin: 14px 0 4px;
+}
+.km-demo .fund-row:first-child { margin-top: 0; }
+.km-demo .project-row {
+  display: block; width: 100%; text-align: left; position: relative;
+  border: none; background: none; color: #C9D6E6; font-size: 14px;
+  padding: 8px 10px 8px 12px; border-radius: 8px; margin: 2px 0; cursor: pointer;
+}
+.km-demo .project-row:hover { background: rgba(255, 255, 255, .09); color: #fff; }
+.km-demo .project-row.active { background: var(--km-navy-sel); color: #fff; font-weight: 700; }
+/* 선택은 색만이 아니라 얇은 표시로도 구분한다 */
+.km-demo .project-row.active::before {
+  content: ''; position: absolute; left: 3px; top: 7px; bottom: 7px; width: 3px;
+  border-radius: 2px; background: #6E9BF0;
+}
+.km-demo .tree-team {
+  display: block; width: 100%; text-align: left; margin-top: 16px; padding: 9px 10px 9px 12px;
+  border: none; border-top: 1px solid rgba(255, 255, 255, .13); border-radius: 0;
+  background: none; color: #C9D6E6; font-size: 14px; cursor: pointer;
+}
+.km-demo .tree-team:hover { color: #fff; }
+.km-demo .side-back {
+  margin-top: auto; padding: 9px 12px; font-size: 12.5px; color: #8FA6C2;
+  text-decoration: none; border-top: 1px solid rgba(255, 255, 255, .13);
+}
+.km-demo .side-back:hover { color: #fff; }
+
+/* ── 상단 ─────────────────────────────────────────────────── */
+.km-demo #topbar {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+  padding: 13px 24px 12px; background: var(--km-card); border-bottom: 1px solid var(--km-line);
+}
+.km-demo #crumb { font-size: 12.5px; font-weight: 400; color: var(--km-sub); }
+.km-demo #pageTitle { font-size: 24px; font-weight: 700; color: var(--km-ink); letter-spacing: -.015em; margin-top: 2px; }
+.km-demo .top-actions { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.km-demo .badge-sample {
+  font-size: 12px; color: var(--km-sub); background: #EEF2F7;
+  border: 1px solid var(--km-line); border-radius: var(--km-rb); padding: 3px 8px;
+}
+/* 체험 초기화 — 보조 동작. 검색·승인과 같은 강조색·크기로 두지 않는다. */
+.km-demo #demoReset {
+  margin-left: 0; border: 1px solid var(--km-line); background: #fff; color: var(--km-sub);
+  border-radius: var(--km-rb); padding: 5px 10px; font-size: 12.5px; cursor: pointer;
+}
+.km-demo #demoReset:hover { border-color: var(--km-sub); color: var(--km-ink); background: #fff; }
+
+/* 얇은 안내줄 — 경고 띠가 아니라 중립적인 한 줄 */
+.km-demo #demoBar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 7px 24px; font-size: 12.5px;
+  background: #ECF0F6; border-bottom: 1px solid var(--km-line); color: var(--km-sub);
+}
+.km-demo .demo-txt { font-weight: 400; }
+.km-demo .save-warn {
+  color: var(--km-err-ink); background: var(--km-err-bg); border: 1px solid #F3CBD1;
+  border-radius: var(--km-rb); padding: 2px 8px; font-weight: 700;
+}
+
+/* ── 검색 ─────────────────────────────────────────────────── */
+.km-demo #searchBar { padding: 20px 24px 0; flex: 0 0 auto; }
+.km-demo .km-search-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.km-demo .km-search-field {
+  flex: 1 1 320px; min-width: 240px; display: flex; align-items: center; gap: 8px;
+  height: 44px; padding: 0 14px; background: var(--km-card);
+  border: 1px solid var(--km-line); border-radius: 10px; color: var(--km-sub);
+}
+.km-demo .km-search-field:focus-within { border-color: var(--km-primary); box-shadow: 0 0 0 3px rgba(36, 87, 197, .12); }
+.km-demo #searchBox {
+  flex: 1 1 auto; min-width: 0; width: auto; height: 42px; padding: 0;
+  border: none; border-radius: 0; background: none; font-size: 15px; color: var(--km-ink);
+}
+.km-demo #searchBox:focus { outline: none; border: none; box-shadow: none; }
+.km-demo .km-ctl {
+  display: inline-flex; align-items: center; gap: 6px; height: 44px;
+  font-size: 13px; color: var(--km-sub); white-space: nowrap;
+}
+.km-demo #searchScope {
+  height: 32px; font-size: 13px; padding: 0 8px; color: var(--km-ink);
+  border: 1px solid var(--km-line); border-radius: var(--km-rb); background: #fff;
+}
+.km-demo #searchScopeNote { margin-top: 8px; }
+.km-demo #searchScopeNote:empty { display: none; }
+
+.km-demo #searchResults { margin-top: 14px; max-height: none; overflow: visible; }
+.km-demo #searchResults:empty { display: none; }
+.km-demo #searchResults:not(:empty) { border: none; border-radius: 0; background: none; padding: 0 0 24px; }
+.km-demo .km-res-group {
+  background: var(--km-card); border: 1px solid var(--km-line); border-radius: var(--km-r);
+  padding: 12px 8px 8px; margin-bottom: 16px;
+}
+.km-demo .km-res-head {
+  display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700;
+  color: var(--km-sub); padding: 0 12px 8px;
+}
+.km-demo #searchResults .result {
+  display: block; width: 100%; text-align: left; border: none; background: none;
+  padding: 10px 12px; border-radius: 8px; font-size: 14px; line-height: 1.55;
+  color: var(--km-ink); cursor: default;
+}
+.km-demo #searchResults .result[data-view] { cursor: pointer; }
+.km-demo #searchResults .result + .result { border-top: 1px solid var(--km-line); border-radius: 0; }
+.km-demo #searchResults .result[data-view]:hover { background: #F5F8FD; }
+.km-demo #searchResults .result .res-where { color: var(--km-sub); font-size: 12.5px; font-weight: 700; }
+.km-demo #searchResults .result .res-title { font-weight: 700; }
+.km-demo #searchResults .result .res-snip { display: block; margin-top: 3px; color: var(--km-ink); }
+/* 강조색은 일치 구절과 선택 상태에만 쓴다 */
+.km-demo #searchResults .result mark { background: #DCE8FB; color: var(--km-ink); border-radius: 3px; padding: 0 2px; }
+.km-demo .res-badge {
+  display: inline-block; font-size: 12px; padding: 1px 7px; border-radius: var(--km-rb);
+  margin-left: 6px; white-space: nowrap;
+}
+.km-demo .res-badge.cur { background: var(--km-ok-bg); color: var(--km-ok-ink); }
+.km-demo .res-badge.old { background: #EEF2F7; color: var(--km-sub); }
+.km-demo .res-badge.wait { background: var(--km-warn-bg); color: var(--km-warn-ink); }
+.km-demo .res-badge.fail { background: var(--km-err-bg); color: var(--km-err-ink); }
+.km-demo .km-empty {
+  background: var(--km-card); border: 1px solid var(--km-line); border-radius: var(--km-r);
+  padding: 20px; margin-bottom: 16px;
+}
+.km-demo .km-empty p { margin: 0 0 12px; font-size: 14px; }
+
+/* 검색 중에는 현황 그리드를 접고 결과가 주 작업 영역을 쓴다 */
+.km-demo #layout.km-searching #tabs,
+.km-demo #layout.km-searching .panel { display: none; }
+
+/* ── 탭 ───────────────────────────────────────────────────── */
+.km-demo #tabs {
+  display: flex; gap: 2px; padding: 0 24px; margin-top: 18px; flex: 0 0 auto;
+  background: transparent; border-bottom: 1px solid var(--km-line);
+}
+.km-demo .tab {
+  border: none; background: none; padding: 11px 14px; font-size: 14px; color: var(--km-sub);
+  cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.km-demo .tab:hover { color: var(--km-ink); }
+.km-demo .tab.active { color: var(--km-primary); border-bottom-color: var(--km-primary); font-weight: 700; }
+.km-demo .panel { display: none; padding: 20px 24px 28px; }
+.km-demo .panel.active { display: block; }
+.km-demo .panel h4 { color: var(--km-ink); margin: 22px 0 10px; font-size: 14px; }
+
+/* ── 현황 탭: 12열 벤토 ──────────────────────────────────── */
+.km-demo #panel-status.active { display: grid; }
+.km-demo #panel-status {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px; align-content: start;
+}
+.km-demo .km-card {
+  grid-column: span 12; min-width: 0;
+  background: var(--km-card); border: 1px solid var(--km-line); border-radius: var(--km-r);
+  padding: 20px;
+}
+.km-demo .km-c8 { grid-column: span 8; }
+.km-demo .km-c7 { grid-column: span 7; }
+.km-demo .km-c5 { grid-column: span 5; }
+.km-demo .km-c4 { grid-column: span 4; }
+.km-demo .km-card-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  margin-bottom: 14px;
+}
+.km-demo .km-card-head h2 { font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+.km-demo .km-card-head .km-card-note { font-size: 12px; color: var(--km-sub); }
+.km-demo .km-card-foot { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+.km-demo .km-lbl { font-size: 12px; color: var(--km-sub); }
+
+/* 사업장 요약 — 제한적으로만 네이비 */
+.km-demo .km-card.km-navy { background: var(--km-navy); border-color: var(--km-navy); color: #fff; }
+.km-demo .km-navy .km-card-head h2 { color: #fff; }
+.km-demo .km-navy .km-card-head .km-card-note,
+.km-demo .km-navy .km-lbl { color: #9DB3CD; }
+.km-demo .km-sum-name { font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1.25; }
+.km-demo .km-sum-sub { font-size: 14px; color: #B6C8DD; margin-top: 3px; }
+.km-demo .km-sum-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 20px;
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, .15);
+}
+.km-demo .km-sum-grid .km-big { font-size: 18px; font-weight: 700; margin-top: 3px; line-height: 1.3; }
+.km-demo .km-sum-grid .km-small { font-size: 13px; color: #CBD8E7; margin-top: 3px; line-height: 1.45; }
+.km-demo .km-navy .km-btn-onnavy {
+  border: 1px solid rgba(255, 255, 255, .34); background: transparent; color: #fff;
+  border-radius: var(--km-rb); padding: 6px 11px; font-size: 13px; cursor: pointer;
+}
+.km-demo .km-navy .km-btn-onnavy:hover { background: rgba(255, 255, 255, .12); }
+
+/* 확인할 변경 */
+.km-demo .km-kpi { display: flex; align-items: baseline; gap: 6px; }
+.km-demo .km-kpi-n { font-size: 30px; font-weight: 700; line-height: 1.1; letter-spacing: -.02em; }
+.km-demo .km-kpi-u { font-size: 14px; color: var(--km-sub); }
+.km-demo .km-oneline { font-size: 14px; margin: 10px 0 0; line-height: 1.5; }
+.km-demo .km-oneline .km-lbl { display: block; margin-bottom: 2px; }
+
+/* 주요 이슈 · 미결사항 — 카드 안의 행(카드 속 카드로 만들지 않는다) */
+.km-demo .km-items .status-card {
+  background: none; border: none; border-radius: 0;
+  padding: 14px 0 0; margin: 0;
+}
+.km-demo .km-items .status-card:first-child { padding-top: 0; }
+.km-demo .km-items .status-card + .status-card { border-top: 1px solid var(--km-line); margin-top: 14px; }
+.km-demo .status-card .k { font-size: 12px; color: var(--km-sub); }
+.km-demo .status-card .v { font-size: 15px; margin: 4px 0; white-space: pre-wrap; line-height: 1.5; }
+.km-demo .status-card .meta { font-size: 12px; color: var(--km-sub); }
+.km-demo .status-card .row-actions { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+.km-demo .status-card .edit-btn {
+  font-size: 12.5px; padding: 5px 10px; border: 1px solid var(--km-line);
+  border-radius: var(--km-rb); background: #fff; cursor: pointer; color: var(--km-sub);
+}
+.km-demo .status-card .edit-btn:hover { border-color: var(--km-primary); color: var(--km-primary); }
+.km-demo .edit-form textarea, .km-demo .edit-form select {
+  width: 100%; font-family: inherit; font-size: 14px; color: var(--km-ink);
+  border: 1px solid var(--km-line); border-radius: var(--km-rb); padding: 8px 10px;
+}
+.km-demo .evidence-chip {
+  display: inline-block; font-size: 12px; background: #EEF3FB; color: var(--km-primary);
+  border: 1px solid #CFDDF5; padding: 2px 8px; border-radius: var(--km-rb);
+  margin-top: 4px; cursor: pointer; text-align: left;
+}
+.km-demo .evidence-chip:hover { background: #E1EAFA; }
+.km-demo .segment-highlight { background: var(--km-warn-bg); outline: 2px solid var(--km-primary); border-radius: 4px; padding: 4px 6px; }
+
+/* 최근 자료 · 최근 업무 이력 · 갱신 체험 — 공통 행 목록 */
+.km-demo .km-rows { display: flex; flex-direction: column; }
+.km-demo .km-row { padding: 11px 0; border-top: 1px solid var(--km-line); font-size: 14px; }
+.km-demo .km-row:first-child { border-top: none; padding-top: 0; }
+.km-demo .km-row-main { font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; }
+.km-demo .km-row-meta { font-size: 12px; color: var(--km-sub); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.km-demo .km-tag {
+  font-size: 12px; padding: 1px 7px; border-radius: var(--km-rb);
+  background: #EEF2F7; color: var(--km-sub); white-space: nowrap;
+}
+.km-demo .km-tag.ok { background: var(--km-ok-bg); color: var(--km-ok-ink); }
+.km-demo .km-tag.wait { background: var(--km-warn-bg); color: var(--km-warn-ink); }
+.km-demo .km-tag.err { background: var(--km-err-bg); color: var(--km-err-ink); }
+
+/* 전체 현황(펼침) — 요약에 못 담은 항목도 계속 읽고 고칠 수 있다 */
+.km-demo .km-all { grid-column: span 12; background: var(--km-card); border: 1px solid var(--km-line); border-radius: var(--km-r); padding: 0; }
+.km-demo .km-all > summary {
+  padding: 15px 20px; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--km-ink);
+}
+.km-demo .km-all > summary::marker { color: var(--km-sub); }
+.km-demo .km-all .km-all-body { padding: 0 20px 20px; }
+.km-demo .km-all .status-card { background: none; border: none; border-radius: 0; padding: 14px 0 0; margin: 0; }
+.km-demo .km-all .status-card + .status-card { border-top: 1px solid var(--km-line); margin-top: 14px; }
+.km-demo .km-focus-item { background: #F5F8FD; border-radius: 8px; box-shadow: 0 0 0 2px var(--km-primary); }
+
+/* 버튼 ─────────────────────────────────────────────────── */
+.km-demo .km-btn-primary {
+  min-height: 40px; padding: 0 16px; border: 1px solid var(--km-primary);
+  background: var(--km-primary); color: #fff; border-radius: 8px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.km-demo .km-btn-primary:hover { background: #1E4BAC; border-color: #1E4BAC; }
+.km-demo .km-btn-quiet {
+  min-height: 34px; padding: 0 12px; border: 1px solid var(--km-line); background: #fff;
+  color: var(--km-sub); border-radius: var(--km-rb); font-size: 13px; cursor: pointer;
+}
+.km-demo .km-btn-quiet:hover { border-color: var(--km-sub); color: var(--km-ink); }
+
+/* ── 자료 탭: 문서명 중심 표 ─────────────────────────────── */
+.km-demo .km-table-wrap { background: var(--km-card); border: 1px solid var(--km-line); border-radius: var(--km-r); overflow-x: auto; }
+.km-demo .km-table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 720px; }
+.km-demo .km-table th, .km-demo .km-table td { border-bottom: 1px solid var(--km-line); padding: 11px 14px; text-align: left; vertical-align: top; }
+.km-demo .km-table thead th { font-size: 12px; font-weight: 700; color: var(--km-sub); white-space: nowrap; background: #F8FAFC; }
+.km-demo .km-table tbody tr:last-child td { border-bottom: none; }
+.km-demo .km-table .km-doc-name { font-weight: 700; overflow-wrap: anywhere; }
+.km-demo .km-table .km-doc-note { font-size: 12px; color: var(--km-sub); margin-top: 3px; line-height: 1.5; }
+.km-demo .km-table td.km-acts { white-space: nowrap; text-align: right; }
+.km-demo .km-table td.km-acts button {
+  font-size: 12.5px; margin-left: 6px; padding: 6px 10px; border: 1px solid var(--km-line);
+  border-radius: var(--km-rb); background: #fff; cursor: pointer; color: var(--km-sub);
+}
+.km-demo .km-table td.km-acts button:hover:not(:disabled) { border-color: var(--km-primary); color: var(--km-primary); }
+.km-demo .km-table td.km-acts button:disabled { opacity: .6; cursor: not-allowed; background: var(--km-bg); }
+.km-demo .status-pill { font-size: 12px; padding: 1px 7px; border-radius: var(--km-rb); white-space: nowrap; }
+.km-demo .status-pill.ready { background: var(--km-ok-bg); color: var(--km-ok-ink); }
+.km-demo .status-pill.partial { background: var(--km-warn-bg); color: var(--km-warn-ink); }
+.km-demo .status-pill.conversion_needed, .km-demo .status-pill.unsupported { background: #EEF2F7; color: var(--km-sub); }
+.km-demo .status-pill.failed { background: var(--km-err-bg); color: var(--km-err-ink); }
+
+/* ── 업무 이력 탭 ─────────────────────────────────────────── */
+.km-demo .activity-row {
+  background: var(--km-card); border: 1px solid var(--km-line); border-radius: var(--km-r);
+  padding: 16px 20px; margin-bottom: 16px;
+}
+.km-demo .activity-row .act-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--km-sub); }
+.km-demo .activity-row .cat { font-size: 12px; background: #EEF2F7; color: var(--km-sub); padding: 1px 7px; border-radius: var(--km-rb); }
+.km-demo .activity-row .act-when { font-size: 15px; font-weight: 700; color: var(--km-ink); }
+.km-demo .act-grid { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 6px 14px; margin-top: 12px; font-size: 14px; }
+.km-demo .act-grid dt { font-size: 12px; color: var(--km-sub); padding-top: 2px; }
+.km-demo .act-grid dd { margin: 0; line-height: 1.55; overflow-wrap: anywhere; }
+
+/* 폼(메모·이력 등록) */
+.km-demo form.inline-form { background: var(--km-card); border: 1px solid var(--km-line); border-radius: var(--km-r); padding: 16px 20px; margin: 0 0 16px; }
+.km-demo form.inline-form label { display: block; font-size: 12px; color: var(--km-sub); margin-top: 10px; }
+.km-demo form.inline-form input, .km-demo form.inline-form textarea, .km-demo form.inline-form select {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--km-line); border-radius: var(--km-rb);
+  margin-top: 4px; font-size: 14px; color: var(--km-ink);
+}
+.km-demo form.inline-form button {
+  margin-top: 14px; min-height: 40px; padding: 0 16px; border: 1px solid var(--km-primary);
+  background: var(--km-primary); color: #fff; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 700;
+}
+.km-demo .km-fold {
+  background: var(--km-card); border: 1px solid var(--km-line); border-radius: var(--km-r);
+  padding: 0; margin-bottom: 16px;
+}
+.km-demo .km-fold > summary { padding: 14px 20px; cursor: pointer; font-size: 13.5px; font-weight: 700; color: var(--km-sub); }
+.km-demo .km-fold .km-fold-body { padding: 0 20px 18px; }
+.km-demo .km-fold .km-fold-body form.inline-form { border: none; padding: 0; margin: 0; }
+
+/* ── 갱신 체험 탭 ─────────────────────────────────────────── */
+.km-demo .sync-target { background: var(--km-card); border: 1px solid var(--km-line); border-radius: var(--km-r); padding: 20px; margin-bottom: 16px; }
+.km-demo .sync-target .k { font-size: 12px; color: var(--km-sub); }
+.km-demo .sync-target .v { font-size: 18px; font-weight: 700; margin: 4px 0 2px; }
+.km-demo .sync-target .meta { font-size: 12px; color: var(--km-sub); overflow-wrap: anywhere; }
+.km-demo .sync-target p.hint { margin: 10px 0 0; }
+.km-demo .km-notice {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  background: var(--km-warn-bg); color: var(--km-warn-ink); border: 1px solid #EBD4A8;
+  border-radius: 8px; padding: 12px 14px; font-size: 13.5px; margin: 12px 0 0; line-height: 1.55;
+}
+.km-demo .km-notice .km-btn-quiet { background: #fff; color: var(--km-warn-ink); border-color: #DCBE8C; }
+.km-demo #syncBtn {
+  min-height: 44px; padding: 0 18px; background: var(--km-primary); color: #fff;
+  border: 1px solid var(--km-primary); border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 700;
+}
+.km-demo #syncBtn:disabled { opacity: .55; cursor: default; }
+.km-demo #syncResult { margin-top: 12px; }
+.km-demo #syncResult:empty { display: none; }
+.km-demo #panel-sync .run { border: 1px solid var(--km-line); border-radius: var(--km-r); padding: 12px 16px; margin-bottom: 8px; background: var(--km-card); font-size: 13.5px; }
+.km-demo .candidate-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; background: #F8FAFC; border: 1px solid var(--km-line); border-radius: 8px; margin-bottom: 8px; }
+.km-demo #panel-sync select, .km-demo #panel-sync button:not(#syncBtn):not(.km-btn-quiet) {
+  font-size: 13px; padding: 6px 10px; border: 1px solid var(--km-line); border-radius: var(--km-rb); background: #fff; color: var(--km-ink); cursor: pointer;
+}
+.km-demo .format-card { background: none; border: none; border-radius: 0; padding: 0; margin: 0; }
+.km-demo .format-card table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.km-demo .format-card th, .km-demo .format-card td { border-bottom: 1px solid var(--km-line); padding: 8px; text-align: left; vertical-align: top; }
+.km-demo .format-card th { color: var(--km-sub); font-size: 12px; font-weight: 700; }
+.km-demo .fmt-badge { display: inline-block; font-size: 12px; padding: 1px 7px; border-radius: var(--km-rb); white-space: nowrap; }
+.km-demo .fmt-badge.supported { background: var(--km-ok-bg); color: var(--km-ok-ink); }
+.km-demo .fmt-badge.unsupported { background: #EEF2F7; color: var(--km-sub); }
+.km-demo .fmt-badge.unverified, .km-demo .fmt-badge.unknown { background: var(--km-warn-bg); color: var(--km-warn-ink); }
+
+/* ── 변경 검토 ────────────────────────────────────────────── */
+.km-demo .km-view-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.km-demo .km-view-head h2 { font-size: 18px; font-weight: 700; }
+.km-demo .proposal-card { background: var(--km-card); border: 1px solid var(--km-line); border-radius: var(--km-r); padding: 20px; margin-bottom: 16px; }
+.km-demo .proposal-card .diff { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; font-size: 14px; }
+.km-demo .proposal-card .diff > div { padding: 12px 14px; border-radius: 8px; line-height: 1.5; }
+.km-demo .proposal-card .diff .before { background: #F5F7FA; color: var(--km-sub); border: 1px solid var(--km-line); }
+.km-demo .proposal-card .diff .after { background: #F3F7FF; color: var(--km-ink); border: 1px solid #CFDDF5; }
+.km-demo .proposal-card .diff .km-lbl { display: block; margin-bottom: 4px; }
+.km-demo .proposal-status { font-size: 12px; padding: 2px 8px; border-radius: var(--km-rb); }
+.km-demo .proposal-status.pending { background: var(--km-warn-bg); color: var(--km-warn-ink); }
+.km-demo .proposal-status.approved { background: var(--km-ok-bg); color: var(--km-ok-ink); }
+.km-demo .proposal-status.rejected { background: #EEF2F7; color: var(--km-sub); }
+.km-demo .proposal-status.conflict { background: var(--km-err-bg); color: var(--km-err-ink); }
+.km-demo .km-decide { margin-top: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* 승인은 주요 동작, 거절(반려)은 보조 */
+.km-demo .km-decide [data-approve] {
+  min-height: 40px; padding: 0 18px; border: 1px solid var(--km-primary); background: var(--km-primary);
+  color: #fff; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.km-demo .km-decide [data-approve]:hover { background: #1E4BAC; }
+.km-demo .km-decide [data-reject] {
+  min-height: 34px; padding: 0 12px; border: 1px solid var(--km-line); background: #fff;
+  color: var(--km-sub); border-radius: var(--km-rb); font-size: 13px; cursor: pointer;
+}
+.km-demo .km-decide [data-reject]:hover { border-color: var(--km-sub); color: var(--km-ink); }
+.km-demo #proposeSyntheticBtn {
+  font-size: 13px; min-height: 34px; padding: 0 12px; border: 1px solid var(--km-line);
+  border-radius: var(--km-rb); background: #fff; cursor: pointer; color: var(--km-sub);
+}
+.km-demo .km-msg { border-radius: 8px; padding: 12px 14px; font-size: 13.5px; margin: 0 0 16px; line-height: 1.55; }
+.km-demo .km-msg.err { background: var(--km-err-bg); color: var(--km-err-ink); border: 1px solid #F3CBD1; }
+.km-demo .km-msg.info { background: #EEF2F7; color: var(--km-sub); border: 1px solid var(--km-line); }
+
+/* ── 근거 원문 패널 ───────────────────────────────────────── */
+.km-demo #side[hidden] { display: none; }
+.km-demo #side {
+  border-left: 1px solid var(--km-line); background: var(--km-card);
+  display: flex; flex-direction: column; min-height: 0; min-width: 0;
+}
+.km-demo #layout.evidence-open { grid-template-columns: 220px minmax(0, 1fr) 400px; }
+.km-demo #evidencePane { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; background: var(--km-card); border-bottom: none; }
+.km-demo .pane-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 13px 20px; border-bottom: 1px solid var(--km-line); flex: 0 0 auto;
+}
+.km-demo .pane-title { font-weight: 700; color: var(--km-ink); font-size: 14px; }
+.km-demo #viewerClose {
+  border: 1px solid var(--km-line); background: #fff; border-radius: var(--km-rb);
+  padding: 5px 11px; cursor: pointer; font-size: 13px; color: var(--km-sub); margin-left: 0;
+}
+.km-demo #viewerClose:hover { border-color: var(--km-sub); color: var(--km-ink); }
+.km-demo #viewerBody { padding: 20px; overflow-y: auto; flex: 1 1 auto; min-height: 0; font-size: 14px; line-height: 1.65; }
+.km-demo #viewerBody h3 { margin: 0 0 6px; font-size: 16px; color: var(--km-ink); line-height: 1.4; overflow-wrap: anywhere; }
+.km-demo #viewerBody .km-prepared {
+  display: inline-block; font-size: 12px; background: #EEF2F7; color: var(--km-sub);
+  border: 1px solid var(--km-line); border-radius: var(--km-rb); padding: 2px 8px; margin: 2px 0 10px;
+}
+.km-demo #viewerBody table { border-collapse: collapse; margin: 10px 0; }
+.km-demo #viewerBody td, .km-demo #viewerBody th { border: 1px solid var(--km-line); padding: 6px 10px; }
+.km-demo #viewerBody .status-card { border: 1px solid var(--km-line); border-radius: 8px; padding: 12px 14px; margin: 0 0 10px; background: #F8FAFC; }
+
+/* ── 화면 크기별 ──────────────────────────────────────────── */
+/* 1024~1279 — 사이드바 192px, 근거는 드로어 */
+@media (max-width: 1279px) {
+  .km-demo #layout { grid-template-columns: 192px minmax(0, 1fr); }
+  .km-demo #layout.evidence-open { grid-template-columns: 192px minmax(0, 1fr); }
+  .km-demo #side {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 92vw);
+    z-index: 40; box-shadow: -6px 0 22px rgba(20, 43, 69, .16);
+  }
+}
+/* 1024 미만 — 트리를 상단 메뉴로 접고 카드 1열 */
+@media (max-width: 1023px) {
+  .km-demo #layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); height: 100vh; }
+  .km-demo #layout.evidence-open { grid-template-columns: minmax(0, 1fr); }
+  .km-demo #sidebar {
+    flex-direction: row; align-items: center; gap: 8px; overflow-x: auto; overflow-y: hidden;
+    padding: 8px 12px; border-bottom: 1px solid var(--km-navy);
+  }
+  .km-demo .side-brand { border: none; margin: 0; padding: 0 8px 0 0; white-space: nowrap; }
+  .km-demo .side-brand-sub { display: none; }
+  .km-demo .side-head { display: none; }
+  .km-demo #tree { display: flex; align-items: center; gap: 6px; }
+  .km-demo .fund-row { margin: 0 2px; white-space: nowrap; padding: 0; }
+  .km-demo .project-row { width: auto; margin: 0; white-space: nowrap; padding: 6px 10px; }
+  .km-demo .project-row.active::before { display: none; }
+  .km-demo .project-row.active { box-shadow: inset 0 -2px 0 #6E9BF0; }
+  .km-demo .tree-team { width: auto; margin: 0; border-top: none; white-space: nowrap; padding: 6px 10px; }
+  .km-demo .side-back { margin: 0 0 0 auto; border-top: none; white-space: nowrap; }
+  .km-demo #topbar { padding: 12px 16px; }
+  .km-demo #pageTitle { font-size: 20px; }
+  .km-demo #demoBar, .km-demo #searchBar, .km-demo #tabs, .km-demo .panel { padding-left: 16px; padding-right: 16px; }
+  .km-demo #tabs { overflow-x: auto; }
+  .km-demo .km-card, .km-demo .km-c8, .km-demo .km-c7, .km-demo .km-c5, .km-demo .km-c4 { grid-column: span 12; }
+  .km-demo .proposal-card .diff { grid-template-columns: minmax(0, 1fr); }
+  .km-demo .act-grid { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .km-demo .act-grid dd { margin-bottom: 8px; }
+  .km-demo .km-search-field { flex: 1 1 100%; }
 }

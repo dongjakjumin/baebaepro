@@ -158,6 +158,7 @@
      실제 파일을 읽거나 AI로 분석해 만든 것이 아니라 미리 적어 둔 예시다. */
   var PREPARED_V2 = {
     documentId: 2,
+    projectId: 1,          /* documents[id=2] 가 달린 사업장 — 화면이 대상 이름을 적을 때 쓴다 */
     version: {
       id: 106, version_no: 2, original_filename: '가상 A물류센터 인수인계 노트.docx',
       extract_status: 'ready', extract_warnings: null, uploaded_at: '2026-09-18T01:00:00.000Z', size: 1510,
@@ -182,8 +183,25 @@
     db = seed();
     return db;
   }
+  /* 예전엔 쓰기 실패(사생활 보호 모드·저장 용량 초과·사이트 데이터 차단)를 잡고 아무 말
+     없이 넘어갔다 — 화면은 저장된 것처럼 보이고 새로고침하면 사라졌다. 이제 상태가
+     바뀔 때 화면에 알린다. 성공했다는 배지·토스트는 두지 않는다(성공이 기본 기대값이고,
+     «저장됨»을 내세우면 실패했을 때 구분이 안 된다). */
+  var saveOk = true;
+  window.__kmDemoSaveOk = true;
+  function announceSaveState() {
+    window.__kmDemoSaveOk = saveOk;
+    try {
+      document.dispatchEvent(new CustomEvent('km-demo-save-state', { detail: { ok: saveOk } }));
+    } catch (e) { /* CustomEvent 미지원 — 조용히 넘긴다(화면 동작은 그대로) */ }
+  }
   function save() {
-    try { localStorage.setItem(DEMO_KEY, JSON.stringify(db)); } catch (e) {}
+    try {
+      localStorage.setItem(DEMO_KEY, JSON.stringify(db));
+      if (!saveOk) { saveOk = true; announceSaveState(); }
+    } catch (e) {
+      if (saveOk) { saveOk = false; announceSaveState(); }
+    }
   }
   function reset() {
     db = seed();
@@ -358,7 +376,18 @@
           root_path: '(체험판 — 실제 공유폴더에 연결되어 있지 않습니다)',
           connection_type: 'demo',
           fund_names: D().funds.map(function (f) { return f.name; }),
-          project_names: D().projects.map(function (p) { return p.name; })
+          project_names: D().projects.map(function (p) { return p.name; }),
+          /* 「갱신 체험」이 실제로 무엇을 바꾸는지 화면이 이름으로 적을 수 있게 알려준다.
+             예전에는 화면이 대상을 몰라, 다른 사업장을 보는 중에 실행해도 A물류센터의
+             문서가 바뀌는 것이 드러나지 않았다. 체험판 어댑터만 이 값을 보내므로
+             화면은 없을 때도 동작해야 한다(conn.demo_target 이 없으면 생략). */
+          demo_target: {
+            project_id: PREPARED_V2.projectId,
+            project_name: projectName(PREPARED_V2.projectId),
+            document_title: PREPARED_V2.version.original_filename,
+            from_version: PREPARED_V2.version.version_no - 1,
+            to_version: PREPARED_V2.version.version_no
+          }
         }] };
       }
       if (path === '/api/folder-mappings') {
@@ -503,7 +532,7 @@
     if (doc && !D().demoSyncDone) {
       doc.versions.unshift(JSON.parse(JSON.stringify(PREPARED_V2.version)));
       added = 1;
-      var target = D().items.filter(function (i) { return i.project_id === 1 && i.key === 'unresolved'; })[0];
+      var target = D().items.filter(function (i) { return i.project_id === PREPARED_V2.projectId && i.key === 'unresolved'; })[0];
       if (target) {
         var segs = segmentsOf(PREPARED_V2.version);
         var ev = segs.filter(function (s) { return /10월 8일/.test(s.text); })[0] || segs[0];
@@ -644,8 +673,8 @@
     if (!fv) { alert('체험판에는 이 자료의 원본이 없습니다.'); return; }
     var body = (fv.ver.blocks || []).join('\n\n') ||
       '이 형식은 본문을 추출하지 않습니다 — 체험판에는 원본 파일이 없습니다.';
-    var txt = '[가상 자료 체험판] ' + fv.ver.original_filename + ' (v' + fv.ver.version_no + ')\n' +
-      '실제 사내 자료가 아닙니다.\n\n' + body + '\n';
+    var txt = '[가상 자료 체험판 — 예시 본문] ' + fv.ver.original_filename + ' (v' + fv.ver.version_no + ')\n' +
+      '실제 사내 자료가 아니며, 원본 파일(DOCX/XLSX/PDF)이 아닙니다 — 미리 준비한 예시 본문을 텍스트로 옮긴 것입니다.\n\n' + body + '\n';
     var blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);

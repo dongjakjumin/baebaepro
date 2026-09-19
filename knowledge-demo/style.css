@@ -1,17 +1,19 @@
+/* 통합 UI — 네 도구(메인·재무모델·캘린더·지식관리 체험판)가 같은 토큰을 쓴다.
+   변수 이름은 그대로 두고 값만 맞췄다. */
 :root {
-  --ink: #243244;
-  --sub: #526174;
-  --navy: #20344a;
-  --line: #e2e7ee;
-  --bg: #f5f7fa;
+  --ink: #172B43;
+  --sub: #58677A;
+  --navy: #142B45;
+  --line: #DCE3EB;
+  --bg: #F3F5F8;
   --panel: #ffffff;
-  --accent: #285fd6;
-  --accent-soft: #eaf0fb;
+  --accent: #2457C5;
+  --accent-soft: #E8EEFA;
   --warn-bg: #fff4e5;
   --warn-ink: #8a5a00;
   --danger: #b3261e;
   --ok: #2a7a4b;
-  --radius: 11px;
+  --radius: 12px;
 }
 * { box-sizing: border-box; }
 body {
