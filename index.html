@@ -9,9 +9,17 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2320344A'/%3E%3Cpath d='M14 44V27l10-7 10 7v17h-7V33h-6v11z' fill='%23285FD6'/%3E%3Cpath d='M38 44V20l12 8v16z' fill='%23fff' opacity='.85'/%3E%3C/svg%3E">
 <style>
 /* 배포용 진입 페이지. 세 도구로 가는 문이고 그 이상은 아니다.
-   요약 화면이라 벤토 그리드 — 카드 크기가 곧 중요도다. 재무모델이 가장 크고,
-   공개 주소가 없는 지식관리가 가장 작다. */
+   실무자가 매일 같은 화면에서 도구를 고른다 — 카드 크기로 중요도를 가르지 않고
+   세 도구를 같은 폭·같은 구조의 행으로 나란히 둔다(내용 길이만큼만 높이가 다르다). */
 /* 통합 UI — 네 도구가 같은 토큰을 쓴다 */
+/* 'SUIT'로 선언만 돼 있고 @font-face가 없어 실제로는 맑은 고딕으로 보이던 것 — 실제로 불러온다 */
+@font-face{
+  font-family:'SUIT';
+  src:url('fonts/SUIT.woff2') format('woff2');
+  font-weight:100 900;
+  font-style:normal;
+  font-display:swap;
+}
 :root{
   --bg:#F3F5F8;
   --card:#FFFFFF;
@@ -20,10 +28,9 @@
   --blue:#2457C5;
   --ink:#172B43;
   --ink2:#58677A;
-  --ink3:#7E8C9E;
-  --warn-bg:#FFF6E8;
-  --warn-line:#E8C99A;
-  --warn-ink:#8A6524;
+  --ink3:#606E81; /* 원래 #7E8C9E는 이 바탕에서 3.1:1로 기준(4.5:1) 미달 — 4.6:1로 올림 */
+  --r-card:8px; /* 패널 모서리 */
+  --r-ctl:6px;  /* 버튼 모서리 */
 }
 *{box-sizing:border-box}
 body{
@@ -39,63 +46,57 @@ header.top{padding:56px 0 28px}
 h1{font-size:34px;line-height:1.25;letter-spacing:-.02em;margin:0 0 10px;font-weight:700;color:var(--navy)}
 .lead{font-size:17px;color:var(--ink2);margin:0;max-width:62ch}
 
-/* ── 벤토 그리드 ── */
-/* 카드 높이를 서로 맞추지 않는다 — 맞추면 내용이 적은 쪽 가운데가 텅 빈다.
-   중요도는 «너비»로 드러내고 높이는 내용이 정한다. */
-.bento{display:grid;grid-template-columns:1.55fr 1fr;gap:20px;align-items:start}
-.col{display:grid;gap:20px}
-.card{
-  background:var(--card);border:1px solid var(--line);border-radius:12px;
-  padding:26px 26px 22px;text-decoration:none;color:inherit;
-  display:flex;flex-direction:column;
-}
-a.card{transition:border-color .15s,box-shadow .15s}
-a.card:hover{border-color:var(--blue);box-shadow:0 2px 14px rgba(40,95,214,.10)}
-a.card:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
-.card.lead-card{padding:30px 30px 26px}
-.ico{width:40px;height:40px;border-radius:9px;background:rgba(40,95,214,.10);color:var(--blue);display:grid;place-items:center;margin-bottom:14px}
-.ico.muted{background:rgba(124,136,153,.12);color:var(--ink3)}
-.card h2{font-size:21px;margin:0 0 8px;color:var(--navy);letter-spacing:-.01em;font-weight:700}
-.card .lead-card h2{font-size:24px}
-.card p{margin:0 0 14px;color:var(--ink2);font-size:15px}
-.card p:last-of-type{margin-bottom:0}
+/* ── 도구 목록 ── */
+/* 세 도구를 한 테두리 안 같은 구조의 행으로 나열한다 — 실무자가 매일 열어
+   쓰는 입구라 크기로 우선순위를 나눌 이유가 없다. 폭은 같고, 높이만 내용만큼 다르다. */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);overflow:hidden}
+/* 넓은 화면에서는 설명을 왼쪽, 진입 버튼을 오른쪽 가운데에 둔다. 버튼이 글 아래
+   한 줄을 따로 쓰면 행이 240px 로 길어져 1440×900 첫 화면에 세 도구가 다 안 들어왔다. */
+.tool-row{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:40px;align-items:center;
+  padding:20px 28px;text-decoration:none;color:inherit}
+.tool-row>*:not(.go){grid-column:1}
+.tool-row>.go{grid-column:2;grid-row:1 / span 6;align-self:center;margin-top:0;
+  min-width:10em;justify-content:center}  /* 세 버튼 폭을 같게 — 오른쪽 열이 한 줄로 선다 */
+.tool-row+.tool-row{border-top:1px solid var(--line)}
+.tool-row:hover{background:#F8FAFC}
+.tool-row:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+.tool-row h2{font-size:20px;margin:0 0 8px;color:var(--navy);letter-spacing:-.01em;font-weight:700}
+.tool-row p{margin:0 0 10px;max-width:70ch}
+.tool-row p:last-of-type{margin-bottom:0}
+.tool-desc{color:var(--ink2);font-size:15px}
 
-/* 지원 범위 — 장식이 아니라 «무엇을 다루는가»의 목록 */
-.chips{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 16px}
-.chip{font-size:13px;color:var(--ink2);background:#F2F5F9;border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+/* 딜 유형은 고르는 태그가 아니라 «다루는 범위» 서술이라 알약 대신 글로 적는다 */
+.tool-types{color:var(--ink3);font-size:14px}
 
-/* 그 도구에서 실제로 밟는 순서 — 도구마다 다르므로 카드마다 따로 적는다 */
-.flow{margin:0 0 16px;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px;font-size:13.5px;color:var(--ink2)}
-.flow li{display:flex;align-items:center;gap:6px}
-.flow li+li::before{content:"→";color:var(--ink3);margin-right:2px}
+/* 그 도구에서 실제로 밟는 순서 — 도구마다 다르므로 행마다 따로 적는다 */
+.tool-flow{color:var(--ink3);font-size:14px}
 
-/* 바로 누를 수 있는 진입 버튼 — 글자 링크보다 눌러야 할 것이 분명해진다 */
+/* 지식관리는 가상 자료라는 사실을 매번 봐야 하지만 경고처럼 보일 일은 아니다 — 옅은 글자로 */
+.tool-note{color:var(--ink3);font-size:13.5px;line-height:1.6}
+.tool-note b{color:var(--ink2)}
+
+/* 바로 누를 수 있는 진입 버튼 — 글자 링크보다 눌러야 할 것이 분명해진다.
+   화살표는 글자로 이미 "열기"가 있으니 빼서 버튼마다 반복되던 CTA 장식을 줄인다 */
 .go{
-  display:inline-flex;align-items:center;gap:6px;align-self:flex-start;
-  min-height:42px;padding:0 18px;margin-top:4px;
-  background:var(--blue);color:#fff;border-radius:8px;
+  display:inline-flex;align-items:center;
+  min-height:40px;padding:0 18px;margin-top:4px;
+  background:var(--blue);color:#fff;border-radius:var(--r-ctl);
   font-weight:700;font-size:15px;
 }
-.go::after{content:"→"}
-a.card:hover .go{background:#1C46A0}
-.state{
-  padding:9px 12px;border-radius:8px;font-size:13.5px;font-weight:700;
-  background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn-ink);
-}
-.state span{display:block;font-weight:400;color:var(--ink2);margin-top:3px}
+.tool-row:hover .go{background:#1C46A0}
 
-/* ── 보조 설명 — 왼쪽 열의 남는 자리를 채운다(벤토) ── */
-.notes{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.note{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
-.note h3{margin:0 0 7px;font-size:15px;color:var(--navy)}
-.note p{margin:0;font-size:14.5px;color:var(--ink2)}
-.note b{color:var(--ink)}
+/* ── 안내 띠 — 카드 두 장 대신 한 줄 띠로, 도구 목록보다 조용하게 ── */
+.notes-strip{margin-top:28px;padding-top:20px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.notes-strip h3{margin:0 0 5px;font-size:13.5px;color:var(--navy);font-weight:700}
+.notes-strip p{margin:0;font-size:13.5px;color:var(--ink3);line-height:1.6}
+.notes-strip b{color:var(--ink2)}
 
 footer{margin-top:36px;padding:22px 0 44px;font-size:13px;color:var(--ink3);line-height:1.75;border-top:1px solid var(--line)}
 
 @media(max-width:860px){
-  .bento{grid-template-columns:1fr}
-  .notes{grid-template-columns:1fr}
+  .notes-strip{grid-template-columns:1fr}
+  .tool-row{display:block}
+  .tool-row>.go{margin-top:6px}
   h1{font-size:28px}
   header.top{padding:40px 0 22px}
 }
@@ -111,70 +112,41 @@ footer{margin-top:36px;padding:22px 0 44px;font-size:13px;color:var(--ink3);line
   <p class="lead">사업장 자료와 근거를 찾고, 투자 조건을 검토하며, 후속 일정을 관리합니다.</p>
 </header>
 
-<div class="bento">
+<div class="panel">
 
- <div class="col">
-  <a class="card lead-card" href="CRE_재무모델_빌더.html">
-    <div class="ico" aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 4 3 5-7"/></svg></div>
+  <a class="tool-row" href="CRE_재무모델_빌더.html">
     <h2>재무모델 빌더</h2>
-    <p>사업구조마다 독립된 계산 엔진이 돕니다. 조건을 바꾸면 수익성·상환 가능성과 위험 표시가 함께 갱신되고, 그대로 엑셀과 투자검토보고서 초안으로 이어집니다.</p>
-    <div class="chips">
-      <span class="chip">개발 · PF</span>
-      <span class="chip">오피스 매입</span>
-      <span class="chip">물류센터 매입</span>
-      <span class="chip">공사비채권 유동화</span>
-      <span class="chip">분양대금 유동화</span>
-    </div>
-    <ul class="flow">
-      <li>사업구조 고르기</li>
-      <li>핵심 조건 입력</li>
-      <li>결과·위험 확인</li>
-      <li>엑셀 · 보고서</li>
-    </ul>
+    <p class="tool-desc">사업구조마다 독립된 계산 엔진이 돕니다. 조건을 바꾸면 수익성·상환 가능성과 위험 표시가 함께 갱신되고, 그대로 엑셀과 투자검토보고서 초안으로 이어집니다.</p>
+    <p class="tool-types">개발 · PF, 오피스 매입, 물류센터 매입, 공사비채권 유동화, 분양대금 유동화</p>
+    <p class="tool-flow">사업구조 고르기 → 핵심 조건 입력 → 결과·위험 확인 → 엑셀·보고서</p>
     <span class="go">재무모델 열기</span>
   </a>
 
-  <div class="notes">
-    <div class="note">
-      <h3>모든 자료는 예시입니다</h3>
-      <p>펀드명·사업장명·수치는 전부 <b>가상</b>입니다. 실제 거래 정보를 포함하지 않으며, 투자 권유가 아닙니다.</p>
-    </div>
-    <div class="note">
-      <h3>어디에 저장되나</h3>
-      <p>재무모델·캘린더는 <b>이 브라우저 안에서만</b> 계산하고 저장합니다 — 서버로 보내지 않고 다른 기기로 이어지지 않습니다. 지식관리는 <b>제작자 PC에서만</b> 실행됩니다.</p>
-    </div>
+  <a class="tool-row" href="업무_캘린더.html">
+    <h2>업무 캘린더</h2>
+    <p class="tool-desc">할 일과 정기업무를 한 화면에서 봅니다. 말하듯 적으면 마감일을 계산해 넣고, 정기업무는 수행 절차까지 이어집니다.</p>
+    <p class="tool-flow">일정 등록 → 상태 · 마감 관리 → 절차 확인</p>
+    <span class="go">업무 캘린더 열기</span>
+  </a>
+
+  <a class="tool-row" href="knowledge-demo/index.html">
+    <h2>지식관리</h2>
+    <p class="tool-desc">사업장별 문서를 모아 검색하고, 현황 수치가 어느 문단에서 나왔는지 원문으로 확인합니다. 변경 제안과 승인 이력이 남습니다.</p>
+    <p class="tool-flow">사업장 고르기 → 검색 · 근거 확인 → 현황 수정 · 승인</p>
+    <p class="tool-note"><b>가상 자료 체험판 — AI 미사용</b><br>구성과 업무 흐름을 눌러 보는 체험판입니다. 실제 업무 자료는 제작자 PC의 로컬 실행본에만 있습니다.</p>
+    <span class="go">지식관리 체험하기</span>
+  </a>
+
+</div>
+
+<div class="notes-strip">
+  <div>
+    <h3>모든 자료는 예시입니다</h3>
+    <p>펀드명·사업장명·수치는 전부 <b>가상</b>입니다. 실제 거래 정보를 포함하지 않으며, 투자 권유가 아닙니다.</p>
   </div>
- </div>
-
-  <div class="col">
-
-    <a class="card" href="업무_캘린더.html">
-      <div class="ico" aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 15l3 3 5-6"/></svg></div>
-      <h2>업무 캘린더</h2>
-      <p>할 일과 정기업무를 한 화면에서 봅니다. 말하듯 적으면 마감일을 계산해 넣고, 정기업무는 수행 절차까지 이어집니다.</p>
-      <ul class="flow">
-        <li>일정 등록</li>
-        <li>상태 · 마감 관리</li>
-        <li>절차 확인</li>
-      </ul>
-      <span class="go">업무 캘린더 열기</span>
-    </a>
-
-    <a class="card" href="knowledge-demo/index.html">
-      <div class="ico" aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M6 3h8l5 5v13H6z"/><path d="M9 13h6M9 17h6"/></svg></div>
-      <h2>지식관리</h2>
-      <p>사업장별 문서를 모아 검색하고, 현황 수치가 어느 문단에서 나왔는지 원문으로 확인합니다. 변경 제안과 승인 이력이 남습니다.</p>
-      <ul class="flow">
-        <li>사업장 고르기</li>
-        <li>검색 · 근거 확인</li>
-        <li>현황 수정 · 승인</li>
-      </ul>
-      <div class="state">가상 자료 체험판 — AI 미사용
-        <span>구성과 업무 흐름을 눌러 보는 체험판입니다. 실제 업무 자료는 제작자 PC의 로컬 실행본에만 있습니다.</span>
-      </div>
-      <span class="go">지식관리 체험하기</span>
-    </a>
-
+  <div>
+    <h3>어디에 저장되나</h3>
+    <p>재무모델·캘린더는 <b>이 브라우저 안에서만</b> 계산하고 저장합니다 — 서버로 보내지 않고 다른 기기로 이어지지 않습니다. 지식관리는 <b>제작자 PC에서만</b> 실행됩니다.</p>
   </div>
 </div>
 

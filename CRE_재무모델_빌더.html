@@ -34,7 +34,7 @@
   --on-dark:#8AB0F5;     /* 어두운 머리줄 위에서 쓰는 밝은 블루 */
   --ink:#172B43;
   --ink-2:#58677A;
-  --ink-3:#7E8C9E;
+  --ink-3:#606E81;     /* #7E8C9E 는 옅은 바탕에서 3.1:1 이라 기준 미달 — 가장 옅은 #EEF2F6 에서도 4.6:1 */
   --line:#DCE3EB;
   --line-soft:#E8EDF3;
   --page:#F3F5F8;
@@ -45,15 +45,20 @@
   --s3:#33506F;   /* 대안 3 */
   --s4:#8B95A3;
   --s5:#2B6350;
-  --good:#2B6350;
-  --good-bg:rgba(43,99,80,.09);
-  --bad:#A4342F;
-  --bad-bg:rgba(164,52,47,.09);
-  --warn:#8D6714;
-  --warn-bg:rgba(141,103,20,.09);
+  --good:#1F7A52;
+  --good-bg:rgba(31,122,82,.09);
+  --bad:#B3261E;
+  --bad-bg:rgba(179,38,30,.09);
+  --warn:#8A6116;
+  --warn-bg:rgba(138,97,22,.09);
   --grid:#E9EBF0;
   --axis:#C6CCD6;
   --muted-ink:#8B95A3;
+  /* 모서리는 역할로 정한다(네 도구 공통). 2·3·5px 가 섞여 도구마다 달라 보였다.
+     카드·패널·모달·떠 있는 층 8 / 누르거나 입력하는 것 6 / 작은 상태 배지 4 */
+  --r-card:8px;
+  --r-ctl:6px;
+  --r-sm:4px;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -78,14 +83,19 @@ button,input,select{font-family:inherit;font-size:inherit}
 .brand .mark{
   width:22px;height:22px;border:0;background:var(--gold);color:#fff;
   display:grid;place-items:center;font-size:10px;font-weight:600;letter-spacing:.02em;flex:0 0 auto;
-  border-radius:5px;overflow:hidden;
+  border-radius:var(--r-sm);overflow:hidden;
 }
 .brand .mark.img{background:none;width:auto;min-width:22px;height:24px;padding:0;border-radius:0}
 .brand .mark img{height:24px;width:auto;display:block;object-fit:contain}
 /* 도구 이동이 4개로 늘면서 브랜드 칸이 눌려 제목이 세 줄로 뭉개졌다.
    제목은 줄이지 않고, 부제는 자리가 넉넉할 때만 보인다. */
-.brand h1{font-size:13px;color:#fff;white-space:nowrap}
-.brand .sub{font-size:9px;color:#8FA0B8;letter-spacing:.08em;text-transform:uppercase;margin-top:1px;
+/* 제목 칸(.brand)은 min-width:0 이라 상자는 줄어드는데 제목 글자는 nowrap 이라 그대로 남아
+   「업무지원 홈」 위로 겹쳐 그려졌다(1366px 개발 PF 9px · 공사비채권 84px). 자산명은 입력값이라
+   길이를 미리 알 수 없으므로, 자리가 모자라면 겹치지 말고 말줄임으로 줄게 한다(1024px 이하와 같은 방식). */
+.brand>div{min-width:0}
+.brand h1{font-size:13px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 부제는 51자라 대문자로 바꾸지 않는다 — 넓은 자간도 대문자용이라 같이 줄였다 */
+.brand .sub{font-size:9px;color:#8FA0B8;letter-spacing:.02em;margin-top:1px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:1500px){ .brand .sub{display:none} }
 .topbar .spacer{flex:1}
@@ -95,10 +105,16 @@ button,input,select{font-family:inherit;font-size:inherit}
 @media (max-width:1500px){
   .topbar{gap:12px;padding:0 16px}
   .topmeta{gap:14px;padding-left:14px}
+  /* 기준일·단위는 예시 표시줄(분석 기준일)과 카드 머리글(단위)에도 있다. 1320px 에서 접던 것을
+     1500px 로 올렸다 — 상단바 글자를 12px 로 키우면 1321~1500px 에서 자산명이 긴 딜은
+     제목이 말줄임으로 거의 사라졌다(1366px 공사비채권 143px 중 143px). */
+  .topmeta > div:nth-child(3),.topmeta > div:nth-child(4){display:none}
 }
 @media (max-width:1320px){
   .brand .sub{display:none}
-  .topmeta > div:nth-child(3),.topmeta > div:nth-child(4){display:none}
+  /* 아래 1120px 규칙은 뒤따르는 .topmeta{display:flex} 에 순서로 져서 한 번도 먹지 않았다.
+     딜 유형·대상도 딜 막대와 입력 패널 첫 칸에 있으니 1320px 부터 통째로 접는다. */
+  .topbar .topmeta{display:none}
 }
 @media (max-width:1120px){ .topmeta{display:none} }
 .topmeta{display:flex;gap:22px;align-items:center;font-size:11.5px;color:#a9bcd6;border-left:1px solid rgba(255,255,255,.14);padding-left:20px}
@@ -108,13 +124,16 @@ button,input,select{font-family:inherit;font-size:inherit}
   font-variant-numeric:tabular-nums}
 .btn{
   border:1px solid rgba(255,255,255,.22);background:transparent;color:#e7eefa;
-  padding:6px 12px;border-radius:5px;cursor:pointer;font-size:11px;letter-spacing:-.01em;
+  padding:6px 12px;border-radius:var(--r-ctl);cursor:pointer;font-size:11px;letter-spacing:-.01em;
   transition:background .12s,border-color .12s;
 }
 .btn:hover{background:rgba(255,255,255,.09)}
 .btn.primary{background:var(--gold);border-color:var(--gold);color:#FFFFFF;font-weight:600}
 .btn.primary:hover{background:var(--gold-dim)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
+/* 상단바 버튼 높이는 네 도구 공통 32px. 더보기 메뉴 안으로 옮겨진 버튼은
+   상단바의 직계 자식이 아니므로 이 규칙을 받지 않는다(메뉴 항목 높이는 그대로). */
+.topbar>.btn,.topbar>.more>.btn{height:32px;padding-top:0;padding-bottom:0}
 
 /* ── Layout ──────────────────────────────── */
 .wrap{display:flex;align-items:flex-start;min-height:calc(100vh - 50px)}
@@ -132,8 +151,8 @@ button,input,select{font-family:inherit;font-size:inherit}
 
 .grp{border-bottom:1px solid rgba(255,255,255,.08);padding:13px 16px 15px}
 .grp>h3{
-  font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--gold);
-  margin-bottom:10px;font-weight:600;
+  font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--on-dark);
+  margin-bottom:10px;font-weight:600;  /* 네이비 위에서는 --gold(진한 파랑)가 2.2:1 이라 밝은 파랑으로 */
 }
 /* 입력 그리드 — 짧은 항목은 2열, 긴 항목은 전체 폭 */
 .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px 10px}
@@ -146,7 +165,7 @@ button,input,select{font-family:inherit;font-size:inherit}
 .fld label .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fld .u{font-size:10px;color:#7f95b2;flex:0 0 auto}
 .fld input,.fld select{
-  width:100%;background:#fff;border:1px solid #b9c6d8;border-radius:2px;
+  width:100%;background:#fff;border:1px solid #b9c6d8;border-radius:var(--r-ctl);
   padding:5px 8px;color:var(--ink);text-align:right;font-size:12.5px;
   font-variant-numeric:tabular-nums;min-width:0;
   height:29px;   /* select 가 input 보다 미세하게 커서 줄이 어긋났다 — 같은 높이로 */
@@ -160,7 +179,7 @@ button,input,select{font-family:inherit;font-size:inherit}
 .dealbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
 .dealpill{
   border:1px solid var(--line);background:var(--surface);color:var(--ink-2);
-  padding:6px 11px;border-radius:5px;cursor:pointer;font-size:11px;letter-spacing:-.01em;
+  padding:6px 11px;border-radius:var(--r-ctl);cursor:pointer;font-size:11px;letter-spacing:-.01em;
   display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
   transition:background .14s,border-color .14s,color .14s;
 }
@@ -174,7 +193,7 @@ button,input,select{font-family:inherit;font-size:inherit}
 /* 탭 두 줄 — 위는 상위 그룹, 아래는 그 그룹의 탭 */
 .tabgrp{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .tabg{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);
-  background:var(--surface);color:var(--ink-2);border-radius:8px;padding:8px 14px;
+  background:var(--surface);color:var(--ink-2);border-radius:var(--r-ctl);padding:8px 14px;
   font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit}
 .tabg:hover{border-color:var(--gold);color:var(--gold)}
 .tabg.on{background:var(--gold);border-color:var(--gold);color:#fff}
@@ -194,7 +213,7 @@ button,input,select{font-family:inherit;font-size:inherit}
 .pane.on{display:block}
 
 /* ── Cards ───────────────────────────────── */
-.card{background:var(--surface);border:1px solid var(--line);border-radius:5px;margin-bottom:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);margin-bottom:16px}
 .card>header{
   padding:11px 16px;border-bottom:1px solid var(--line-soft);display:flex;
   align-items:baseline;gap:10px;background:var(--surface-2);
@@ -209,12 +228,12 @@ button,input,select{font-family:inherit;font-size:inherit}
 .mfold>summary{
   list-style:none;cursor:pointer;display:flex;align-items:center;gap:7px;
   padding:11px 14px;font-size:12.5px;font-weight:600;color:var(--navy-900);
-  background:var(--surface);border:1px solid var(--line);border-radius:5px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);
 }
 .mfold>summary::-webkit-details-marker{display:none}
 .mfold>summary::after{content:'▾';margin-left:auto;font-weight:400;color:var(--ink-3)}
 .mfold:not([open])>summary::after{content:'▸'}
-.mfold[open]>summary{border-radius:5px 5px 0 0;border-bottom-color:var(--line-soft)}
+.mfold[open]>summary{border-radius:var(--r-card) var(--r-card) 0 0;border-bottom-color:var(--line-soft)}
 .mfold>summary:focus-visible{outline:2px solid var(--navy-600);outline-offset:1px}
 .mfold>.qadj{margin-top:0;border-top-left-radius:0;border-top-right-radius:0}
 /* 카드 안(역할 설명)에서는 카드 테두리와 겹치지 않게 얇게 */
@@ -236,8 +255,8 @@ button,input,select{font-family:inherit;font-size:inherit}
 /* ── 내려받기 안내판 (공유 링크 대비) ─────── */
 .dlp{position:fixed;inset:0;z-index:200;background:rgba(6,16,32,.55);
      display:grid;place-items:center;padding:18px}
-.dlp-box{background:var(--surface);border-radius:4px;max-width:460px;width:100%;
-         box-shadow:0 18px 48px -12px rgba(0,20,50,.45);overflow:hidden}
+.dlp-box{background:var(--surface);border-radius:var(--r-card);max-width:460px;width:100%;
+         box-shadow:0 8px 24px rgba(0,0,0,.14);overflow:hidden}
 .dlp-box header{display:flex;align-items:center;gap:10px;padding:13px 16px;
                 background:var(--navy-900);color:#fff}
 .dlp-box header b{font-size:13.5px;flex:1}
@@ -261,8 +280,8 @@ button,input,select{font-family:inherit;font-size:inherit}
 .cfm-acts .btn.primary{color:#FFFFFF}
 
 /* ── 즉석 조정 (결과 화면 안) ───────────────── */
-.qadj{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--navy-700);
-      border-radius:3px;padding:12px 15px 13px;margin-bottom:16px}
+.qadj{background:var(--surface);border:1px solid var(--line);
+      border-radius:var(--r-card);padding:12px 16px 13px;margin-bottom:16px}
 .qa-hd{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:10px}
 .qa-hd b{font-size:12.5px;color:var(--navy-800)}
 .qa-hd span{font-size:11px;color:var(--ink-3)}
@@ -275,7 +294,7 @@ button,input,select{font-family:inherit;font-size:inherit}
 .qa-v{font-size:14.5px;font-weight:700;color:var(--navy-900);text-align:center;
       font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .qa-b{width:30px;height:30px;border:1px solid var(--line);background:var(--surface-2);
-      color:var(--navy-800);border-radius:3px;cursor:pointer;font-size:16px;line-height:1;
+      color:var(--navy-800);border-radius:var(--r-ctl);cursor:pointer;font-size:16px;line-height:1;
       display:grid;place-items:center;padding:0;flex:0 0 auto}
 .qa-b:hover{background:var(--navy-900);border-color:var(--navy-900);color:#fff}
 .qa-b:active{background:var(--gold);border-color:var(--gold);color:#FFFFFF}
@@ -344,7 +363,7 @@ button,input,select{font-family:inherit;font-size:inherit}
       font-variant-numeric:tabular-nums}
 .tm-foot{margin:8px 0 14px;font-size:11px;line-height:1.6;color:var(--ink-3)}
 /* 모달 안 경고 한 줄 — 검증 밖이라는 사실을 눈에 띄게 적는 자리 */
-.tm-warn{margin:0 0 10px;padding:8px 11px;border-radius:4px;font-size:11.5px;line-height:1.6;
+.tm-warn{margin:0 0 10px;padding:8px 11px;border-radius:var(--r-card);font-size:11.5px;line-height:1.6;
   color:var(--warn);background:var(--warn-bg);border:1px solid rgba(141,103,20,.25)}
 .tm-warn b{color:var(--warn)}
 /* 시트 구조 카드 아래 지시문 여는 줄 */
@@ -364,7 +383,7 @@ table.heat{border-collapse:collapse;font-variant-numeric:tabular-nums}
 table.heat th{background:var(--surface-2);color:var(--ink-2);font-weight:600;
               font-size:11.5px;padding:7px 10px;white-space:nowrap;
               border-bottom:1px solid var(--line)}
-table.heat th.hx{text-align:left;color:var(--ink-3);font-weight:500}
+table.heat th.hx{text-align:right;color:var(--ink-3);font-weight:500}
 table.heat th.cx{color:var(--ink);box-shadow:inset 0 -2px 0 var(--gold)}
 /* min-width 를 둬야 값이 채워질 때 칸 너비가 안 바뀐다 — 뼈대와 완성본이
    같은 크기여야 화면이 두 번 밀리지 않는다. */
@@ -388,7 +407,7 @@ table.heat td.hc.now{border:2px solid var(--gold);font-weight:700;color:var(--in
 /* ── 입력 방어 ─────────────────────────────── */
 .fld.bad input,.fld.bad select{border-color:var(--bad);background:var(--bad-bg)}
 .fwarn{display:block;font-size:11px;line-height:1.4;color:var(--bad);margin-top:3px}
-.xwarn{border:1px solid var(--bad);background:var(--bad-bg);border-radius:3px;
+.xwarn{border:1px solid var(--bad);background:var(--bad-bg);border-radius:var(--r-card);
        padding:10px 12px;margin-bottom:12px}
 .xwarn b{display:block;font-size:12px;color:var(--bad);margin-bottom:5px}
 .xwarn ul{margin:0;padding-left:16px}
@@ -396,10 +415,11 @@ table.heat td.hc.now{border:2px solid var(--gold);font-weight:700;color:var(--in
 .xwarn li:last-child{margin-bottom:0}
 
 /* ── 처방 (판정 미달 시 통과 조건) ─────────── */
-.rx{border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:3px;
+.rx{border:1px solid var(--line);border-radius:var(--r-card);
     background:var(--surface);padding:13px 15px 14px;margin-top:12px}
 .rx-hd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px}
-.rx-t{font-weight:700;font-size:13.5px;letter-spacing:-.01em}
+/* 처방 카드는 미달일 때만 나온다 — 그 상태를 왼쪽 막대 대신 제목 색으로 전한다 */
+.rx-t{font-weight:700;font-size:13.5px;letter-spacing:-.01em;color:var(--bad)}
 .rx-gap{font-size:11.5px;color:var(--ink-3);margin-left:auto;font-variant-numeric:tabular-nums}
 .rx-lead{margin:0 0 9px;font-size:12.5px;color:var(--ink-2);line-height:1.55}
 .rx-lead b{color:var(--ink)}
@@ -428,9 +448,9 @@ table.heat td.hc.now{border:2px solid var(--gold);font-weight:700;color:var(--in
 /* 210px 하한 때문에 좁은 화면에서 한 줄에 하나씩만 들어가 세로로 길어졌다.
    최소 폭을 낮추고, 좁아지면 2열을 유지한다. */
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-bottom:16px}
-.tile{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--navy-900);border-radius:5px;padding:10px 12px 11px}
-.tile.a1{border-left-color:var(--s1)} .tile.a2{border-left-color:var(--s2)} .tile.a3{border-left-color:var(--s3)}
-.tile.a4{border-left-color:var(--s4)} .tile.a5{border-left-color:var(--s5)}
+/* 왼쪽 색 막대(a1~a5)는 뺐다. 막대 색은 차트 계열색일 뿐 상태와 무관했고,
+   좋음·나쁨은 값 색(.ok/.warn)과 목표 배지가 이미 전한다. 클래스는 JS 에 그대로 남는다. */
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:10px 12px 11px}
 .tile .lab{font-size:10px;color:var(--ink-3);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 /* 핵심 지표는 한눈에 들어와야 한다 — 값을 키우고 색을 준다 */
 .tile.kpi{padding:11px 13px 12px}
@@ -453,7 +473,8 @@ table.heat td.hc.now{border:2px solid var(--gold);font-weight:700;color:var(--in
 .tile .val{font-size:24px;font-weight:600;letter-spacing:-.02em;margin:5px 0 2px;color:var(--navy-900)}
 .tile .val small{font-size:12px;font-weight:500;color:var(--ink-3);margin-left:3px}
 .tile .sub{font-size:11.5px;color:var(--ink-2)}
-.tile .sub span{color:var(--ink-3)}
+/* 배지(.pill)는 빼야 한다 — 이 규칙이 .pill.no 를 이겨 「미충족」이 빨강 대신 회색(4.48:1)으로 칠해졌다 */
+.tile .sub span:not(.pill){color:var(--ink-3)}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:0 0 auto}
 
 /* ── Tables ──────────────────────────────── */
@@ -465,8 +486,24 @@ th{
   border-bottom:1px solid var(--line);position:sticky;top:0;letter-spacing:-.01em;
 }
 th.l,td.l{text-align:left}
-th{text-align:center}
+/* 검증 표의 「검증 내용」은 문장이다 — 한 줄로 두면 1440px 에서도 표가 옆으로 넘쳤다.
+   이 열만 줄바꿈하고 나머지(항목·대상·결과)는 한 줄 그대로 */
+.val-tbl td:nth-child(3){white-space:normal;min-width:18em;line-height:1.5}
+/* 머리글은 그 열의 숫자와 같은 오른쪽 끝에 선다 — 금융 표의 기본 규칙이다.
+   예전에는 머리글만 가운데라, 넓은 숫자 열에서 머리글이 숫자와 따로 떠 보였다
+   (1440px 실측 155개 열). 가운데 칸(단위·배지)과 글자 칸은 아래 규칙이 맞춘다. */
+th{text-align:right}
 th.l{text-align:left}
+th.uc{text-align:center}
+/* 칸이 가운데(단위·구분·시나리오 이름)인 열은 머리글도 가운데. 어느 열이 가운데인지는
+   표마다 달라서 열 번호로 짝을 맞춘다. 입력 표(.alt-tbl)는 입력칸 줄과 합계 줄의 정렬이
+   열마다 섞여 있어 이 규칙으로 맞출 수 없으므로 건드리지 않는다. */
+table:not(.alt-tbl):has(tbody td.uc:nth-child(1)) thead th:nth-child(1),
+table:not(.alt-tbl):has(tbody td.uc:nth-child(2)) thead th:nth-child(2),
+table:not(.alt-tbl):has(tbody td.uc:nth-child(3)) thead th:nth-child(3),
+table:not(.alt-tbl):has(tbody td.uc:nth-child(4)) thead th:nth-child(4),
+table:not(.alt-tbl):has(tbody td.uc:nth-child(5)) thead th:nth-child(5),
+table:not(.alt-tbl):has(tbody td.uc:nth-child(6)) thead th:nth-child(6){text-align:center}
 td.uc{text-align:center;color:var(--ink-3);font-variant-numeric:normal}
 td:has(.pill),td.l:has(.pill){text-align:center}
 td:has(.seg),td.l:has(.seg){text-align:center}
@@ -478,7 +515,7 @@ tr.tot td{background:#f7f9fc;font-weight:600;border-top:1px solid var(--line)}
 td.dim{color:var(--ink-3)}
 td.neg{color:var(--bad)}
 .note{font-size:11.5px;color:var(--ink-3);padding:10px 16px;border-top:1px solid var(--line-soft);background:#fbfcfe;line-height:1.55}
-.pill{display:inline-flex;align-items:center;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:500;letter-spacing:-.01em}
+.pill{display:inline-flex;align-items:center;padding:2px 6px;border-radius:var(--r-sm);font-size:10px;font-weight:500;letter-spacing:-.01em}
 .pill.ok{background:var(--good-bg);color:var(--good)}
 .pill.no{background:var(--bad-bg);color:var(--bad)}
 .pill.wr{background:var(--warn-bg);color:var(--warn)}
@@ -490,18 +527,89 @@ td.neg{color:var(--bad)}
 .alt-tbl th{text-align:center}
 .alt-tbl th.l,.alt-tbl td.l{text-align:center}
 .alt-tbl input,.alt-tbl select{
-  width:100%;border:1px solid var(--line);border-radius:2px;padding:4px 6px;text-align:right;
+  width:100%;border:1px solid var(--line);border-radius:var(--r-ctl);padding:4px 6px;text-align:right;
   font-variant-numeric:tabular-nums;background:#fff;color:var(--ink);
 }
 .alt-tbl input.nm{text-align:center;font-variant-numeric:normal}
 .alt-tbl select{text-align:center;text-align-last:center}
 .alt-tbl tr.tot td{font-variant-numeric:tabular-nums}
 .alt-tbl tr.tot td:not(.l){text-align:right}
+/* 입력 표의 고정 칸(합계·선순위·plug 줄) — 같은 열의 입력칸과 끝을 맞춘다.
+   열마다 성격이 달라 한꺼번에 밀 수 없다: 숫자 입력칸이 있는 열은 오른쪽 정렬에
+   여백 15px(칸 8 + 입력칸 테두리 1 + 안쪽 6) — 입력칸 안 숫자와 같은 끝이 된다.
+   선택칸·이름칸이 있는 열은 가운데. 합친 칸(colspan)과 그 뒤 칸은 열 번호가 밀리므로 뺀다.
+   고치기 전 합계 칸 60개 중 48개가 7~41px 어긋나 있었다. */
+.alt-tbl:has(tbody td:nth-child(1)>input:not(.nm):not([type=checkbox])) tbody tr>td:nth-child(1):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(2)>input:not(.nm):not([type=checkbox])) tbody tr>td:nth-child(2):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(3)>input:not(.nm):not([type=checkbox])) tbody tr>td:nth-child(3):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(4)>input:not(.nm):not([type=checkbox])) tbody tr>td:nth-child(4):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(5)>input:not(.nm):not([type=checkbox])) tbody tr>td:nth-child(5):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(6)>input:not(.nm):not([type=checkbox])) tbody tr>td:nth-child(6):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(7)>input:not(.nm):not([type=checkbox])) tbody tr>td:nth-child(7):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(8)>input:not(.nm):not([type=checkbox])) tbody tr>td:nth-child(8):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(9)>input:not(.nm):not([type=checkbox])) tbody tr>td:nth-child(9):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(10)>input:not(.nm):not([type=checkbox])) tbody tr>td:nth-child(10):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(11)>input:not(.nm):not([type=checkbox])) tbody tr>td:nth-child(11):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(12)>input:not(.nm):not([type=checkbox])) tbody tr>td:nth-child(12):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)){text-align:right;padding-right:15px}
+.alt-tbl:has(tbody td:nth-child(1)>:is(select,input.nm)) tbody tr>td:nth-child(1):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(2)>:is(select,input.nm)) tbody tr>td:nth-child(2):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(3)>:is(select,input.nm)) tbody tr>td:nth-child(3):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(4)>:is(select,input.nm)) tbody tr>td:nth-child(4):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(5)>:is(select,input.nm)) tbody tr>td:nth-child(5):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(6)>:is(select,input.nm)) tbody tr>td:nth-child(6):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(7)>:is(select,input.nm)) tbody tr>td:nth-child(7):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(8)>:is(select,input.nm)) tbody tr>td:nth-child(8):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(9)>:is(select,input.nm)) tbody tr>td:nth-child(9):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(10)>:is(select,input.nm)) tbody tr>td:nth-child(10):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(11)>:is(select,input.nm)) tbody tr>td:nth-child(11):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)),
+.alt-tbl:has(tbody td:nth-child(12)>:is(select,input.nm)) tbody tr>td:nth-child(12):not([colspan]):not(td[colspan] ~ td):not(:has(input,select,button)){text-align:center}
+/* 입력칸이 없는 열의 숫자 칸 — 편집 줄은 가운데, 합계 줄은 오른쪽이라 같은 열에서 끝이 달랐다.
+   이 파일에서 글자 칸에는 .l 이 붙고 숫자 칸에는 안 붙으므로, .l 이 아닌 고정 칸은 오른쪽으로 통일한다. */
+.alt-tbl:not(:has(tbody td:nth-child(1) :is(input,select,button))) tbody tr>td:nth-child(1):not(.l):not([colspan]):not(td[colspan] ~ td),
+.alt-tbl:not(:has(tbody td:nth-child(2) :is(input,select,button))) tbody tr>td:nth-child(2):not(.l):not([colspan]):not(td[colspan] ~ td),
+.alt-tbl:not(:has(tbody td:nth-child(3) :is(input,select,button))) tbody tr>td:nth-child(3):not(.l):not([colspan]):not(td[colspan] ~ td),
+.alt-tbl:not(:has(tbody td:nth-child(4) :is(input,select,button))) tbody tr>td:nth-child(4):not(.l):not([colspan]):not(td[colspan] ~ td),
+.alt-tbl:not(:has(tbody td:nth-child(5) :is(input,select,button))) tbody tr>td:nth-child(5):not(.l):not([colspan]):not(td[colspan] ~ td),
+.alt-tbl:not(:has(tbody td:nth-child(6) :is(input,select,button))) tbody tr>td:nth-child(6):not(.l):not([colspan]):not(td[colspan] ~ td),
+.alt-tbl:not(:has(tbody td:nth-child(7) :is(input,select,button))) tbody tr>td:nth-child(7):not(.l):not([colspan]):not(td[colspan] ~ td),
+.alt-tbl:not(:has(tbody td:nth-child(8) :is(input,select,button))) tbody tr>td:nth-child(8):not(.l):not([colspan]):not(td[colspan] ~ td),
+.alt-tbl:not(:has(tbody td:nth-child(9) :is(input,select,button))) tbody tr>td:nth-child(9):not(.l):not([colspan]):not(td[colspan] ~ td),
+.alt-tbl:not(:has(tbody td:nth-child(10) :is(input,select,button))) tbody tr>td:nth-child(10):not(.l):not([colspan]):not(td[colspan] ~ td),
+.alt-tbl:not(:has(tbody td:nth-child(11) :is(input,select,button))) tbody tr>td:nth-child(11):not(.l):not([colspan]):not(td[colspan] ~ td),
+.alt-tbl:not(:has(tbody td:nth-child(12) :is(input,select,button))) tbody tr>td:nth-child(12):not(.l):not([colspan]):not(td[colspan] ~ td){text-align:right}
+/* 그 열의 머리글도 오른쪽 — 칸만 오른쪽으로 보내면 넓은 열(수금 일정의 「누계」)에서
+   가운데 머리글과 숫자가 수백 px 떨어진다. 여백도 칸(8px)과 같게. */
+.alt-tbl:not(:has(tbody td:nth-child(1) :is(input,select,button))):has(tbody td:nth-child(1):not(.l):not([colspan])) thead th:nth-child(1):not(.l),
+.alt-tbl:not(:has(tbody td:nth-child(2) :is(input,select,button))):has(tbody td:nth-child(2):not(.l):not([colspan])) thead th:nth-child(2):not(.l),
+.alt-tbl:not(:has(tbody td:nth-child(3) :is(input,select,button))):has(tbody td:nth-child(3):not(.l):not([colspan])) thead th:nth-child(3):not(.l),
+.alt-tbl:not(:has(tbody td:nth-child(4) :is(input,select,button))):has(tbody td:nth-child(4):not(.l):not([colspan])) thead th:nth-child(4):not(.l),
+.alt-tbl:not(:has(tbody td:nth-child(5) :is(input,select,button))):has(tbody td:nth-child(5):not(.l):not([colspan])) thead th:nth-child(5):not(.l),
+.alt-tbl:not(:has(tbody td:nth-child(6) :is(input,select,button))):has(tbody td:nth-child(6):not(.l):not([colspan])) thead th:nth-child(6):not(.l),
+.alt-tbl:not(:has(tbody td:nth-child(7) :is(input,select,button))):has(tbody td:nth-child(7):not(.l):not([colspan])) thead th:nth-child(7):not(.l),
+.alt-tbl:not(:has(tbody td:nth-child(8) :is(input,select,button))):has(tbody td:nth-child(8):not(.l):not([colspan])) thead th:nth-child(8):not(.l),
+.alt-tbl:not(:has(tbody td:nth-child(9) :is(input,select,button))):has(tbody td:nth-child(9):not(.l):not([colspan])) thead th:nth-child(9):not(.l),
+.alt-tbl:not(:has(tbody td:nth-child(10) :is(input,select,button))):has(tbody td:nth-child(10):not(.l):not([colspan])) thead th:nth-child(10):not(.l),
+.alt-tbl:not(:has(tbody td:nth-child(11) :is(input,select,button))):has(tbody td:nth-child(11):not(.l):not([colspan])) thead th:nth-child(11):not(.l),
+.alt-tbl:not(:has(tbody td:nth-child(12) :is(input,select,button))):has(tbody td:nth-child(12):not(.l):not([colspan])) thead th:nth-child(12):not(.l){text-align:right;padding-right:8px}
+/* 숫자 입력칸 열의 머리글 — 입력칸 안 숫자와 합계 숫자가 오른쪽 15px 에 서므로 머리글도 거기에.
+   숫자 열 머리글은 오른쪽이라는 표 전체 규칙을 입력 표에도 똑같이 적용한다. */
+.alt-tbl:has(tbody td:nth-child(1)>input:not(.nm):not([type=checkbox])) thead th:nth-child(1),
+.alt-tbl:has(tbody td:nth-child(2)>input:not(.nm):not([type=checkbox])) thead th:nth-child(2),
+.alt-tbl:has(tbody td:nth-child(3)>input:not(.nm):not([type=checkbox])) thead th:nth-child(3),
+.alt-tbl:has(tbody td:nth-child(4)>input:not(.nm):not([type=checkbox])) thead th:nth-child(4),
+.alt-tbl:has(tbody td:nth-child(5)>input:not(.nm):not([type=checkbox])) thead th:nth-child(5),
+.alt-tbl:has(tbody td:nth-child(6)>input:not(.nm):not([type=checkbox])) thead th:nth-child(6),
+.alt-tbl:has(tbody td:nth-child(7)>input:not(.nm):not([type=checkbox])) thead th:nth-child(7),
+.alt-tbl:has(tbody td:nth-child(8)>input:not(.nm):not([type=checkbox])) thead th:nth-child(8),
+.alt-tbl:has(tbody td:nth-child(9)>input:not(.nm):not([type=checkbox])) thead th:nth-child(9),
+.alt-tbl:has(tbody td:nth-child(10)>input:not(.nm):not([type=checkbox])) thead th:nth-child(10),
+.alt-tbl:has(tbody td:nth-child(11)>input:not(.nm):not([type=checkbox])) thead th:nth-child(11),
+.alt-tbl:has(tbody td:nth-child(12)>input:not(.nm):not([type=checkbox])) thead th:nth-child(12){text-align:right;padding-right:15px}
 .alt-tbl input:focus,.alt-tbl select:focus{outline:2px solid var(--navy-600);outline-offset:-1px}
 .alt-tbl input.on-blue{background:#f0f6ff;border-color:#b7d0ee}
-.xbtn{border:1px solid var(--line);background:#fff;color:var(--ink-3);cursor:pointer;padding:3px 8px;border-radius:2px}
+.xbtn{border:1px solid var(--line);background:#fff;color:var(--ink-3);cursor:pointer;padding:3px 8px;border-radius:var(--r-ctl)}
 .xbtn:hover{border-color:var(--bad);color:var(--bad)}
-.addbtn{border:1px dashed var(--navy-600);background:#f5f9ff;color:var(--navy-700);cursor:pointer;padding:6px 12px;border-radius:2px;font-size:12px}
+.addbtn{border:1px dashed var(--navy-600);background:#f5f9ff;color:var(--navy-700);cursor:pointer;padding:6px 12px;border-radius:var(--r-ctl);font-size:12px}
 .addbtn:hover{background:#eaf2fd}
 
 /* ── Chart ───────────────────────────────── */
@@ -569,8 +677,8 @@ table.compo-tbl .sw{display:inline-grid;place-items:center;width:15px;height:15p
 .legend i.sq{width:10px;height:10px;border-radius:2px;vertical-align:-1px}
 .tip{
   position:absolute;pointer-events:none;background:var(--navy-900);color:#eef3fa;
-  border-radius:3px;padding:8px 11px;font-size:11.5px;line-height:1.55;
-  box-shadow:0 6px 20px rgba(0,26,58,.28);opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;
+  border-radius:var(--r-card);padding:8px 11px;font-size:11.5px;line-height:1.55;
+  box-shadow:0 8px 24px rgba(0,0,0,.14);opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;
 }
 .tip b{color:#fff;font-weight:600}
 .tip .k{color:#9fb4d0}
@@ -580,7 +688,7 @@ table.compo-tbl .sw{display:inline-grid;place-items:center;width:15px;height:15p
 
 /* ── misc ────────────────────────────────── */
 .flexrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:2px;overflow:hidden}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-ctl);overflow:hidden}
 .seg button{border:none;background:#fff;padding:5px 12px;cursor:pointer;font-size:12px;color:var(--ink-2);border-right:1px solid var(--line)}
 .seg button:last-child{border-right:none}
 .seg button.on{background:var(--navy-900);color:#fff;font-weight:600}
@@ -589,15 +697,15 @@ table.compo-tbl .sw{display:inline-grid;place-items:center;width:15px;height:15p
 .kv dd{margin:0;font-variant-numeric:tabular-nums}
 .toast{
   position:fixed;right:20px;bottom:20px;background:var(--navy-900);color:#fff;padding:12px 18px;
-  border-left:3px solid var(--gold);border-radius:2px;font-size:12.5px;opacity:0;transform:translateY(8px);
-  transition:.2s;z-index:100;box-shadow:0 8px 26px rgba(0,26,58,.3);pointer-events:none;
+  border-radius:var(--r-card);font-size:12.5px;opacity:0;transform:translateY(8px);
+  transition:.2s;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.14);pointer-events:none;
 }
 .toast.on{opacity:1;transform:none}
 .foot{color:var(--ink-3);font-size:11px;text-align:center;padding:10px 0 0}
 /* ── 단계형 입력 ─────────────────────────── */
 .grp>h3{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none}
 .grp>h3:hover .gname{color:#fff}
-.grp>h3:focus-visible{outline:2px solid rgba(255,255,255,.55);outline-offset:2px;border-radius:3px}
+.grp>h3:focus-visible{outline:2px solid rgba(255,255,255,.55);outline-offset:2px;border-radius:var(--r-sm)}
 /* 접힌 단계는 머리글만 남긴다 — 입력이 길어질수록 이게 이동 비용을 줄인다 */
 .grp>h3 .caret{flex:0 0 auto;font-size:9px;opacity:.65;width:9px}
 .grp.fold>.fgrid,.grp.fold>.hint,.grp.fold>.jump,.grp.fold>.note{display:none}
@@ -609,7 +717,7 @@ table.compo-tbl .sw{display:inline-grid;place-items:center;width:15px;height:15p
 .grp>h3 .gname{flex:1;min-width:0}
 .cnt{
   flex:0 0 auto;font-size:10px;letter-spacing:0;color:#9fb4d0;background:rgba(255,255,255,.08);
-  border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:1px 7px;font-weight:500;text-transform:none;
+  border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:1px 7px;font-weight:500;text-transform:none;
 }
 .cnt.done{color:#8fdcb0;border-color:rgba(143,220,176,.3);background:rgba(143,220,176,.10)}
 /* 상세 가정을 손댔는지 — 접힌 채로도 겉에서 보여야 한다 */
@@ -622,16 +730,17 @@ table.compo-tbl .sw{display:inline-grid;place-items:center;width:15px;height:15p
 .prog .sub2{font-size:10.5px;color:#8299b7;margin-top:3px}
 .jump{
   width:100%;border:1px dashed rgba(255,255,255,.28);background:rgba(255,255,255,.05);color:#dbe5f2;
-  padding:8px 10px;border-radius:2px;cursor:pointer;font-size:12px;text-align:left;
+  padding:8px 10px;border-radius:var(--r-ctl);cursor:pointer;font-size:12px;text-align:left;
   display:flex;align-items:center;justify-content:space-between;gap:8px;
 }
 .jump:hover{background:rgba(255,255,255,.1);border-color:var(--gold);color:#fff}
-.jump span.arw{color:var(--gold);font-weight:700}
+.jump span.arw{color:var(--on-dark);font-weight:700}
 
 /* ── 판정 요약 ───────────────────────────── */
-.verdict{background:linear-gradient(180deg,#f7f9fc 0%,#fff 100%);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:3px;padding:14px 18px;margin-bottom:16px}
+/* 금색 왼쪽 막대와 옅은 그라데이션은 장식이었다. 상태는 판정 제목·정합성 배지·유의 줄이 전한다 */
+.verdict{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:14px 18px;margin-bottom:16px}
 .verdict h3{font-size:12px;color:var(--navy-800);letter-spacing:.02em;margin-bottom:9px;display:flex;align-items:center;gap:7px}
-.verdict h3 .tagx{background:var(--navy-900);color:#e9f0fa;font-size:10px;padding:2px 7px;border-radius:2px;font-weight:500;letter-spacing:.04em}
+.verdict h3 .tagx{background:var(--navy-900);color:#e9f0fa;font-size:10px;padding:2px 7px;border-radius:var(--r-sm);font-weight:500;letter-spacing:.04em}
 .verdict ul{margin:0;padding:0;list-style:none;display:grid;gap:6px}
 .verdict li{font-size:13px;color:var(--ink-2);display:flex;gap:9px;align-items:baseline}
 .verdict li b{color:var(--navy-900);font-weight:700}
@@ -648,13 +757,14 @@ table.compo-tbl .sw{display:inline-grid;place-items:center;width:15px;height:15p
 /* ── 예시 표시줄 · 역산 접기 (P1) ── */
 .samplebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:7px 14px;
   background:var(--warn-bg);border-bottom:1px solid rgba(141,103,20,.22);font-size:12px;color:var(--ink-2)}
-.sb-tag{font-weight:700;color:var(--warn);border:1px solid rgba(141,103,20,.35);
-  border-radius:2px;padding:1px 7px;font-size:11px;letter-spacing:.02em}
-.sb-d{margin-left:auto;color:var(--ink-3)}
+.sb-tag{font-weight:700;color:#7A5412;  /* 주황 띠 위 12px — 공통 주황은 4.5:1 경계라 한 단계 진하게 */
+  border:1px solid rgba(141,103,20,.35);
+  border-radius:var(--r-sm);padding:1px 7px;font-size:11px;letter-spacing:.02em}
+.sb-d{margin-left:auto;color:var(--ink-2)}  /* 띠 바탕 위 --ink-3 은 4.2:1 */
 /* 엑셀 재계산 제한 — 내려받기 버튼 바로 옆에 붙어 받기 전에 읽힌다 */
 .sb-lim{font-weight:700;color:var(--bad);border:1px solid rgba(164,52,47,.35);
-  background:rgba(164,52,47,.07);border-radius:2px;padding:1px 7px;font-size:11px}
-.sb-x{border:1px solid var(--line);background:#fff;border-radius:3px;padding:3px 10px;
+  background:rgba(164,52,47,.07);border-radius:var(--r-sm);padding:1px 7px;font-size:11px}
+.sb-x{border:1px solid var(--line);background:#fff;border-radius:var(--r-ctl);padding:3px 10px;
   font-size:11.5px;cursor:pointer;color:var(--ink-2)}
 .sb-x:hover{border-color:var(--gold);color:var(--ink)}
 /* 판정 근거 접기 — 펴 둔 상태는 G.vOpen 에 기억해 다시 그려도 유지한다 */
@@ -663,29 +773,33 @@ details.vfold>summary{cursor:pointer;font-size:12px;color:var(--ink-2);padding:3
 details.vfold>summary::-webkit-details-marker{display:none}
 details.vfold>summary::before{content:"▸ ";color:var(--ink-3)}
 details.vfold[open]>summary::before{content:"▾ "}
-details.rxfold{border:1px solid var(--line);border-radius:3px;margin:0 0 14px;background:#fff}
+details.rxfold{border:1px solid var(--line);border-radius:var(--r-card);margin:0 0 14px;background:#fff}
 details.rxfold>summary{cursor:pointer;padding:9px 13px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
 details.rxfold[open]>summary{border-bottom:1px solid var(--line-soft)}
+/* 접기 안의 처방은 접기 테두리가 이미 감싼다 — 카드 속 카드(겹친 테두리)를 만들지 않는다.
+   글자 시작은 손잡이 글자(13px)에 맞춘다. 처방이 둘이면 얇은 줄로 가른다. */
+details.rxfold>.rx{border:0;border-radius:0;margin-top:0;padding-left:13px;padding-right:13px}
+details.rxfold>.rx+.rx{border-top:1px solid var(--line-soft)}
 
 /* ── 투자검토보고서 3단계 ── */
 .rsteps{display:flex;gap:8px;margin:0 0 12px;flex-wrap:wrap}
 .rstep{flex:1;min-width:150px;padding:9px 12px;border:1px solid var(--line);background:#fff;
-  border-radius:3px;cursor:pointer;font-size:13px;color:var(--ink-2);text-align:left}
+  border-radius:var(--r-ctl);cursor:pointer;font-size:13px;color:var(--ink-2);text-align:left}
 .rstep b{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;
   background:var(--line);color:var(--ink-2);font-size:11px;margin-right:6px}
 .rstep.on{border-color:var(--navy-900);color:var(--ink);font-weight:600}
 .rstep.on b{background:var(--navy-900);color:#fff}
 .agopts{display:flex;flex-direction:column;gap:5px}
-.agopt{display:block;padding:6px 9px;border:1px solid var(--line);border-radius:3px;cursor:pointer;font-size:12.5px}
+.agopt{display:block;padding:6px 9px;border:1px solid var(--line);border-radius:var(--r-ctl);cursor:pointer;font-size:12.5px}
 .agopt.on{border-color:var(--gold);background:rgba(185,138,60,.07)}
 .rtocs{display:flex;flex-wrap:wrap;gap:6px}
-.rtoc{padding:6px 10px;border:1px solid var(--line);background:#fff;border-radius:3px;cursor:pointer;font-size:12.5px}
+.rtoc{padding:6px 10px;border:1px solid var(--line);background:#fff;border-radius:var(--r-ctl);cursor:pointer;font-size:12.5px}
 .rtoc.on{border-color:var(--navy-900);font-weight:600}
 .rtoc-n{color:var(--bad);font-weight:700;margin-left:4px}
 .rtoc-ok{color:var(--good);font-weight:700;margin-left:4px}
 .rpt-na{color:var(--ink-3);font-size:12px;font-style:italic}
 .integrity{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
-.ibadge{display:inline-block;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:3px;border:1px solid}
+.ibadge{display:inline-block;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:var(--r-sm);border:1px solid}
 .ibadge.ok{color:var(--good);background:var(--good-bg);border-color:var(--good)}
 .ibadge.warn{color:var(--warn);background:var(--warn-bg);border-color:var(--warn)}
 .ibadge.no{color:var(--bad);background:var(--bad-bg);border-color:var(--bad)}
@@ -694,15 +808,137 @@ details.rxfold[open]>summary{border-bottom:1px solid var(--line-soft)}
 .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .chipgrp{display:flex;align-items:center;gap:6px;margin:0 14px 8px 0}
 .chipgrp>span{font-size:10.5px;color:var(--ink-3);flex:0 0 auto;letter-spacing:.04em}
-.chip{font-size:11.5px;padding:4px 9px;border-radius:2px;border:1px solid var(--navy-700);background:var(--navy-900);color:#e6edf8;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.chip{font-size:11.5px;padding:4px 9px;border-radius:var(--r-sm);border:1px solid var(--navy-700);background:var(--navy-900);color:#e6edf8;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
 .chip.off{background:#fff;border-color:var(--line);color:#a8b2c0;text-decoration:line-through;text-decoration-color:#cfd6e0}
 .chip.new{border-color:var(--gold);background:var(--gold);color:#FFFFFF;font-weight:600}
 
 /* ── 시나리오 ────────────────────────────── */
-.scen-tbl input{width:76px;border:1px solid var(--line);border-radius:2px;padding:4px 6px;text-align:right;font-variant-numeric:tabular-nums;background:#f0f6ff;border-color:#b7d0ee}
+.scen-tbl input{width:76px;border:1px solid var(--line);border-radius:var(--r-ctl);padding:4px 6px;text-align:right;font-variant-numeric:tabular-nums;background:#f0f6ff;border-color:#b7d0ee}
 .scen-tbl input:focus{outline:2px solid var(--navy-600);outline-offset:-1px}
 .scen-tbl input:disabled{background:#f3f5f8;border-color:var(--line);color:var(--ink-3)}
 tr.scn td{background:#f2f6fb;font-weight:600;color:var(--navy-800)}
+
+/* ── 화면 글자 크기 ──────────────────────────
+   1440px 첫 화면에서 보이는 글자의 77%가 12px 미만이었다(표 11px · 입력 이름표 11px ·
+   통용 범위 10px). 같은 제품의 캘린더·지식관리 체험판은 본문 12~15px 이다.
+   단계: 카드 제목 15 · 탭 그룹·판정 문장 14 · 탭·입력값 13 · 표 칸·설명 12.5 ·
+   머리글·이름표·보조 정보 12. KPI 큰 값(27px)과 차트 글자(SVG)는 그대로다.
+   값은 화면에만 준다 — 인쇄는 @media print 가 종이에 맞춘 크기(본문 10.5 · 표 9.5)를
+   쓰고, 위쪽 규칙의 옛 값도 인쇄에서는 그대로 쓰인다. 반응형 규칙(≤1024 · ≤620)이
+   이 뒤에 있어 폰 폭에서는 그쪽 값이 이긴다. */
+@media screen{
+  body{font-size:12.5px}
+  .topmeta{font-size:12px}
+  .btn{font-size:12px}
+
+  /* 입력 패널 — 이름표는 2열 칸(약 129px)에서 말줄임이 생기지 않는 데까지만 올렸다 */
+  .grp>h3{font-size:12.5px}
+  .fld label{font-size:12px}
+  .fld .u{font-size:12px}
+  .fld input,.fld select{font-size:13px}
+  .hint{font-size:12px}
+  .fbase{font-size:12px}
+  .fwarn{font-size:12px}
+  .cnt{font-size:12px}
+  .prog .msg{font-size:12.5px}
+  .prog .sub2{font-size:12px}
+  .jump{font-size:12.5px}
+
+  .dealpill{font-size:12.5px}
+  .dealpill .bdg{font-size:12px}
+  .tabg{font-size:14px}
+  .tabg-n{font-size:12px}
+  .tab{font-size:13px}
+  .samplebar{font-size:12.5px}
+  .sb-tag,.sb-lim,.sb-x{font-size:12px}
+
+  .card>header h2{font-size:15px}
+  .card>header .desc{font-size:12.5px}
+  .card.heatcard.waiting>header h2:after{font-size:12px}
+  .mfold>summary{font-size:13px}
+  .mfold.in>summary{font-size:12.5px}
+  .rolebar{font-size:12px}
+  .rolebar b{font-size:12px}
+  .note{font-size:12.5px}
+  .legend{font-size:12px}
+  .foot{font-size:12px}
+
+  /* 표 — 칸 글자를 키운 만큼 위아래 여백을 1px 줄여 줄 높이(약 31px)는 그대로 둔다.
+     한 화면에 보이는 줄 수가 줄지 않아야 월별 표를 훑을 수 있다. */
+  table{font-size:12.5px}
+  th{font-size:12px}
+  th,td{padding-top:6px;padding-bottom:6px}
+  .pill{font-size:12px}
+  .addbtn{font-size:12.5px}
+  table.heat th{font-size:12px}
+  table.heat td.hc{font-size:12.5px}
+  table.compo-tbl th{font-size:12px}
+  table.compo-tbl td{font-size:12.5px}
+  table.compo-tbl td.dim{font-size:12px}
+  .rx-tbl td.dl{font-size:12px}
+  .tm-tbl{font-size:12.5px}
+
+  .tile .lab,.tile.kpi .lab{font-size:12px}
+  .tile .goal{font-size:12px}
+  .tile .sub{font-size:12px}
+  .seg.mini button{font-size:12px}
+
+  .verdict h3{font-size:13px}
+  .verdict h3 .tagx{font-size:12px}
+  .verdict li{font-size:14px}
+  .verdict li .qt,.verdict li .cri{font-size:12.5px}
+  .verdict .cau{font-size:12.5px}
+  .verdict .cau.dim{font-size:12px}
+  details.vfold>summary{font-size:12.5px}
+  details.rxfold>summary{font-size:13px}
+  .rx-t{font-size:15px}
+  .rx-gap{font-size:12.5px}
+  .rx-lead,.rx-none{font-size:13px}
+  .rx-miss,.rx-hint{font-size:12.5px}
+  .xwarn b{font-size:13px}
+  .xwarn li{font-size:12.5px}
+
+  .qa-hd b{font-size:13.5px}
+  .qa-hd span{font-size:12px}
+  .qa-l{font-size:13px}
+  .qa-v{font-size:15px}
+  .qa-s{font-size:12px}
+  .qa-ft span{font-size:12px}
+  .qa-ft .btn{font-size:12px}
+
+  .asm-t{font-size:12.5px}
+  .asm-help{font-size:12.5px}
+  .chipgrp>span{font-size:12px}
+  .chip{font-size:12px}
+  .planact span{font-size:12.5px}
+  .seg button{font-size:12.5px}
+  .kv{font-size:12.5px}
+  .tip,.tip table{font-size:12.5px}
+  .toast{font-size:13.5px}
+
+  .rstep b{font-size:12px}
+  .ibadge{font-size:12px}
+
+  .dlp-box header b{font-size:15px}
+  .dlp-msg{font-size:13px}
+  .dlp-note{font-size:12px}
+  .cfm-msg{font-size:13.5px}
+  .tm-lead{font-size:13px}
+  .tm-sec h4{font-size:12px}
+  .tm-foot{font-size:12px}
+  .tm-warn{font-size:12.5px}
+
+  /* 투자검토보고서 미리보기는 내려받는 .doc 과 같은 모습이어야 한다(실물 심의서 골격).
+     본문·표와, 절 안에 그대로 들어가는 화면 카드 조각을 올리기 전 크기로 묶는다.
+     :where 로 특이도를 올리지 않는다 — 폰 폭 규칙(≤620)이 뒤에서 예전처럼 이기게. */
+  .rpt-head,.rpt-sec{font-size:11px}
+  :where(.rpt-sec) table,:where(.rpt-sec) th{font-size:11px}
+  :where(.rpt-sec) th,:where(.rpt-sec) td{padding-top:7px;padding-bottom:7px}
+  :where(.rpt-sec) .card>header h2{font-size:13.5px}
+  :where(.rpt-sec) .card>header .desc,:where(.rpt-sec) .note{font-size:11.5px}
+  :where(.rpt-sec) .rolebar{font-size:11px}
+  :where(.rpt-sec) .rolebar b,:where(.rpt-sec) .pill{font-size:10px}
+}
 
 /* ── 반응형 ──────────────────────────────── */
 .menu{display:none;font-size:15px;line-height:1;padding:8px 12px;letter-spacing:2px}
@@ -714,7 +950,10 @@ body.nav-open .backdrop{display:block}
   .tiles{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
 }
 @media(max-width:1024px){
-  .topbar{height:56px;padding:0 10px;gap:8px;overflow:hidden}
+  /* overflow:hidden 을 두면 상단바 아래로 펼쳐지는 「더보기」 메뉴가 잘려
+     항목 일곱 개를 하나도 누를 수 없었다. 넘칠 버튼은 packTopbar 가 이미
+     더보기로 옮기므로(360~1600px 실측 넘침 0) 자를 이유가 없다. */
+  .topbar{height:56px;padding:0 10px;gap:8px}
   /* 0 까지 눌리면 마크가 제 칸을 넘어 옆 버튼 위에 그려진다 — 마크 폭은 남긴다 */
   .brand{flex:1 1 auto;min-width:30px}
   .brand>div{min-width:0}
@@ -732,7 +971,7 @@ body.nav-open .backdrop{display:block}
   .side{
     position:fixed;top:56px;left:0;bottom:0;width:min(300px,86vw);
     max-height:none;flex:none;transform:translateX(-100%);
-    transition:transform .22s ease;z-index:60;box-shadow:6px 0 24px rgba(0,26,58,.3);
+    transition:transform .22s ease;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.14);
   }
   body.nav-open .side{transform:none}
   .main{padding:12px}
@@ -749,15 +988,15 @@ body.nav-open .backdrop{display:block}
   .brand h1{font-size:13px}
   .xlsx-full{display:none}
   .xlsx-sm{display:inline}
-  #btnXlsx{padding:7px 10px;font-size:12px}
+  #btnXlsx{padding:0 10px;font-size:12px}   /* 높이는 상단바 공통 32px 이 정한다 */
   .verdict li span{overflow-wrap:anywhere}
   .verdict .cau{overflow-wrap:anywhere}
   /* 세로로 한 개씩 쌓이면 화면이 너무 길어진다. 좁아도 2열은 지킨다. */
   .tiles{grid-template-columns:1fr 1fr;gap:9px}
   .tile.kpi{padding:11px 12px 12px}
   .tile.kpi .val{font-size:27px}
-  .tile.kpi .lab{font-size:10.5px}
-  .tile.kpi .goal,.tile.kpi .sub{font-size:10px}
+  .tile.kpi .lab{font-size:12px}   /* 휴대폰에서도 보조 정보 최소 12px — 데스크톱보다 작아지지 않게 */
+  .tile.kpi .goal,.tile.kpi .sub{font-size:12px}
   .rolebar{grid-template-columns:1fr}
   .rolebar div{border-right:none;border-bottom:1px solid var(--line-soft)}
   .rolebar div:last-child{border-bottom:none}
@@ -766,21 +1005,21 @@ body.nav-open .backdrop{display:block}
   /* 항목 이름이 한 줄을 통째로 먹으면 요약이 두 배로 길어진다.
      좁혀서 같은 줄에 둔다. */
   .verdict li{flex-wrap:nowrap}
-  .verdict li .cri{flex:0 0 62px;font-size:10.5px;line-height:1.35}
+  .verdict li .cri{flex:0 0 66px;font-size:12px;line-height:1.35}
   .verdict li>span:last-child{overflow-wrap:anywhere}
   .fgrid{gap:10px 10px}
   .btn{padding:7px 10px;font-size:12px}
   .main{padding:10px}
   th,td{padding:6px 8px;font-size:12px}
   .tile .val{font-size:22px}
-  .note,.hint{font-size:11px}
+  .note,.hint{font-size:12px}
   .flexrow{gap:6px}
-  .seg button{padding:5px 9px;font-size:11.5px}
+  .seg button{padding:5px 9px;font-size:12px}
 }
 /* ── 인쇄 항목 고르기 ─────────────────────── */
 .prp-list{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;padding:0 16px 12px}
-.prp-i{display:flex;align-items:center;gap:7px;padding:5px 2px;font-size:12.5px;
-       color:var(--ink-2);cursor:pointer;border-radius:2px}
+.prp-i{display:flex;align-items:center;gap:7px;padding:5px 2px;font-size:13px;
+       color:var(--ink-2);cursor:pointer;border-radius:var(--r-ctl)}
 .prp-i:hover{background:var(--surface-2)}
 .prp-i input{width:14px;height:14px;flex:0 0 auto;accent-color:var(--navy-700);cursor:pointer}
 @media (max-width:520px){ .prp-list{grid-template-columns:1fr} }
@@ -826,7 +1065,7 @@ body.nav-open .backdrop{display:block}
 
 /* ── 도구 간 이동 (상단바) ── */
 .toolnav{display:flex;align-items:center;gap:5px;margin-left:16px;flex:0 0 auto}
-.toolnav .tn{font-size:11px;padding:5px 10px;border-radius:4px;text-decoration:none;white-space:nowrap;border:1px solid transparent;line-height:1.4}
+.toolnav .tn{font-size:12px;padding:5px 10px;border-radius:var(--r-ctl);text-decoration:none;white-space:nowrap;border:1px solid transparent;line-height:1.4}
 .toolnav .tn-home{color:#a9bccf;border-color:rgba(255,255,255,.2)}
 .toolnav .tn-home:hover{background:rgba(255,255,255,.1);color:#fff}
 /* 지금 도구는 채워서, 나머지는 조용한 글자 링크로. 넷 다 파란 버튼이면
@@ -842,11 +1081,11 @@ body.nav-open .backdrop{display:block}
 /* ── 상단바 더보기 메뉴 ── */
 .more{position:relative;flex:0 0 auto}
 .more-menu{position:absolute;right:0;top:calc(100% + 6px);background:var(--surface);
-  border:1px solid var(--line);border-radius:4px;box-shadow:0 12px 32px -8px rgba(0,20,50,.35);
+  border:1px solid var(--line);border-radius:var(--r-card);box-shadow:0 8px 24px rgba(0,0,0,.14);
   padding:5px;display:flex;flex-direction:column;gap:3px;min-width:150px;z-index:60}
 .more-menu[hidden]{display:none}
 .more-menu .btn{border-color:transparent;color:var(--ink-2);text-align:left;justify-content:flex-start;
-  width:100%;padding:8px 12px;border-radius:3px}
+  width:100%;padding:8px 12px;border-radius:var(--r-sm)}
 .more-menu .btn:hover{background:var(--surface-2);color:var(--navy-900)}
 @media print{ .more{display:none} }
 
@@ -856,15 +1095,15 @@ body.nav-open .backdrop{display:block}
    따로 쓴다. 밝은 바탕에 놓인 다른 버튼들은 --gold 그대로다. */
 .btn.fb{border-color:var(--on-dark);color:var(--on-dark)}
 .btn.fb:hover{background:var(--on-dark);color:var(--navy-900)}
-.fb-ctx{font-size:11.5px;color:var(--ink-3);background:var(--surface-2);border:1px solid var(--line-soft);
-  border-radius:3px;padding:7px 10px;margin:8px 0 10px}
-.fb-text{width:100%;border:1px solid var(--line);border-radius:3px;padding:10px 12px;font-size:13px;
+.fb-ctx{font-size:12px;color:var(--ink-3);background:var(--surface-2);border:1px solid var(--line-soft);
+  border-radius:var(--r-card);padding:7px 10px;margin:8px 0 10px}
+.fb-text{width:100%;border:1px solid var(--line);border-radius:var(--r-ctl);padding:10px 12px;font-size:13px;
   line-height:1.6;resize:vertical;background:var(--surface);color:var(--ink);font-family:inherit}
 .fb-text:focus{outline:2px solid var(--navy-600);outline-offset:-1px}
 .fb-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 14px}
 .fb-acts .btn{border-color:var(--line);color:var(--ink-2)}
 .fb-acts .btn.primary{background:var(--gold);border-color:var(--gold);color:#fff}
-.fb-note{font-size:11px;color:var(--ink-3)}
+.fb-note{font-size:12px;color:var(--ink-3)}
 
 /* ── 투자검토보고서 ──
    실물 심의서는 「카드 + 부제 + 표 + 각주」가 아니라 「절 제목 + 표」다.
@@ -873,14 +1112,14 @@ body.nav-open .backdrop{display:block}
    여기서는 그 표가 실물처럼 보이게 하는 것만 다룬다. */
 /* 머리 블록 — 원본에는 표지 쪽이 없고 1쪽 맨 위 다섯 줄이 그 자리다.
    화면 미리보기도 같은 모습이어야 하므로 문서와 같은 골격으로 그린다. */
-.rpt-head{background:var(--surface);border:1px solid var(--line);border-radius:5px;
+.rpt-head{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);
           padding:28px 16px;margin-bottom:16px;text-align:center}
 .rpt-h16{font-size:19px;font-weight:700;color:var(--navy-900);margin:0 0 10px}
 .rpt-h14{font-size:16px;font-weight:700;color:var(--navy-900);margin:18px 0 10px}
 .rpt-disc{font-size:12px;color:var(--ink-3);margin:8px 0 0}
 /* 쪽나눔은 워드에서만 뜻이 있다 — 화면에서는 빈 줄만 남으므로 감춘다. */
 .rpt-pb{display:none}
-.rpt-sec{background:var(--surface);border:1px solid var(--line);border-radius:5px;
+.rpt-sec{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);
          padding:14px 16px 16px;margin-bottom:16px}
 .rpt-sec>h2{font-size:14px;font-weight:700;color:var(--navy-900);margin:0 0 12px;letter-spacing:-.01em}
 .rpt-sub{font-size:12px;font-weight:600;color:var(--navy-800);margin:16px 0 6px}
@@ -899,20 +1138,20 @@ body.nav-open .backdrop{display:block}
 .rpt-blank[contenteditable],.rpt-writ[contenteditable]{cursor:text}
 .rpt-blank[contenteditable]:focus,.rpt-writ[contenteditable]:focus{outline:2px solid var(--gold,#B98A3C)}
 @media print{ .rpt-writ{background:none;border:0} }
-.rpt-warn{background:#fdecea;color:#b3261e;font-weight:700;padding:1px 6px;border-radius:4px}
+.rpt-warn{background:#fdecea;color:#b3261e;font-weight:700;padding:1px 6px;border-radius:var(--r-sm)}
 .rpt-tail{color:var(--dim,#888);font-size:.85em}
 .rpt-foot{padding:6px 14px 10px;color:var(--dim,#888);font-size:.85em}
 .rpt-ol{margin:6px 0 0;padding-left:1.4em}
 .rpt-ol li{margin:3px 0}
-.rpt-box{border:1px dashed var(--line,#d7dde5);border-radius:6px;padding:18px;text-align:center}
+.rpt-box{border:1px dashed var(--line,#d7dde5);border-radius:var(--r-card);padding:18px;text-align:center}
 @media print{ .rpt-sec{break-inside:avoid} }
 
 /* ── IM 붙여넣기 — 찾아만 주고, 넣는 것은 사람이 누른다 ── */
-.im-src{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:5px;
-        font-family:inherit;font-size:12px;line-height:1.5;resize:vertical;
+.im-src{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:var(--r-ctl);
+        font-family:inherit;font-size:12.5px;line-height:1.5;resize:vertical;
         background:var(--surface);color:var(--ink)}
 .im-src:focus{outline:2px solid var(--navy-600);outline-offset:-1px}
-.im-steps{margin:0 0 10px;font-size:11.5px;color:var(--ink-2)}
+.im-steps{margin:0 0 10px;font-size:12.5px;color:var(--ink-2)}
 .im-v{word-break:break-all}
 .im-done{color:var(--good);font-weight:600}
 .im-empty{padding:12px 14px;color:var(--ink-3)}
@@ -1932,6 +2171,14 @@ function compoModeNow(){
    조건을 한 행에서 비교하고 싶다는 요청도 이 표가 받는다. 유동화 2종이
    이미 요약에 두고 있는 stackCard 와 같은 성격의 읽기 전용 표다 —
    계산하지 않고 차트가 쓰는 바로 그 값을 옮겨 적는다. */
+/* 색 칸 위 번호 글자색 — 흰색과 네이비 중 대비가 큰 쪽. 우선주처럼 밝은 칸 위 흰 숫자가
+   1.5:1 로 안 보였다. 16진 색만 계산하고 그 밖의 값은 흰색으로 둔다. */
+function inkOn(c){
+  var m=/^#([0-9a-f]{6})$/i.exec(String(c||'')); if(!m) return '#fff';
+  var n=parseInt(m[1],16), ch=[n>>16&255,n>>8&255,n&255].map(function(v){ v/=255; return v<=0.03928? v/12.92 : Math.pow((v+0.055)/1.055,2.4); });
+  var L=0.2126*ch[0]+0.7152*ch[1]+0.0722*ch[2];
+  return (1.05/(L+0.05)) >= ((L+0.05)/0.0751) ? '#fff' : '#142B45';
+}
 function compoSide(segs,opts){
   var list=(segs||[]).filter(function(x){ return x.v>0.0001; });
   if(!list.length) return '';
@@ -1945,7 +2192,7 @@ function compoSide(segs,opts){
   /* 번호는 차트 막대 밑의 ①②③ 과 같은 순서다 — 이름이 막대에 안 들어갈 때
      그 번호로 이 표를 찾아오게 한다. 색도 막대와 같다. */
   list.forEach(function(x,i){
-    t+='<tr><td class="l"><i class="sw" style="background:'+x.c+'">'+(i+1)+'</i>'+esc(x.n)+'</td>'+
+    t+='<tr><td class="l"><i class="sw" style="background:'+x.c+';color:'+inkOn(x.c)+'">'+(i+1)+'</i>'+esc(x.n)+'</td>'+
        '<td>'+f0(x.v)+'</td><td>'+fp(x.v/tot,1)+'</td>'+
        (hasCond?'<td class="l dim">'+esc(x.cond||'—')+'</td>':'')+'</tr>';
   });
@@ -2093,7 +2340,7 @@ function drawColumns(host,segs,totLabel){
     if(legend){
       /* 축에는 번호만 — 겹칠 여지 없음 */
       svg.appendChild(svgEl('circle',{cx:cx,cy:m.t+ph+14,r:6.5,fill:s.c}));
-      var no=svgEl('text',{x:cx,y:m.t+ph+17.5,'text-anchor':'middle','font-size':8.5,fill:'#fff','font-weight':'700'});
+      var no=svgEl('text',{x:cx,y:m.t+ph+17.5,'text-anchor':'middle','font-size':8.5,fill:inkOn(s.c),'font-weight':'700'});
       no.textContent=(i+1); svg.appendChild(no);
       var pc2=svgEl('text',{x:cx,y:m.t+ph+30,'text-anchor':'middle','font-size':9,fill:VZ.tick});
       pc2.textContent=fp(s.v/tot,1); svg.appendChild(pc2);
@@ -2913,7 +3160,7 @@ function scenPane(){
   var Ms={}; keys.forEach(function(k){ Ms[k]=eng.model(k); });
   var labels=eng.scenLabels||{dRev:'수입 수준',dG:'성장률',dRate:'금리',dCap:'Cap Rate'};
   var e='<div class="tbl-wrap"><table class="scen-tbl"><thead><tr><th class="l">시나리오</th><th>'+esc(labels.dRev)+
-    '</th><th>'+esc(labels.dG)+'</th><th>'+esc(labels.dRate)+'</th><th>'+esc(labels.dCap)+'</th><th class="l">적용</th></tr></thead><tbody>';
+    '</th><th>'+esc(labels.dG)+'</th><th>'+esc(labels.dRate)+'</th><th>'+esc(labels.dCap)+'</th><th class="uc">적용</th></tr></thead><tbody>';
   keys.forEach(function(k){
     var sc=G.scens[k], dis=(k==='base'?' disabled':'');
     e+='<tr'+(k===G.scen?' class="scn"':'')+'><td class="l"><b>'+esc(sc.name)+'</b></td>'+
@@ -2960,7 +3207,7 @@ function bindScen(){
 /* 공통 검증 탭 */
 function valPane(M){
   var C=E().checks(M);
-  var t='<table><thead><tr><th class="l">점검 항목</th><th class="l">대상</th><th class="l">검증 내용</th><th class="l">참조</th><th class="l">결과</th></tr></thead><tbody>';
+  var t='<table class="val-tbl"><thead><tr><th class="l">점검 항목</th><th class="l">대상</th><th class="l">검증 내용</th><th class="l">참조</th><th class="uc">결과</th></tr></thead><tbody>';
   C.checks.forEach(function(c){
     t+='<tr><td class="l">'+esc(c.n)+'</td><td class="uc">'+esc(c.a)+'</td><td class="l dim">'+esc(c.v)+
        '</td><td class="l dim">'+esc(c.ref)+'</td><td class="l">'+

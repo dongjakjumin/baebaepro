@@ -631,17 +631,17 @@ async function renderSyncPanel() {
     ${targetCardHtml}
     <button id="syncBtn" ${runs.running ? 'disabled' : ''}>${runs.running ? '반영 중…' : '예시 문서 갱신 체험 실행'}</button>
     <div id="syncResult">${lastSyncMessage}</div>
-    <h4>최근 갱신 기록</h4>
+    <h3 class="km-sub-h">최근 갱신 기록</h3>
     <div id="runs">${runs.runs.map((r) => `
       <div class="run">${esc(r.started_at?.slice(0, 16).replace('T', ' '))} — ${esc({ success: '성공', partial: '일부 성공', failed: '실패', running: '진행 중' }[r.status] || r.status)} (전체 ${r.items_total}, 정상 ${r.items_ok}, 재시도 ${r.items_failed})</div>`).join('') || '<p class="hint">아직 실행 기록이 없습니다.</p>'}</div>
-    ${failures.failures.length ? `<h4>수집 실패 자료(최근 갱신)</h4>
+    ${failures.failures.length ? `<h3 class="km-sub-h">수집 실패 자료(최근 갱신)</h3>
     <div id="syncFailures">${failures.failures.map((f) => `
       <div class="candidate-row" style="flex-direction:column;align-items:stretch;gap:2px">
         <div><b>${esc(f.relative_path)}</b></div>
         <div class="hint">${esc(f.error || '사유 기록 없음')}</div>
       </div>`).join('')}<p class="hint">원본을 고친 뒤 "지금 자료 갱신"을 다시 누르면 재시도합니다. 원본을 지우면 다음 갱신에서 목록에서 사라집니다.</p></div>` : ''}
     <details class="km-fold"><summary>폴더 연결 · 지원 파일 형식 (참고)</summary><div class="km-fold-body">
-    <h4>미확인 폴더(체험판에는 없음)</h4>
+    <h3 class="km-sub-h">미확인 폴더(체험판에는 없음)</h3>
     <div id="candidates">${candidates.map((c) => `
       <div class="candidate-row" style="flex-direction:column;align-items:stretch;gap:6px">
         <div><b>${esc(c.relative_path)}</b> (미확인)</div>
@@ -655,7 +655,7 @@ async function renderSyncPanel() {
           <button data-confirm-move="${c.id}">이동으로 확인</button>
         </div>` : ''}
       </div>`).join('') || '<p class="hint">없음</p>'}</div>
-    ${unsupported.length ? `<h4>재분류가 필요한 폴더</h4>
+    ${unsupported.length ? `<h3 class="km-sub-h">재분류가 필요한 폴더</h3>
     <div id="unsupportedMappings">${unsupported.map((m) => `
       <div class="candidate-row" style="flex-direction:column;align-items:stretch;gap:6px">
         <div><b>${esc(m.relative_path)}</b> — 지금 분류로는 자료가 수집되지 않습니다.</div>
@@ -665,7 +665,7 @@ async function renderSyncPanel() {
           <button data-confirm-new="${m.id}">재분류</button>
         </div>` : ''}
       </div>`).join('')}</div>` : ''}
-    <h4>지원 파일 형식</h4>
+    <h3 class="km-sub-h">지원 파일 형식</h3>
     ${formatsCardHtml(formats.formats)}
     </div></details>`;
 
