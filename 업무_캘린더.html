@@ -345,6 +345,33 @@ table.cal td:focus-visible{outline:2px solid var(--navy-600);outline-offset:-2px
 .seg button.on{background:var(--gold);color:#fff;font-weight:700}
 .seg button:focus-visible{outline:2px solid var(--navy-600);outline-offset:-2px}
 
+/* ── 펀드·사업장 필터 ──────────────────────
+   탭 바로 아래 한 줄. 꺼져 있으면 선택칸만 있고, 켜지면 옅은 선택색 바탕으로
+   바뀌어 «일부만 보고 있다»와 가려진 건수를 말한다. 안쪽 여백은 켜짐·꺼짐이
+   같다 — 고르는 순간 선택칸이 옆으로 밀리지 않게. 글자 시작은 카드 안 글자와
+   같은 20px 선에 맞춘다. */
+.ffbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin:0 0 12px;
+  padding:5px var(--pad-card);min-height:44px;border:1px solid transparent;border-radius:var(--r-card)}
+.ffbar.on{background:#E8F0FD;border-color:rgba(36,87,197,.22)}   /* 바탕은 선택한 날짜·항목과 같은 선택색, 테두리는 주 파랑을 옅게 */
+.ff-lab{font-size:12.5px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.ff-sel{height:32px;min-width:120px;max-width:min(300px,100%);padding:0 8px;border:1px solid var(--line);
+  border-radius:var(--r-ctl);background:var(--surface);color:var(--ink);font-size:13.5px;font-weight:600;cursor:pointer}
+.ff-sel:hover{border-color:var(--gold)}
+.ff-sel:focus-visible{outline:2px solid var(--navy-600);outline-offset:1px}
+.ff-msg{font-size:13px;color:var(--ink)}
+.ff-msg b,.ff-out b{font-variant-numeric:tabular-nums}
+.ff-out{font-size:12.5px;color:var(--ink-2)}
+.ff-out .ff-late{color:var(--bad);font-weight:700}
+.ff-out .ff-soon{color:var(--warn);font-weight:700}
+.ffbar .rbtn{padding:5px 11px}
+/* 좁은 화면 — 선택칸이 첫 줄을 채우고(누르기 쉬운 폭), 상태 문장은 한 줄을 통째로
+   쓴다. 그래야 폭에 따라 「필터 해제」가 혼자 떨어지지 않고 가려진 건수 옆에 선다. */
+@media (max-width:900px){
+  .ff-sel{flex:1 1 160px}
+  .ff-msg{flex:1 1 100%}
+}
+@media print{ .ffbar:not(.on),.ffbar .rbtn{display:none} }
+
 /* ── 상세 등록 패널 (드로어) ───────────────
    「자세히 등록」 폼을 기본 펼침 대신 오른쪽 패널로. 폼 자체는 그대로
    재사용하므로 닫혀 있어도 DOM 에 남는다(수정 프리필·스크립트 접근 동일). */
@@ -653,6 +680,7 @@ tr.run-done td{background:var(--good-bg)}
 <nav class="tabs" id="tabs"></nav>
 
 <div class="wrap">
+  <div class="ffbar" id="fundBar"></div>
   <div class="pane on" id="pane-dash"></div>
   <div class="pane"    id="pane-task"></div>
   <div class="pane"    id="pane-cal"></div>
@@ -3923,6 +3951,10 @@ var DRAWER_OPENER='';            /* 패널을 연 버튼의 선택자 — 닫을
 var PROC_PICK=0;                 /* 프로세스 뷰어가 고른 업무 */
 var RUN_PICK=0;                  /* 실행 모드로 열어 둔 RUN id (0 = 카탈로그 모드) */
 var TASK_FILTER='open';          /* open | all | late */
+/* 펀드·사업장 필터 — null = 전체, '' = 펀드 미지정, 그 밖 = 공백을 정리한 펀드명.
+   보기 상태일 뿐이라 저장하지 않는다(다시 열면 늘 전체). 켜 둔 채 잊고 다음 날
+   열면 «일이 사라졌다»로 읽히기 때문이다. */
+var FUND_FILTER=null;
 var EDIT_ID=0;                   /* 「자세히 등록」 폼이 수정 중인 업무 id (0 = 새로 등록) */
 
 var GUBUN=['수익자보고','내부보고','공문','결산','검토','제세공과금','기타'];
@@ -5017,7 +5049,8 @@ function runNewModal(){
     var id=startRun(p.name, f, base, due, cyc);
     close();
     RUN_PICK=id; render();
-    toast('수행을 시작했습니다 — STEP 을 체크하며 진행하세요');
+    var nr=findRun(id);
+    toast(nr&&!fundOk(nr.fund)? '수행을 시작했습니다'+FF_HIDDEN : '수행을 시작했습니다 — STEP 을 체크하며 진행하세요');
   }
   var seg=document.getElementById('runCycleSeg');
   if(seg) seg.querySelectorAll('button').forEach(function(b){
@@ -5035,11 +5068,68 @@ function runNewModal(){
 }
 
 /* ══ 화면 ═════════════════════════════════════════════════ */
-function counts(){
+/* ── 펀드·사업장 필터 ───────────────────────────────────────
+   보기만 좁힌다. S·RUNS 는 읽기만 하고 고치지 않는다 — 저장·백업·공유는
+   언제나 전체다. 앞뒤·겹친 공백만 다른 값은 같은 펀드로 묶는다(저장값은 그대로). */
+function fundKey(f){ return String(f==null?'':f).replace(/\s+/g,' ').trim(); }
+function fundOk(f){ return FUND_FILTER===null || fundKey(f)===FUND_FILTER; }
+function fundPick(list){ return FUND_FILTER===null? list : list.filter(function(x){ return fundOk(x.fund); }); }
+function viewTasks(){ return fundPick(S.tasks); }
+function viewRegs(){ return fundPick(S.regs); }
+function viewRuns(){ return fundPick(RUNS.items); }
+function fundLabel(k){ return k===''? '펀드 미지정' : k; }
+var FUND_COLL=null;
+try{ FUND_COLL=new Intl.Collator('ko',{numeric:true}); }catch(e){}
+/* 고를 수 있는 값 — 할 일·정기업무·수행 기록의 펀드명을 가나다순으로, 빈 값은
+   맨 끝 「펀드 미지정」 하나로. 고른 값이 데이터에서 사라져도(수정·복원) 목록에
+   남겨 0건으로 보이게 한다 — 필터가 말없이 풀리면 그것대로 헷갈린다. */
+var FUND_OPTS=[];                /* 지금 그려진 선택칸의 항목 순서 — selectedIndex 로 값을 찾는다 */
+function fundOptions(){
+  var seen=Object.create(null), keys=[], none=false;
+  [S.tasks,S.regs,RUNS.items].forEach(function(list){
+    list.forEach(function(x){
+      var k=fundKey(x.fund);
+      if(!k){ none=true; return; }
+      if(!seen[k]){ seen[k]=1; keys.push(k); }
+    });
+  });
+  if(FUND_FILTER&&!seen[FUND_FILTER]) keys.push(FUND_FILTER);
+  keys.sort(function(a,b){ return FUND_COLL? FUND_COLL.compare(a,b) : (a<b?-1:(a>b?1:0)); });
+  var opts=[null].concat(keys);
+  if(none||FUND_FILTER==='') opts.push('');
+  return opts;
+}
+/* 켜져 있으면 «몇 건 중 몇 건만 보는 중»을 이 탭의 목록 기준으로 말하고,
+   가려진 할 일의 지연·임박은 따로 센다 — 필터를 켠 채 다른 펀드의 마감을
+   놓치지 않게. 이 줄은 모든 탭 맨 위에 같은 자리로 나온다. */
+function fundBarHtml(){
+  FUND_OPTS=fundOptions();
+  var h='<label class="ff-lab" for="fundSel">펀드·사업장</label>'+
+    '<select id="fundSel" class="ff-sel">'+
+    FUND_OPTS.map(function(k){
+      return '<option'+(k===FUND_FILTER?' selected':'')+'>'+esc(k===null? '전체' : fundLabel(k))+'</option>';
+    }).join('')+'</select>';
+  if(FUND_FILTER===null) return h;
+  var unit, all, shown;
+  if(TAB==='reg'){ unit='정기업무'; all=S.regs.length; shown=viewRegs().length; }
+  else if(TAB==='proc'){ unit='수행 기록'; all=RUNS.items.length; shown=viewRuns().length; }
+  else { unit='할 일'; all=S.tasks.length; shown=viewTasks().length; }
+  h+='<span class="ff-msg">'+unit+' '+all+'건 중 <b>'+shown+'건</b>만 보는 중</span>';
+  var hid=counts(S.tasks.filter(function(t){ return !fundOk(t.fund); })), warn=[];
+  if(hid.지연) warn.push('<span class="ff-late">지연 <b>'+hid.지연+'</b>건</span>');
+  if(hid.soon) warn.push('<span class="ff-soon">임박 <b>'+hid.soon+'</b>건</span>');
+  if(warn.length) h+='<span class="ff-out">가려진 할 일에 '+warn.join(' · ')+'</span>';
+  return h+'<button class="rbtn" id="fundClear" data-fund-clear>필터 해제</button>';
+}
+/* 방금 넣거나 고친 것이 필터 밖이면 목록에 안 나온다 — 사라진 줄 알지 않게 말한다 */
+var FF_HIDDEN=' — 지금 필터에서는 안 보입니다';
+function lastAddedHidden(){ var t=S.tasks[S.tasks.length-1]; return !!t&&!fundOk(t.fund); }
+
+function counts(list){
   var c={대기:0,진행중:0,지연:0,보류:0,완료:0,soon:0,thisMonth:0,open:0};
   var t0=today(), lim=addDays(t0,7);
   var ym=t0.getFullYear()+'-'+pad2(t0.getMonth()+1);
-  S.tasks.forEach(function(t){
+  (list||viewTasks()).forEach(function(t){
     /* 부재는 업무 «건수»가 아니다. soon·thisMonth 는 statusOf 를 거치지 않고
        done/hold 만 보므로, statusOf 만 고쳐서는 여기가 안 고쳐진다 — 임박
        타일과 이번 달 마감 숫자에 휴가가 섞인다. 그래서 여기서 따로 뺀다. */
@@ -5059,7 +5149,7 @@ function renderTabs(){
     {id:'dash', t:'대시보드'},
     {id:'task', t:'할 일',   n:c.open, hot:c.지연>0},
     {id:'cal',  t:'캘린더'},
-    {id:'reg',  t:'정기업무', n:S.regs.length},
+    {id:'reg',  t:'정기업무', n:viewRegs().length},
     {id:'proc', t:'업무 프로세스', n:PROCS.length}
   ];
   document.getElementById('tabs').innerHTML=defs.map(function(d){
@@ -5073,7 +5163,7 @@ function renderTabs(){
    펼치기 규칙도 여기 하나뿐이다. 판정 규칙 자체는 바꾸지 않았다. */
 function tasksByDay(y,mo){
   var byDay={};
-  S.tasks.forEach(function(t){
+  viewTasks().forEach(function(t){
     var d=parseYmd(t.due); if(!d) return;
     if(t.kind==='absence' && t.until){
       var u=parseYmd(t.until);
@@ -5099,6 +5189,7 @@ function sharedByDay(y,mo){
   var byDay={};
   SHARED.bundles.forEach(function(b){
     b.tasks.forEach(function(t){
+      if(!fundOk(t.fund)) return;        /* 받은 일정도 같은 펀드 필터를 따른다 */
       var sd=parseYmd(t.due); if(!sd) return;
       if(t.kind==='absence'&&t.until){
         var su=parseYmd(t.until);
@@ -5143,12 +5234,16 @@ function quickBlock(examples,hint){
 
 /* 진행 중인 프로세스 카드 — 수행의 원장. 행을 누르면 그 원장이 열린다. */
 function dashRunsCard(){
-  var act=[];
-  RUNS.items.forEach(function(r){ if(!r.doneAt) act.push(r); });
+  var act=[], hidN=0;
+  RUNS.items.forEach(function(r){ if(!r.doneAt){ if(fundOk(r.fund)) act.push(r); else hidN++; } });
   var h='<div class="card" id="dashRuns"><header><h2>진행 중인 프로세스</h2>'+
      '<span class="desc">업무 프로세스 탭에서 「수행 시작」한 건 · 행을 누르면 그 원장이 열립니다</span></header>'+
      '<div class="body flush">';
-  if(!act.length){
+  if(!act.length&&hidN){
+    /* 없는 게 아니라 가려진 것이다 — «수행을 시작해 보세요»라고 하면 거짓말이 된다 */
+    h+='<div class="empty">이 필터에 해당하는 진행 중인 프로세스가 없습니다 — 다른 펀드·사업장의 '+hidN+'건은 가려져 있습니다'+
+       '<br><span class="em-act" data-fund-clear>필터 해제</span></div>';
+  } else if(!act.length){
     h+='<div class="empty">진행 중인 프로세스가 없습니다 — 업무 프로세스 탭에서 수행을 시작해 보세요'+
        '<br><span class="em-act" id="dashRunsGo">업무 프로세스로 이동</span></div>';
   } else act.forEach(function(r){
@@ -5191,7 +5286,7 @@ function paneDash(){
      마감이 지난 건도 아직 먼 건도 들어온다 — 임박 타일(7일)과 기준이
      다르다. 이름을 임박이라 붙이면 타일 숫자와 표 내용이 어긋나 보인다.
      오늘 마감은 «새 집계»를 만들지 않고 이 목록 안에서 표시만 한다. */
-  var soon=S.tasks.filter(function(t){ return !t.done&&!t.hold&&t.due&&t.kind!=='absence'; })
+  var soon=viewTasks().filter(function(t){ return !t.done&&!t.hold&&t.due&&t.kind!=='absence'; })
     .sort(function(a,b){ return parseYmd(a.due)-parseYmd(b.due); }).slice(0,5);
   h+='<div class="b8"><div class="card"><header><h2>우선 확인할 미완료 업무 5건</h2>'+
      '<span class="desc">미완료·미보류 기준 · 마감일 순 (지난 건부터) · 7일 필터 아님 · 오늘 마감은 파랗게</span></header>'+
@@ -5249,14 +5344,14 @@ function paneDash(){
   h+='<div class="b4">'+dashRunsCard()+'</div>';
 
   /* ⑥ 구분별 건수 (12열) */
-  var by={}, nWork=0;
+  var by={}, nWork=0, vt=viewTasks();
   GUBUN.forEach(function(g){ by[g]=0; });
-  S.tasks.forEach(function(t){
+  vt.forEach(function(t){
     if(t.kind==='absence') return;      /* 구분은 업무 성격 분류다 — 부재는 안 센다 */
     nWork++;
     if(by[t.gubun]!=null) by[t.gubun]++; else by['기타']++;
   });
-  var nAbs=S.tasks.length-nWork;
+  var nAbs=vt.length-nWork;
   h+='<div class="b12"><div class="card"><header><h2>구분별 건수</h2>'+
      '<span class="desc">이번 달 마감 '+c.thisMonth+'건 · 전체 '+nWork+'건'+
      (nAbs? ' · 부재 '+nAbs+'건은 제외' : '')+'</span></header>'+
@@ -5317,7 +5412,8 @@ function paneTask(){
      '<th class="dday">D-Day</th><th>상태</th><th class="due">완료일</th><th></th>'+
      '</tr></thead><tbody>';
 
-  var rows=S.tasks.slice().sort(function(a,b){
+  var vt=viewTasks(), inF=(FUND_FILTER!==null);
+  var rows=vt.slice().sort(function(a,b){
     var pa=parseYmd(a.due), pb=parseYmd(b.due);
     var ad=pa?pa.getTime():Infinity, bd=pb?pb.getTime():Infinity;
     return ad-bd;
@@ -5332,12 +5428,15 @@ function paneTask(){
     if(!S.tasks.length)
       msg='<b>아직 등록된 업무가 없습니다.</b><br>위 <b>빠르게 등록</b>에 말하듯 적어 보세요 — 예) 다음주 금요일까지 B호 수익자보고서'+
           '<br><span class="em-act" data-filt-jump="sample">예시 데이터로 채우기</span>';
+    else if(!vt.length)
+      msg='<b>「'+esc(fundLabel(FUND_FILTER))+'」에 해당하는 업무가 없습니다.</b> 다른 펀드·사업장의 '+S.tasks.length+'건은 필터로 가려져 있습니다.'+
+          '<br><span class="em-act" data-fund-clear>필터 해제</span>';
     else if(TASK_FILTER==='late')
-      msg='<b>지연된 업무가 없습니다.</b> 마감을 넘긴 건이 하나도 없습니다.'+
-          '<br><span class="em-act" data-filt-jump="all">전체 '+S.tasks.length+'건 보기</span>';
+      msg='<b>지연된 업무가 없습니다.</b> '+(inF?'이 필터 안에서는 ':'')+'마감을 넘긴 건이 하나도 없습니다.'+
+          '<br><span class="em-act" data-filt-jump="all">전체 '+vt.length+'건 보기</span>';
     else if(TASK_FILTER==='open')
-      msg='<b>미완료 업무가 없습니다.</b> 등록된 '+S.tasks.length+'건이 모두 완료·보류 상태입니다.'+
-          '<br><span class="em-act" data-filt-jump="all">전체 '+S.tasks.length+'건 보기</span>';
+      msg='<b>미완료 업무가 없습니다.</b> '+(inF?'이 필터의 ':'등록된 ')+vt.length+'건이 모두 완료·보류 상태입니다.'+
+          '<br><span class="em-act" data-filt-jump="all">전체 '+vt.length+'건 보기</span>';
     else msg='해당하는 업무가 없습니다.';
     h+='<tr><td colspan="6" class="empty">'+msg+'</td></tr>';
   }
@@ -5420,12 +5519,19 @@ function paneReg(){
        두지 않으므로 달력·할 일·대시보드에는 안 나온다. 화면이 그렇다고
        말하지 않으면 「D-2 인데 달력에 왜 없나」로 읽힌다. */
     '<span class="desc">다음 예정일은 여기서만 봅니다 — 회차를 업무로 등록해야 달력·할 일·대시보드에 나옵니다 · '+
-    '프로세스를 누르면 그 업무의 절차가 바로 열립니다</span></header>'+
-    '<div class="body flush"><div class="tbl-wrap"><table><thead><tr>'+
+    '프로세스를 누르면 그 업무의 절차가 바로 열립니다</span></header>';
+  /* 펀드 필터로 전부 가려졌으면 표 대신 안내만 — 좁은 화면의 표는 최소 폭(720px)이라
+     표 안에 두면 안내와 해제 버튼이 옆으로 밀려 화면 밖에 걸린다 */
+  var vr=viewRegs();
+  if(S.regs.length&&!vr.length)
+    return h+'<div class="body flush"><div class="empty"><b>이 필터에 해당하는 정기업무가 없습니다.</b> '+
+      '다른 펀드·사업장의 '+S.regs.length+'건은 필터로 가려져 있습니다.'+
+      '<br><span class="em-act" data-fund-clear>필터 해제</span></div></div></div>';
+  h+='<div class="body flush"><div class="tbl-wrap"><table><thead><tr>'+
     '<th>주기</th><th>업무명</th><th>관련</th><th>다음 예정일</th><th>D-Day</th><th>절차</th><th>비고</th>'+
     '</tr></thead><tbody>';
   if(!S.regs.length) h+='<tr><td colspan="7" class="empty">등록된 정기업무가 없습니다.</td></tr>';
-  S.regs.forEach(function(r){
+  vr.forEach(function(r){
     var n=r.next? days(parseYmd(r.next),today()) : null;
     var hot=(n!==null&&n<=7);
     h+='<tr><td class="mid">'+esc(r.cycle)+'</td><td>'+esc(r.task)+'</td>'+
@@ -5513,8 +5619,11 @@ function paneProc(){
   /* 실행 모드로 열어 둔 RUN. 이 프로세스 것이 아니면(스테일) 카탈로그 모드다. */
   var run=findRun(RUN_PICK);
   if(run&&run.proc!==p.name) run=null;
-  var myRuns=[];
-  RUNS.items.forEach(function(r){ if(r.proc===p.name) myRuns.push(r); });
+  /* 펀드·사업장 필터 밖의 기록은 열지도 고르지도 않는다. RUN_PICK 은 그대로 둬서
+     필터를 풀면 보던 원장이 돌아온다. */
+  if(run&&!fundOk(run.fund)) run=null;
+  var myRuns=[], hidRuns=0;
+  RUNS.items.forEach(function(r){ if(r.proc===p.name){ if(fundOk(r.fund)) myRuns.push(r); else hidRuns++; } });
   var editing=(!run&&PROC_EDIT);
 
   h+='<div class="card"><header><h2>'+esc(p.name)+'</h2>'+
@@ -5557,7 +5666,8 @@ function paneProc(){
   }
   h+='<span class="rb-note">'+(run? '체크·담당·산출물은 이 브라우저에만 저장됩니다'
        : (myRuns.length? '기록을 고르면 STEP 표가 수행 원장으로 바뀝니다'
-                       : '수행을 시작하면 STEP 표가 체크·기록되는 원장이 됩니다'))+'</span></div>';
+         : (hidRuns? '이 절차의 수행 기록 '+hidRuns+'건은 펀드·사업장 필터로 가려져 있습니다'
+                   : '수행을 시작하면 STEP 표가 체크·기록되는 원장이 됩니다')))+'</span></div>';
 
   if(run){
     /* 실행 모드 — STEP 표가 그 한 건의 원장이 된다 */
@@ -5844,7 +5954,7 @@ function renderDept(){
     if(!load()){ fillSample(); save(); saveRuns(); } else loadRuns();
     loadShared();      /* 본부마다 받은 파일이 다르다 — 앞 본부 것이 남으면 안 된다 */
     loadProcEdits();
-    PROC_PICK=0; RUN_PICK=0; TAB='dash'; PROC_EDIT=false;
+    PROC_PICK=0; RUN_PICK=0; TAB='dash'; PROC_EDIT=false; FUND_FILTER=null;
     render();
     toast((DEPTS[DEPT]||{}).name+' 로 전환했습니다');
   });
@@ -5859,6 +5969,9 @@ function render(){
   document.getElementById('hdToday').textContent=ymdw(ymd(today()));
   renderDept();
   renderTabs();
+  var fbar=document.getElementById('fundBar');
+  fbar.innerHTML=fundBarHtml();
+  fbar.className='ffbar'+(FUND_FILTER!==null?' on':'');
   ['dash','task','cal','reg','proc'].forEach(function(id){
     var el=document.getElementById('pane-'+id);
     el.className='pane'+(id===TAB?' on':'');
@@ -5904,6 +6017,21 @@ function bind(){
     b.addEventListener('click',function(){ TAB=b.getAttribute('data-tab'); render(); window.scrollTo(0,0); });
   });
 
+  /* 펀드·사업장 필터 — 다시 그리면 선택칸이 새 요소가 되므로 포커스를 돌려준다 */
+  var refocusFund=function(){
+    var n=document.getElementById('fundSel');
+    if(n){ try{ n.focus({preventScroll:true}); }catch(e){ n.focus(); } }
+  };
+  var fsel=document.getElementById('fundSel');
+  if(fsel) fsel.addEventListener('change',function(){
+    var v=FUND_OPTS[fsel.selectedIndex];
+    FUND_FILTER=(v===undefined)? null : v;
+    render(); refocusFund();
+  });
+  document.querySelectorAll('[data-fund-clear]').forEach(function(b){
+    b.addEventListener('click',function(){ FUND_FILTER=null; render(); refocusFund(); });
+  });
+
   var q=document.getElementById('qIn');
   if(q){
     var prev=document.getElementById('qPrev');
@@ -5943,13 +6071,14 @@ function bind(){
     var o=readForm();
     if(!o.task){ toast('업무명을 입력해 주세요'); document.getElementById('fTask').focus(); return; }
     addTask(o);
-    toast('등록했습니다'); render();
+    toast('등록했습니다'+(lastAddedHidden()? FF_HIDDEN : '')); render();
   });
   var fs=document.getElementById('fSave');
   if(fs) fs.addEventListener('click',function(){
     var o=readForm();
     if(!o.task){ toast('업무명을 입력해 주세요'); document.getElementById('fTask').focus(); return; }
-    if(updateTask(EDIT_ID,o)){ EDIT_ID=0; toast('수정했습니다'); }
+    var eid=EDIT_ID;
+    if(updateTask(EDIT_ID,o)){ EDIT_ID=0; toast('수정했습니다'+(fundOk(findTask(eid).fund)? '' : FF_HIDDEN)); }
     else { EDIT_ID=0; toast('수정하려던 업무를 찾지 못했습니다'); }
     closeDrawer();
   });
@@ -6183,7 +6312,7 @@ function quickAddOnDate(dateStr){
     var t=ta.value.trim();
     if(!t){ toast('업무명을 적어 주세요'); ta.focus(); return; }
     addTask({task:t, due:dateStr, gubun:nlGubun(t), pri:nlPriority(t)});
-    close(); render(); toast('등록했습니다 — 마감 '+dateStr);
+    close(); render(); toast(lastAddedHidden()? '등록했습니다'+FF_HIDDEN : '등록했습니다 — 마감 '+dateStr);
   }
   document.getElementById('addOnGo').addEventListener('click',go);
   ta.addEventListener('keydown',function(e){
@@ -6199,7 +6328,7 @@ function doQuickAdd(){
   if(!r){ toast('내용을 입력해 주세요'); return; }
   addTask(r);
   q.value=''; document.getElementById('qPrev').className='qprev';
-  toast(r.due? '등록했습니다 — 마감 '+r.due : '등록했습니다 — 마감일 없음');
+  toast(lastAddedHidden()? '등록했습니다'+FF_HIDDEN : (r.due? '등록했습니다 — 마감 '+r.due : '등록했습니다 — 마감일 없음'));
   render();
   /* 연달아 넣을 수 있게 입력칸으로 돌아간다. render 가 패널을 새로 만들어
      방금 쓰던 입력칸은 사라졌으므로 새 것을 찾는다. */

@@ -710,6 +710,20 @@ table.compo-tbl .sw{display:inline-grid;place-items:center;width:15px;height:15p
 .grp>h3 .caret{flex:0 0 auto;font-size:9px;opacity:.65;width:9px}
 .grp.fold>.fgrid,.grp.fold>.hint,.grp.fold>.jump,.grp.fold>.note{display:none}
 .grp.fold{padding-bottom:11px}
+/* 핵심 입력 먼저 — 그룹 안의 나머지 항목은 「세부 가정 N개」 줄 아래로 접는다.
+   그룹 머리글보다 한 단계 조용하게: 이름표 색 · 12px · 가는 구분선 하나. */
+.subtog{display:flex;align-items:center;gap:6px;width:100%;min-height:32px;margin-top:10px;padding:6px 0 0;
+  border:0;border-top:1px solid rgba(255,255,255,.08);border-radius:0;background:none;
+  color:#a9bccf;font:inherit;font-size:12px;font-weight:500;line-height:1.3;text-align:left;cursor:pointer}
+.subtog:hover{color:#fff}
+.subtog:focus-visible{outline:2px solid rgba(255,255,255,.55);outline-offset:2px;border-radius:var(--r-sm)}
+.subtog .caret{flex:0 0 auto;font-size:9px;opacity:.65;width:9px}
+.subtog .sub-t{flex:1;min-width:0}
+.subtog .sub-ed{color:#ffd591}
+.subtog .sub-bad{flex:0 0 auto;background:var(--bad-bg);color:var(--bad);border-radius:var(--r-sm);padding:1px 6px;font-weight:600}
+.fgrid.subgrid{margin-top:8px}
+.fgrid[hidden]{display:none}
+.grp.fold>.subtog{display:none}
 .stepno{
   flex:0 0 auto;width:17px;height:17px;border-radius:50%;background:var(--gold);color:#FFFFFF;
   display:grid;place-items:center;font-size:10.5px;font-weight:700;letter-spacing:0;
@@ -1195,6 +1209,7 @@ body.nav-open .backdrop{display:block}
   <div class="more" id="moreWrap">
     <button class="btn" id="btnMore" aria-haspopup="true" aria-expanded="false" aria-controls="moreMenu">더보기 ▾</button>
     <div class="more-menu" id="moreMenu" role="menu" hidden>
+      <button class="btn" id="btnXlsm" role="menuitem" title="같은 엑셀에 민감도 재계산·시나리오 전환·목표 역산·되돌리기 버튼(매크로)을 넣습니다">매크로 포함 엑셀 (.xlsm)</button>
       <button class="btn" id="btnSave" role="menuitem" title="현재 입력을 파일로 내보냅니다">설정 저장</button>
       <button class="btn" id="btnLoad" role="menuitem" title="내보낸 설정 파일을 불러옵니다">불러오기</button>
       <button class="btn" id="btnPrint" role="menuitem">인쇄</button>
@@ -1738,6 +1753,28 @@ function patchHardcodeRow(made,order){
       }
     });
   });
+  /* 대시보드 집계 캐시를 방금 채운 점검 결과로 다시 센다 — 수식(COUNTA·COUNTIF)이 세는 범위와 같게 */
+  var vcS=made.Validation_Checks, vdS=made.Validation_Dashboard;
+  if(vcS&&vdS){
+    var inT=false, nAll=0, nPass=0, nChk=0;
+    vcS.rows.forEach(function(row){
+      var a=row&&row[0], t=(typeof a==='string')?a:((a&&a.t==='s')?String(a.v||''):'');
+      if(t==='점검 항목'){ inT=true; return; }
+      if(t==='오류 상세'){ inT=false; return; }
+      if(!inT||!row) return;
+      var c=row[4], v=(c==null)?'':(typeof c==='object'?c.v:c);
+      if(v===''||v==null) return;
+      nAll++; if(v==='PASS') nPass++; if(v==='CHECK') nChk++;
+    });
+    vdS.rows.forEach(function(row){
+      var a=row&&row[0], c=row&&row[1];
+      if(typeof a!=='string'||!c||typeof c!=='object') return;
+      if(a==='총 점검 항목') c.v=nAll;
+      else if(a==='PASS') c.v=nPass;
+      else if(a==='CHECK') c.v=nChk;
+      else if(a==='종합 판정') c.v=nChk? '검토 필요' : '이상 없음';
+    });
+  }
   return scan;
 }
 
@@ -1791,7 +1828,7 @@ function finishBook(wb,made,title,subject,keyM,info){
        유동화 표지에 그대로 찍으면 그 파일에 없는 개념을 경고하는 꼴이 된다. */
     if(LAST_HARDCODE.total>0){
       P(made.Cover,['','바뀌지 않는 가정', G.deal==='dev'
-        ? '본PF 약정액·총사업비 앵커(순환참조를 끊는 자리), 분양 흡수 일정·코호트 가중치, 중도금 무이자 부담. 이 값들을 엑셀에서 바꾸면 하위 시트가 따라오지 않습니다.'
+        ? '본PF 약정액·총사업비 앵커(순환참조를 끊는 자리)와 기간 입력(토지 선매입~착공·공사기간·분양 개시·흡수기간 — 행 배치를 정함). 앵커 때문에 금리·공사비를 바꾸면 필요 PF 한도에 작은 잔차가 남고, 기간은 엑셀에서 바꿔도 반영되지 않습니다. 기간을 바꾸려면 화면에서 바꾼 뒤 다시 내려받으세요.'
         : '어느 칸인지는 Validation_Checks 「하드코딩 셀 존재 여부」 행에 시트별로 적혀 있습니다. 그 칸의 가정을 바꾸려면 화면에서 바꾼 뒤 다시 내려받으세요.']);
     }
   }
@@ -1800,6 +1837,1104 @@ function finishBook(wb,made,title,subject,keyM,info){
   order.forEach(function(nm){ if(made[nm]) addSheet(wb,made[nm],sheetNo(nm)); });
   wb.Props={Title:title,Subject:subject,Author:G.author||'CRE Model',CreatedDate:new Date()};
   return wb;
+}
+
+/* ══ 매크로 포함 엑셀(.xlsm) ═══════════════════════════════════
+   기본 엑셀(.xlsx)은 그대로 두고, 같은 워크북에 버튼 시트(Macro)와 숨긴
+   설정 시트(_JB_Macro)·VBA를 더한 파일을 따로 만든다.
+
+   · 엔진 build()는 XM 이 비어 있지 않을 때만 «매크로가 건드려도 되는 칸»
+     (입력칸 주소, 민감도 표 위치·축, 역산 기준·레버)을 적는다. 기본 엑셀을
+     만들 때는 XM 이 null 이라 한 글자도 달라지지 않는다.
+   · VBA 는 설정 시트에 적힌 칸만 바꾼다. 한글 문구도 설정 시트(MSG 행)에서
+     읽는다 — VBA 소스를 ASCII 로만 두어 코드페이지 문제를 피한다.
+   · 시나리오 값은 VBA 가 계산하지 않는다. 화면 엔진으로 세 시나리오를 각각
+     빌드해 «시나리오마다 다른 고정값 칸»을 통째로 적어 둔다 — 그래서 엑셀에서
+     시나리오를 바꾸면 화면에서 그 시나리오로 내려받은 파일과 같은 입력이 된다. */
+var XM=null;
+function xmReset(){ XM={sens:[], rx:[], out:{}, block:'', anchors:[]}; }
+function xmRowOf(sh,label){
+  for(var i=0;i<sh.rows.length;i++){ if((sh.rows[i]||[])[0]===label) return i+1; }
+  return 0;
+}
+/* 'Assumptions!$C$34' · 'Unit_Mix_Pricing!$D$9:$D$14' → 최종 시트 이름과 주소 */
+function xmRef(ref){
+  var m=/^'?([^'!]+)'?!(.+)$/.exec(String(ref||''));
+  if(!m) throw new Error('매크로 명세의 셀 주소를 읽지 못했습니다: '+ref);
+  return {sh:sheetNo(m[1]), a:m[2].replace(/\$/g,'')};
+}
+
+/* VBA 소스 — 설정 시트가 시키는 대로만 움직인다 */
+var XM_VBA=[
+  "Option Explicit",
+  "' ------------------------------------------------------------------",
+  "' JB CRE model - macro buttons.",
+  "' Everything this module does is driven by the hidden sheet _JB_Macro,",
+  "' which the web builder writes at download time:",
+  "'   INPUT     sheet, address, value            - exported input values (restore)",
+  "'   SCEN      key, sheet, address, value       - input values per scenario",
+  "'   SCENNAME  key, display name",
+  "'   SCENMARK  key, sheet, address              - cells that show which scenario is applied",
+  "'   SENS / SAX                                 - sensitivity grids and their axes",
+  "'   RX / RXL                                   - goal-seek targets and levers",
+  "'   UI        key, sheet, address              - where to write status / results",
+  "'   MSG       key, text                        - all user-facing (Korean) text",
+  "' Only cells listed there are ever written. Korean text is read from cells so",
+  "' that this source stays ASCII (no code page issues).",
+  "' ------------------------------------------------------------------",
+  "Private Const CFG_NAME As String = \"_JB_Macro\"",
+  "Private C As Variant          ' config table (2-D array, 1-based)",
+  "Private gN As Long",
+  "Private oldCalc As Long",
+  "' goal-seek state (module level declarations must come before any procedure)",
+  "Private gOutSh As String, gOutAddr As String, gOutKind As String",
+  "Private gLevRow As Long, gOrig As Variant",
+  "",
+  "' ---------- config ----------",
+  "Private Sub LoadCfg()",
+  "    Dim ws As Worksheet, last As Long",
+  "    Set ws = ThisWorkbook.Worksheets(CFG_NAME)",
+  "    last = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row",
+  "    C = ws.Range(\"A1:L\" & last).Value2",
+  "    gN = last",
+  "End Sub",
+  "",
+  "Private Function CS(r As Long, k As Long) As String",
+  "    If IsError(C(r, k)) Then CS = \"\" Else CS = CStr(C(r, k))",
+  "End Function",
+  "",
+  "Private Function Msg(key As String) As String",
+  "    Dim r As Long",
+  "    For r = 1 To gN",
+  "        If CS(r, 1) = \"MSG\" And CS(r, 2) = key Then Msg = CS(r, 3): Exit Function",
+  "    Next r",
+  "    Msg = key",
+  "End Function",
+  "",
+  "Private Function UiCell(key As String) As Range",
+  "    Dim r As Long",
+  "    For r = 1 To gN",
+  "        If CS(r, 1) = \"UI\" And CS(r, 2) = key Then",
+  "            Set UiCell = ThisWorkbook.Worksheets(CS(r, 3)).Range(CS(r, 4))",
+  "            Exit Function",
+  "        End If",
+  "    Next r",
+  "End Function",
+  "",
+  "Private Function Rg(sh As String, addr As String) As Range",
+  "    Set Rg = ThisWorkbook.Worksheets(sh).Range(addr)",
+  "End Function",
+  "",
+  "Private Sub SetStatus(txt As String)",
+  "    Dim cel As Range",
+  "    Set cel = UiCell(\"status\")",
+  "    If Not cel Is Nothing Then cel.Value2 = Format(Now, \"yyyy-mm-dd hh:nn\") & \"  \" & txt",
+  "End Sub",
+  "",
+  "Private Sub BeginWork()",
+  "    oldCalc = Application.Calculation",
+  "    Application.ScreenUpdating = False",
+  "    Application.Calculation = xlCalculationManual",
+  "End Sub",
+  "",
+  "Private Sub EndWork()",
+  "    Application.Calculation = oldCalc",
+  "    Application.Calculate",
+  "    Application.ScreenUpdating = True",
+  "End Sub",
+  "",
+  "Private Function Num(v As Variant) As Double",
+  "    Num = CDbl(v)",
+  "End Function",
+  "",
+  "' Reads one output cell. Returns Empty when the model gives an error (e.g. IRR has no root).",
+  "Private Function ReadOut(outSh As String, outAddr As String, outKind As String, denSh As String, denAddr As String) As Variant",
+  "    Dim v As Variant, d As Variant",
+  "    v = Rg(outSh, outAddr).Value2",
+  "    If IsError(v) Or IsEmpty(v) Or VarType(v) = vbString Then ReadOut = Empty: Exit Function",
+  "    If outKind = \"oneMinusRatio\" Then",
+  "        d = Rg(denSh, denAddr).Value2",
+  "        If IsError(d) Or IsEmpty(d) Or VarType(d) = vbString Then ReadOut = Empty: Exit Function",
+  "        If CDbl(d) <= 0 Then ReadOut = Empty: Exit Function",
+  "        ReadOut = 1 - CDbl(v) / CDbl(d)",
+  "    Else",
+  "        ReadOut = CDbl(v)",
+  "    End If",
+  "End Function",
+  "",
+  "' ================================================================",
+  "'  0. Anchors (dev PF): the web screen solves \"PF limit / fees depend on total",
+  "'     cost, which depends on PF interest\" by iterating to a fixed point. The",
+  "'     workbook keeps the converged values in anchor cells to avoid a circular",
+  "'     reference. Converge repeats: anchor := its source cell, until nothing moves.",
+  "'     Always calculates at least once.",
+  "' ================================================================",
+  "Private Function Converge() As Long",
+  "    Dim r As Long, it As Long, moved As Boolean, v As Variant, a As Range",
+  "    Application.Calculate",
+  "    If FindRow(\"ANCHOR\", \"\") = 0 Then Converge = 0: Exit Function",
+  "    For it = 1 To 60",
+  "        moved = False",
+  "        For r = 1 To gN",
+  "            If CS(r, 1) = \"ANCHOR\" Then",
+  "                Set a = Rg(CS(r, 2), CS(r, 3))",
+  "                v = Rg(CS(r, 4), CS(r, 5)).Value2",
+  "                If Not IsError(v) Then",
+  "                    If Not IsEmpty(v) And VarType(v) <> vbString Then",
+  "                        If Abs(CDbl(v) - CDbl(a.Value2)) > 0.0000001 Then a.Value2 = CDbl(v): moved = True",
+  "                    End If",
+  "                End If",
+  "            End If",
+  "        Next r",
+  "        If Not moved Then Converge = it: Exit Function",
+  "        Application.Calculate",
+  "    Next it",
+  "    Converge = it",
+  "End Function",
+  "",
+  "Public Sub JB_Converge()",
+  "    LoadCfg",
+  "    DoConverge",
+  "End Sub",
+  "",
+  "Public Function DoConverge() As Long",
+  "    Dim n As Long",
+  "    LoadCfg",
+  "    If FindRow(\"ANCHOR\", \"\") = 0 Then SetStatus Msg(\"anchor_none\"): DoConverge = -1: Exit Function",
+  "    On Error GoTo EH",
+  "    BeginWork",
+  "    n = Converge()",
+  "    EndWork",
+  "    SetStatus Replace(Msg(\"anchor_done\"), \"{n}\", CStr(n))",
+  "    DoConverge = n",
+  "    Exit Function",
+  "EH:",
+  "    EndWork",
+  "    SetStatus Msg(\"error\") & \" \" & Err.Description",
+  "    DoConverge = -1",
+  "End Function",
+  "",
+  "' ================================================================",
+  "'  1. Restore the inputs exactly as they were downloaded",
+  "' ================================================================",
+  "Public Sub JB_Restore()",
+  "    LoadCfg",
+  "    If MsgBox(Msg(\"restore_confirm\"), vbYesNo + vbQuestion, Msg(\"title\")) <> vbYes Then Exit Sub",
+  "    DoRestore",
+  "End Sub",
+  "",
+  "Public Function DoRestore() As Long",
+  "    Dim r As Long, n As Long",
+  "    LoadCfg",
+  "    On Error GoTo EH",
+  "    BeginWork",
+  "    For r = 1 To gN",
+  "        If CS(r, 1) = \"INPUT\" Then",
+  "            If CStr(Rg(CS(r, 2), CS(r, 3)).Value2) <> CS(r, 4) Then n = n + 1",
+  "            Rg(CS(r, 2), CS(r, 3)).Value2 = C(r, 4)",
+  "        End If",
+  "    Next r",
+  "    r = FindRow(\"INPUTSCEN\", \"\")",
+  "    If r > 0 Then ApplyScenMark CS(r, 2)",
+  "    EndWork",
+  "    SetStatus Replace(Msg(\"restore_done\"), \"{n}\", CStr(n))",
+  "    DoRestore = n",
+  "    Exit Function",
+  "EH:",
+  "    EndWork",
+  "    SetStatus Msg(\"error\") & \" \" & Err.Description",
+  "    DoRestore = -1",
+  "End Function",
+  "",
+  "Private Function FindRow(tag As String, key As String) As Long",
+  "    Dim r As Long",
+  "    For r = 1 To gN",
+  "        If CS(r, 1) = tag And (key = \"\" Or CS(r, 2) = key) Then FindRow = r: Exit Function",
+  "    Next r",
+  "    FindRow = 0",
+  "End Function",
+  "",
+  "' ================================================================",
+  "'  2. Scenario switch - only the cells a scenario decides are changed",
+  "' ================================================================",
+  "Public Sub JB_ScenBase()",
+  "    JB_Scenario \"base\"",
+  "End Sub",
+  "Public Sub JB_ScenUp()",
+  "    JB_Scenario \"up\"",
+  "End Sub",
+  "Public Sub JB_ScenDown()",
+  "    JB_Scenario \"down\"",
+  "End Sub",
+  "",
+  "Private Sub JB_Scenario(key As String)",
+  "    LoadCfg",
+  "    If FindRow(\"SCEN\", key) = 0 Then SetStatus Msg(\"scen_none\"): Exit Sub",
+  "    If MsgBox(Replace(Msg(\"scen_confirm\"), \"{name}\", ScenName(key)), vbYesNo + vbQuestion, Msg(\"title\")) <> vbYes Then Exit Sub",
+  "    DoScenario key",
+  "End Sub",
+  "",
+  "Private Function ScenName(key As String) As String",
+  "    Dim r As Long",
+  "    r = FindRow(\"SCENNAME\", key)",
+  "    If r > 0 Then ScenName = CS(r, 3) Else ScenName = key",
+  "End Function",
+  "",
+  "Private Sub ApplyScenMark(key As String)",
+  "    Dim r As Long",
+  "    If key = \"\" Then Exit Sub",
+  "    For r = 1 To gN",
+  "        If CS(r, 1) = \"SCENMARK\" Then",
+  "            If CS(r, 2) = key Then",
+  "                Rg(CS(r, 3), CS(r, 4)).Value2 = C(r, 5)",
+  "            Else",
+  "                Rg(CS(r, 3), CS(r, 4)).Value2 = C(r, 6)",
+  "            End If",
+  "        End If",
+  "    Next r",
+  "End Sub",
+  "",
+  "Public Function DoScenario(key As String) As Long",
+  "    Dim r As Long, n As Long",
+  "    LoadCfg",
+  "    If FindRow(\"SCEN\", key) = 0 Then DoScenario = -1: SetStatus Msg(\"scen_none\"): Exit Function",
+  "    On Error GoTo EH",
+  "    BeginWork",
+  "    For r = 1 To gN",
+  "        If CS(r, 1) = \"SCEN\" And CS(r, 2) = key Then",
+  "            Rg(CS(r, 3), CS(r, 4)).Value2 = C(r, 5)",
+  "            n = n + 1",
+  "        End If",
+  "    Next r",
+  "    ApplyScenMark key",
+  "    EndWork",
+  "    SetStatus Replace(Replace(Msg(\"scen_done\"), \"{name}\", ScenName(key)), \"{n}\", CStr(n))",
+  "    DoScenario = n",
+  "    Exit Function",
+  "EH:",
+  "    EndWork",
+  "    SetStatus Msg(\"error\") & \" \" & Err.Description",
+  "    DoScenario = -1",
+  "End Function",
+  "",
+  "' ================================================================",
+  "'  3. Sensitivity - rebuild every grid from the current inputs",
+  "' ================================================================",
+  "Public Sub JB_Sensitivity()",
+  "    LoadCfg",
+  "    DoSensitivity",
+  "End Sub",
+  "",
+  "' One axis target: kind = delta (current + p) | abs (p) | scale (range * p) | follow (moves with the first target)",
+  "Private Sub AxisTargets(id As String, dimName As String, rows() As Long, cnt As Long)",
+  "    Dim r As Long",
+  "    cnt = 0",
+  "    For r = 1 To gN",
+  "        If CS(r, 1) = \"SAX\" And CS(r, 2) = id And CS(r, 3) = dimName Then",
+  "            cnt = cnt + 1",
+  "            ReDim Preserve rows(1 To cnt)",
+  "            rows(cnt) = r",
+  "        End If",
+  "    Next r",
+  "End Sub",
+  "",
+  "Private Function Snap(r As Long) As Variant",
+  "    Snap = Rg(CS(r, 5), CS(r, 6)).Value2",
+  "End Function",
+  "",
+  "' Puts axis step p on the targets of one axis. orig() holds the value(s) before the run.",
+  "Private Function ApplyAxis(rows() As Long, cnt As Long, orig() As Variant, p As Double) As Double",
+  "    Dim t As Long, kind As String, rr As Range, v As Variant, i As Long, j As Long, lead As Double",
+  "    For t = 1 To cnt",
+  "        kind = CS(rows(t), 4)",
+  "        Set rr = Rg(CS(rows(t), 5), CS(rows(t), 6))",
+  "        Select Case kind",
+  "            Case \"delta\"",
+  "                lead = CDbl(orig(t)) + p",
+  "                rr.Value2 = lead",
+  "            Case \"abs\"",
+  "                lead = p",
+  "                rr.Value2 = p",
+  "            Case \"scale\"",
+  "                lead = p",
+  "                v = orig(t)",
+  "                If IsArray(v) Then",
+  "                    For i = 1 To UBound(v, 1)",
+  "                        For j = 1 To UBound(v, 2)",
+  "                            If Not IsEmpty(v(i, j)) Then v(i, j) = CDbl(v(i, j)) * p",
+  "                        Next j",
+  "                    Next i",
+  "                    rr.Value2 = v",
+  "                Else",
+  "                    rr.Value2 = CDbl(v) * p",
+  "                End If",
+  "            Case \"follow\"",
+  "                ' same shift as the first target of this axis",
+  "                rr.Value2 = CDbl(orig(t)) + (lead - CDbl(orig(1)))",
+  "        End Select",
+  "    Next t",
+  "    ApplyAxis = lead",
+  "End Function",
+  "",
+  "Private Sub RestoreAxis(rows() As Long, cnt As Long, orig() As Variant)",
+  "    Dim t As Long",
+  "    For t = 1 To cnt",
+  "        Rg(CS(rows(t), 5), CS(rows(t), 6)).Value2 = orig(t)",
+  "    Next t",
+  "End Sub",
+  "",
+  "Public Function DoSensitivity() As Long",
+  "    Dim r As Long, cells As Long, grids As Long",
+  "    Dim rowT() As Long, colT() As Long, nRowT As Long, nColT As Long",
+  "    Dim rowO() As Variant, colO() As Variant",
+  "    Dim ws As Worksheet, r0 As Long, c0 As Long, gridR As Long, gridC As Long",
+  "    Dim i As Long, j As Long, t As Long, p As Double, lab As Double, v As Variant",
+  "    Dim busy As Boolean",
+  "    LoadCfg",
+  "    If FindRow(\"SENS\", \"\") = 0 Then SetStatus Msg(\"sens_none\"): DoSensitivity = -1: Exit Function",
+  "    If FindRow(\"SENSBLOCK\", \"\") > 0 Then SetStatus Msg(\"sens_blocked\"): DoSensitivity = -1: Exit Function",
+  "    On Error GoTo EH",
+  "    BeginWork",
+  "    For r = 1 To gN",
+  "        If CS(r, 1) = \"SENS\" Then",
+  "            grids = grids + 1",
+  "            Set ws = ThisWorkbook.Worksheets(CS(r, 3))",
+  "            r0 = CLng(C(r, 4)): c0 = CLng(C(r, 5)): gridR = CLng(C(r, 6)): gridC = CLng(C(r, 7))",
+  "            AxisTargets CS(r, 2), \"row\", rowT, nRowT",
+  "            AxisTargets CS(r, 2), \"col\", colT, nColT",
+  "            ReDim rowO(1 To nRowT): ReDim colO(1 To nColT)",
+  "            For t = 1 To nRowT: rowO(t) = Snap(rowT(t)): Next t",
+  "            For t = 1 To nColT: colO(t) = Snap(colT(t)): Next t",
+  "            busy = True",
+  "            For i = 1 To gridR",
+  "                p = CDbl(C(rowT(1), 6 + i))",
+  "                For j = 1 To gridC",
+  "                    lab = ApplyAxis(rowT, nRowT, rowO, p)",
+  "                    If i = 1 Then ws.Cells(r0 - 1, c0 + j - 1).Value2 = ApplyAxis(colT, nColT, colO, CDbl(C(colT(1), 6 + j))) _",
+  "                        Else ApplyAxis colT, nColT, colO, CDbl(C(colT(1), 6 + j))",
+  "                    If j = 1 Then ws.Cells(r0 + i - 1, c0 - 1).Value2 = lab",
+  "                    Converge",
+  "                    v = ReadOut(CS(r, 8), CS(r, 9), CS(r, 10), CS(r, 11), CS(r, 12))",
+  "                    If IsEmpty(v) Then ws.Cells(r0 + i - 1, c0 + j - 1).Value2 = ChrW(8212) _",
+  "                        Else ws.Cells(r0 + i - 1, c0 + j - 1).Value2 = v",
+  "                    cells = cells + 1",
+  "                Next j",
+  "            Next i",
+  "            RestoreAxis rowT, nRowT, rowO",
+  "            RestoreAxis colT, nColT, colO",
+  "            Converge",
+  "            busy = False",
+  "        End If",
+  "    Next r",
+  "    For r = 1 To gN",
+  "        If CS(r, 1) = \"SENSNOTE\" Then Rg(CS(r, 2), CS(r, 3)).Value2 = Replace(Msg(\"sens_note\"), \"{t}\", Format(Now, \"yyyy-mm-dd hh:nn\"))",
+  "    Next r",
+  "    EndWork",
+  "    SetStatus Replace(Replace(Msg(\"sens_done\"), \"{g}\", CStr(grids)), \"{n}\", CStr(cells))",
+  "    DoSensitivity = cells",
+  "    Exit Function",
+  "EH:",
+  "    If busy Then",
+  "        On Error Resume Next",
+  "        RestoreAxis rowT, nRowT, rowO",
+  "        RestoreAxis colT, nColT, colO",
+  "    End If",
+  "    EndWork",
+  "    SetStatus Msg(\"error\") & \" \" & Err.Description",
+  "    DoSensitivity = -1",
+  "End Function",
+  "",
+  "' ================================================================",
+  "'  4. Goal seek - the same search the web screen uses",
+  "'     (16-point scan, 20 bisection steps, nudge, snap to display step,",
+  "'      final check; \"not reachable\" is reported as such)",
+  "' ================================================================",
+  "",
+  "Public Sub JB_GoalSeek()",
+  "    LoadCfg",
+  "    DoGoalSeek",
+  "End Sub",
+  "",
+  "Private Function EvalSpec(spec As String, cur As Double) As Double",
+  "    EvalSpec = CDbl(Application.Evaluate(Replace(spec, \"cur\", Trim(Str(cur)))))",
+  "End Function",
+  "",
+  "Private Sub SetLever(x As Double)",
+  "    Dim rr As Range, v As Variant, i As Long, j As Long",
+  "    Set rr = Rg(CS(gLevRow, 5), CS(gLevRow, 6))",
+  "    If CS(gLevRow, 4) = \"scale\" Then",
+  "        v = gOrig",
+  "        If IsArray(v) Then",
+  "            For i = 1 To UBound(v, 1)",
+  "                For j = 1 To UBound(v, 2)",
+  "                    If Not IsEmpty(v(i, j)) Then v(i, j) = CDbl(v(i, j)) * x",
+  "                Next j",
+  "            Next i",
+  "            rr.Value2 = v",
+  "        Else",
+  "            rr.Value2 = CDbl(v) * x",
+  "        End If",
+  "    Else",
+  "        rr.Value2 = x",
+  "    End If",
+  "End Sub",
+  "",
+  "Private Function Probe(x As Double) As Variant",
+  "    SetLever x",
+  "    Converge",
+  "    Probe = ReadOut(gOutSh, gOutAddr, gOutKind, \"\", \"\")",
+  "End Function",
+  "",
+  "Private Function StepOf(fmt As String) As Double",
+  "    Select Case fmt",
+  "        Case \"p\": StepOf = 0.0001",
+  "        Case \"p1\": StepOf = 0.001",
+  "        Case \"mult\": StepOf = 0.001",
+  "        Case \"x\": StepOf = 0.01",
+  "        Case \"i\": StepOf = 1",
+  "        Case Else: StepOf = 0",
+  "    End Select",
+  "End Function",
+  "",
+  "Private Function Passes(v As Variant, target As Double, above As Boolean) As Boolean",
+  "    If IsEmpty(v) Then Passes = False: Exit Function",
+  "    If above Then Passes = (CDbl(v) >= target) Else Passes = (CDbl(v) <= target)",
+  "End Function",
+  "",
+  "' Returns need (Empty when not reachable) and the farthest point checked (edge).",
+  "Private Function Solve(lo As Double, hi As Double, cur As Double, target As Double, nowV As Variant, fmt As String, edge As Double) As Variant",
+  "    Const SCAN As Long = 16, ITERS As Long = 20",
+  "    Dim ts(0 To SCAN) As Double, vs(0 To SCAN) As Variant, ok(0 To SCAN) As Boolean",
+  "    Dim i As Long, k As Long, n As Long, minT As Double, maxT As Double, x As Variant",
+  "    Dim da As Double, db As Double, xa As Double, xb As Double, sa As Double, fm As Variant, midp As Double",
+  "    Dim toward As Double, edgeV As Variant, above As Boolean, span As Double, stp As Double, dirn As Double, cx As Double",
+  "    Dim q As Double, down As Boolean, snapped As Double, g As Long, sv As Variant, mustRise As Boolean, chk As Variant",
+  "    x = Empty",
+  "    For i = 0 To SCAN",
+  "        ts(i) = lo + (hi - lo) * i / SCAN",
+  "        vs(i) = Probe(ts(i))",
+  "        ok(i) = Not IsEmpty(vs(i))",
+  "        If ok(i) Then",
+  "            If n = 0 Then minT = ts(i): maxT = ts(i)",
+  "            If ts(i) < minT Then minT = ts(i)",
+  "            If ts(i) > maxT Then maxT = ts(i)",
+  "            n = n + 1",
+  "        End If",
+  "    Next i",
+  "    If lo < cur Then edge = IIf(n > 0, minT, lo) Else edge = IIf(n > 0, maxT, hi)",
+  "    If n < 2 Then Solve = Empty: Exit Function",
+  "    ' first sign change between consecutive valid points",
+  "    Dim pa As Long, pb As Long",
+  "    pa = -1",
+  "    For i = 0 To SCAN",
+  "        If ok(i) Then",
+  "            If pa >= 0 Then",
+  "                da = CDbl(vs(pa)) - target: db = CDbl(vs(i)) - target",
+  "                If Abs(da) < 0.000000000001 Then x = ts(pa): Exit For",
+  "                If Abs(db) < 0.000000000001 Then x = ts(i): Exit For",
+  "                If (da > 0) <> (db > 0) Then",
+  "                    xa = ts(pa): xb = ts(i): sa = da",
+  "                    For k = 1 To ITERS",
+  "                        midp = (xa + xb) / 2",
+  "                        fm = Probe(midp)",
+  "                        If IsEmpty(fm) Then Exit For",
+  "                        If ((CDbl(fm) - target) > 0) = (sa > 0) Then",
+  "                            xa = midp: sa = CDbl(fm) - target",
+  "                        Else",
+  "                            xb = midp",
+  "                        End If",
+  "                    Next k",
+  "                    x = (xa + xb) / 2",
+  "                    Exit For",
+  "                End If",
+  "            End If",
+  "            pa = i",
+  "        End If",
+  "    Next i",
+  "    If IsEmpty(x) Then Solve = Empty: Exit Function",
+  "    ' nudge toward the improving side until it really passes, then snap to the display step",
+  "    If lo < cur Then toward = minT Else toward = maxT",
+  "    edgeV = Probe(toward)",
+  "    If Not IsEmpty(edgeV) Then",
+  "        above = (CDbl(edgeV) > target)",
+  "        span = Abs(toward - x)",
+  "        If span > 0 Then stp = span / 5000 Else stp = Abs(x) * 0.000001",
+  "        If stp = 0 Then stp = 0.000000001",
+  "        If toward > x Then dirn = 1 Else dirn = -1",
+  "        cx = x",
+  "        For g = 0 To 20",
+  "            If Passes(Probe(cx), target, above) Then x = cx: Exit For",
+  "            cx = cx + dirn * stp",
+  "            If (dirn > 0 And cx > toward) Or (dirn < 0 And cx < toward) Then Exit For",
+  "        Next g",
+  "        q = StepOf(fmt)",
+  "        If q > 0 Then",
+  "            down = (toward < x)",
+  "            If down Then snapped = Application.WorksheetFunction.Floor_Math(x / q) * q _",
+  "                Else snapped = Application.WorksheetFunction.Ceiling_Math(x / q) * q",
+  "            For g = 0 To 3",
+  "                sv = Probe(snapped)",
+  "                If Passes(sv, target, above) Then x = snapped: Exit For",
+  "                If down Then snapped = snapped - q Else snapped = snapped + q",
+  "            Next g",
+  "        End If",
+  "    End If",
+  "    ' final gate: does the proposed value really meet the criterion?",
+  "    If IsEmpty(nowV) Then mustRise = True Else mustRise = (CDbl(nowV) < target)",
+  "    chk = Probe(CDbl(x))",
+  "    If IsEmpty(chk) Then",
+  "        x = Empty",
+  "    ElseIf mustRise Then",
+  "        If CDbl(chk) < target - 0.000000001 Then x = Empty",
+  "    Else",
+  "        If CDbl(chk) > target + 0.000000001 Then x = Empty",
+  "    End If",
+  "    Solve = x",
+  "End Function",
+  "",
+  "Public Function DoGoalSeek() As Long",
+  "    Dim r As Long, lr As Long, outRow As Long, blocks As Long, levers As Long",
+  "    Dim target As Double, nowV As Variant, id As String, cur As Double, lo As Double, hi As Double",
+  "    Dim need As Variant, edge As Double, anchor As Range, ws As Worksheet, fmtCur As String",
+  "    LoadCfg",
+  "    If FindRow(\"RX\", \"\") = 0 Then SetStatus Msg(\"rx_none\"): DoGoalSeek = -1: Exit Function",
+  "    If FindRow(\"RXBLOCK\", \"\") > 0 Then SetStatus Msg(\"rx_blocked\"): DoGoalSeek = -1: Exit Function",
+  "    Set anchor = UiCell(\"rx\")",
+  "    Set ws = anchor.Worksheet",
+  "    ws.Range(anchor, anchor.Offset(23, 5)).ClearContents   ' the sheet reserves 24 rows here",
+  "    outRow = 0",
+  "    On Error GoTo EH",
+  "    BeginWork",
+  "    Converge",
+  "    For r = 1 To gN",
+  "        If CS(r, 1) = \"RX\" Then",
+  "            blocks = blocks + 1",
+  "            id = CS(r, 2)",
+  "            gOutSh = CS(r, 6): gOutAddr = CS(r, 7): gOutKind = \"value\"",
+  "            If CS(r, 4) = \"cell\" Then target = CDbl(Rg(CS(r, 5), CS(r, 8)).Value2) Else target = CDbl(C(r, 5))",
+  "            nowV = ReadOut(gOutSh, gOutAddr, \"value\", \"\", \"\")",
+  "            anchor.Offset(outRow, 0).Value2 = CS(r, 3)",
+  "            anchor.Offset(outRow, 1).Value2 = Msg(\"rx_now\") & \" \" & FmtText(nowV, CS(r, 9))",
+  "            anchor.Offset(outRow, 2).Value2 = Msg(\"rx_target\") & \" \" & FmtText(target, CS(r, 9))",
+  "            outRow = outRow + 1",
+  "            If Not IsEmpty(nowV) And CDbl(nowV) >= target Then",
+  "                anchor.Offset(outRow, 0).Value2 = Msg(\"rx_ok\")",
+  "                outRow = outRow + 2",
+  "            Else",
+  "                anchor.Offset(outRow, 0).Value2 = Msg(\"rx_h_lever\")",
+  "                anchor.Offset(outRow, 1).Value2 = Msg(\"rx_h_cur\")",
+  "                anchor.Offset(outRow, 2).Value2 = Msg(\"rx_h_need\")",
+  "                anchor.Offset(outRow, 3).Value2 = Msg(\"rx_h_edge\")",
+  "                anchor.Offset(outRow, 4).Value2 = Msg(\"rx_h_note\")",
+  "                outRow = outRow + 1",
+  "                For lr = 1 To gN",
+  "                    If CS(lr, 1) = \"RXL\" And CS(lr, 2) = id Then",
+  "                        gLevRow = lr",
+  "                        gOrig = Rg(CS(lr, 5), CS(lr, 6)).Value2",
+  "                        If CS(lr, 4) = \"scale\" Then cur = 1 Else cur = CDbl(gOrig)",
+  "                        lo = EvalSpec(CS(lr, 7), cur): hi = EvalSpec(CS(lr, 8), cur)",
+  "                        fmtCur = FmtOf(CS(lr, 9))",
+  "                        ' the web screen drops a lever whose range is empty (e.g. sales rate already 100%)",
+  "                        If lo >= hi And CS(lr, 11) = \"skip\" Then GoTo NextLever",
+  "                        levers = levers + 1",
+  "                        anchor.Offset(outRow, 0).Value2 = CS(lr, 3)",
+  "                        anchor.Offset(outRow, 1).Value2 = cur",
+  "                        anchor.Offset(outRow, 1).NumberFormat = fmtCur",
+  "                        If lo < hi Then",
+  "                            need = Solve(lo, hi, cur, target, nowV, CS(lr, 9), edge)",
+  "                        Else",
+  "                            need = Empty: edge = cur",
+  "                        End If",
+  "                        Rg(CS(lr, 5), CS(lr, 6)).Value2 = gOrig",
+  "                        Converge",
+  "                        If IsEmpty(need) Then",
+  "                            anchor.Offset(outRow, 2).Value2 = Msg(\"rx_unreach\")",
+  "                        Else",
+  "                            anchor.Offset(outRow, 2).Value2 = need",
+  "                            anchor.Offset(outRow, 2).NumberFormat = fmtCur",
+  "                        End If",
+  "                        anchor.Offset(outRow, 3).Value2 = edge",
+  "                        anchor.Offset(outRow, 3).NumberFormat = fmtCur",
+  "                        anchor.Offset(outRow, 4).Value2 = CS(lr, 10)",
+  "                        outRow = outRow + 1",
+  "                    End If",
+  "NextLever:",
+  "                Next lr",
+  "                outRow = outRow + 1",
+  "            End If",
+  "        End If",
+  "    Next r",
+  "    anchor.Offset(outRow, 0).Value2 = Msg(\"rx_foot\")",
+  "    EndWork",
+  "    SetStatus Replace(Replace(Msg(\"rx_done\"), \"{b}\", CStr(blocks)), \"{n}\", CStr(levers))",
+  "    DoGoalSeek = levers",
+  "    Exit Function",
+  "EH:",
+  "    On Error Resume Next",
+  "    If gLevRow > 0 Then Rg(CS(gLevRow, 5), CS(gLevRow, 6)).Value2 = gOrig",
+  "    EndWork",
+  "    SetStatus Msg(\"error\") & \" \" & Err.Description",
+  "    DoGoalSeek = -1",
+  "End Function",
+  "",
+  "' Label text for the block title row (\"now 6.63%\" / \"target 10.00%\")",
+  "Private Function FmtText(v As Variant, fmt As String) As String",
+  "    If IsEmpty(v) Then FmtText = ChrW(8212): Exit Function",
+  "    Select Case fmt",
+  "        Case \"p\": FmtText = Format(CDbl(v), \"0.00%\")",
+  "        Case \"p1\": FmtText = Format(CDbl(v), \"0.0%\")",
+  "        Case \"x\": FmtText = Format(CDbl(v), \"0.00\") & \"x\"",
+  "        Case \"mult\": FmtText = Format(CDbl(v), \"0.000\") & \"x\"",
+  "        Case \"i\": FmtText = Format(CDbl(v), \"#,##0\")",
+  "        Case Else: FmtText = CStr(v)",
+  "    End Select",
+  "End Function",
+  "",
+  "Private Function FmtOf(fmt As String) As String",
+  "    Select Case fmt",
+  "        Case \"p\": FmtOf = \"0.00%\"",
+  "        Case \"p1\": FmtOf = \"0.0%\"",
+  "        Case \"x\": FmtOf = \"0.00\"\"x\"\"\"",
+  "        Case \"mult\": FmtOf = \"0.000\"\"x\"\"\"",
+  "        Case \"i\": FmtOf = \"#,##0\"",
+  "        Case Else: FmtOf = \"General\"",
+  "    End Select",
+  "End Function"
+].join('\r\n');
+
+/* MS-OVBA vbaProject.bin 생성기 — 소스만 담고 컴파일 캐시는 비운다
+   (_VBA_PROJECT Version=0xFFFF → Office가 열 때 소스에서 다시 컴파일).
+   브라우저에서 XLSX.CFB 로 복합 문서를 쓴다. VBA 소스는 ASCII만 쓴다 —
+   한글 문구는 통합문서 셀에서 읽게 해서 코드페이지 문제를 피한다. */
+var OVBA = (function () {
+  function u16(a, v) { a.push(v & 255, (v >>> 8) & 255); }
+  function u32(a, v) { a.push(v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255); }
+  function ascii(s) { var o = []; for (var i = 0; i < s.length; i++) { var c = s.charCodeAt(i); if (c > 127) throw new Error('VBA 소스는 ASCII만: ' + s.charAt(i)); o.push(c); } return o; }
+  function utf16(s) { var o = []; for (var i = 0; i < s.length; i++) u16(o, s.charCodeAt(i)); return o; }
+  function push(a, b) { for (var i = 0; i < b.length; i++) a.push(b[i]); }
+
+  /* 2.4.1.3 압축 — 4096바이트 덩어리별 LZ77. 넘치면 원본 덩어리로 둔다. */
+  function copyTokenHelp(diff) {
+    var bit = 4; while ((1 << bit) < diff) bit++;
+    return { bitCount: bit, maxLen: (0xFFFF >>> bit) + 3 };
+  }
+  function compress(src) {
+    var out = [1], pos = 0, n = src.length;
+    while (pos < n) {
+      var chunkStart = pos, dEnd = Math.min(pos + 4096, n);
+      var hdrAt = out.length; out.push(0, 0);
+      var cStart = hdrAt, cEnd = cStart + 4098, overflow = false;
+      while (pos < dEnd) {
+        if (out.length >= cEnd) { overflow = true; break; }
+        var flagAt = out.length, flags = 0; out.push(0);
+        for (var t = 0; t < 8 && pos < dEnd; t++) {
+          if (out.length >= cEnd) { overflow = true; break; }
+          var best = 0, bestOff = 0, h = copyTokenHelp(pos - chunkStart);
+          for (var c = pos - 1; c >= chunkStart; c--) {
+            var len = 0;
+            while (pos + len < dEnd && len < h.maxLen && src[c + len] === src[pos + len]) len++;
+            if (len > best) { best = len; bestOff = pos - c; }
+          }
+          if (best >= 3) {
+            if (out.length + 2 > cEnd) { overflow = true; break; }
+            var tok = ((bestOff - 1) << (16 - h.bitCount)) | (best - 3);
+            u16(out, tok); flags |= (1 << t); pos += best;
+          } else {
+            out.push(src[pos]); pos++;
+          }
+        }
+        out[flagAt] = flags;
+        if (overflow) break;
+      }
+      if (overflow || out.length - cStart > 4098) {
+        out.length = hdrAt; pos = chunkStart;
+        u16(out, 0x3FFF);
+        for (var r = 0; r < 4096; r++) out.push(pos + r < n ? src[pos + r] : 0);
+        pos = Math.min(chunkStart + 4096, n);
+      } else {
+        var size = out.length - cStart;
+        var hdr = ((size - 3) & 0x0FFF) | (3 << 12) | 0x8000;
+        out[hdrAt] = hdr & 255; out[hdrAt + 1] = (hdr >>> 8) & 255;
+      }
+    }
+    return new Uint8Array(out);
+  }
+  function decompress(buf) {
+    if (buf[0] !== 1) throw new Error('signature');
+    var out = [], p = 1;
+    while (p < buf.length) {
+      var hdr = buf[p] | (buf[p + 1] << 8), size = (hdr & 0x0FFF) + 3, flag = hdr >>> 15;
+      var end = p + size, chunkStart = out.length; p += 2;
+      if (!flag) { for (var r = 0; r < 4096; r++) out.push(buf[p + r]); p += 4096; continue; }
+      while (p < end) {
+        var flags = buf[p++];
+        for (var t = 0; t < 8 && p < end; t++) {
+          if (flags & (1 << t)) {
+            var tok = buf[p] | (buf[p + 1] << 8); p += 2;
+            var h = copyTokenHelp(out.length - chunkStart);
+            var len = (tok & (0xFFFF >>> h.bitCount)) + 3, off = (tok >>> (16 - h.bitCount)) + 1;
+            for (var k = 0; k < len; k++) out.push(out[out.length - off]);
+          } else out.push(buf[p++]);
+        }
+      }
+    }
+    return new Uint8Array(out);
+  }
+
+  /* 2.4.3 데이터 암호화 — PROJECT 스트림의 CMG/DPB/GC 값 */
+  function encrypt(projectId, data, seed) {
+    var projKey = 0; for (var i = 0; i < projectId.length; i++) projKey = (projKey + projectId.charCodeAt(i)) & 255;
+    var out = [seed, seed ^ 2, seed ^ projKey];
+    var unenc1 = projKey, enc1 = out[2], enc2 = out[1];
+    var ignored = (seed & 6) / 2, plain = [];
+    for (var j = 0; j < ignored; j++) plain.push(0);
+    u32(plain, data.length); push(plain, data);
+    for (var q = 0; q < plain.length; q++) {
+      var b = plain[q], e = b ^ ((enc2 + unenc1) & 255);
+      out.push(e); enc2 = enc1; enc1 = e; unenc1 = b;
+    }
+    return out.map(function (x) { return (x < 16 ? '0' : '') + x.toString(16).toUpperCase(); }).join('');
+  }
+
+  var DOC_BASE = { workbook: '0{00020819-0000-0000-C000-000000000046}', sheet: '0{00020820-0000-0000-C000-000000000046}' };
+  function moduleSource(m) {
+    var lines = ['Attribute VB_Name = "' + m.name + '"'];
+    if (m.kind !== 'std') {
+      lines.push('Attribute VB_Base = "' + DOC_BASE[m.kind] + '"',
+        'Attribute VB_GlobalNameSpace = False', 'Attribute VB_Creatable = False',
+        'Attribute VB_PredeclaredId = True', 'Attribute VB_Exposed = True',
+        'Attribute VB_TemplateDerived = False', 'Attribute VB_Customizable = True');
+    }
+    var body = (m.code || '').replace(/\r?\n/g, '\r\n');
+    return ascii(lines.join('\r\n') + '\r\n' + body + (body && !/\r\n$/.test(body) ? '\r\n' : ''));
+  }
+
+  function dirStream(modules, codepage) {
+    var d = [];
+    u16(d, 0x0001); u32(d, 4); u32(d, 1);             /* SYSKIND Win32 */
+    u16(d, 0x0002); u32(d, 4); u32(d, 0x0409);        /* LCID */
+    u16(d, 0x0014); u32(d, 4); u32(d, 0x0409);        /* LCIDINVOKE */
+    u16(d, 0x0003); u32(d, 2); u16(d, codepage);      /* CODEPAGE */
+    var pn = ascii('VBAProject'); u16(d, 0x0004); u32(d, pn.length); push(d, pn);
+    u16(d, 0x0005); u32(d, 0); u16(d, 0x0040); u32(d, 0);   /* DOCSTRING */
+    u16(d, 0x0006); u32(d, 0); u16(d, 0x003D); u32(d, 0);   /* HELPFILEPATH */
+    u16(d, 0x0007); u32(d, 4); u32(d, 0);             /* HELPCONTEXT */
+    u16(d, 0x0008); u32(d, 4); u32(d, 0);             /* LIBFLAGS */
+    u16(d, 0x0009); u32(d, 4); u32(d, 1); u16(d, 0);  /* VERSION */
+    u16(d, 0x000C); u32(d, 0); u16(d, 0x003C); u32(d, 0);   /* CONSTANTS */
+    [['stdole', '*\\G{00020430-0000-0000-C000-000000000046}#2.0#0#C:\\Windows\\System32\\stdole2.tlb#OLE Automation']].forEach(function (r) {
+      var nm = ascii(r[0]), lib = ascii(r[1]);
+      u16(d, 0x0016); u32(d, nm.length); push(d, nm); u16(d, 0x003E); var nu = utf16(r[0]); u32(d, nu.length); push(d, nu);
+      u16(d, 0x000D); u32(d, 4 + lib.length + 4 + 2); u32(d, lib.length); push(d, lib); u32(d, 0); u16(d, 0);
+    });
+    u16(d, 0x000F); u32(d, 2); u16(d, modules.length);
+    u16(d, 0x0013); u32(d, 2); u16(d, 0xFFFF);
+    modules.forEach(function (m) {
+      var nm = ascii(m.name), nu = utf16(m.name);
+      u16(d, 0x0019); u32(d, nm.length); push(d, nm);
+      u16(d, 0x0047); u32(d, nu.length); push(d, nu);
+      u16(d, 0x001A); u32(d, nm.length); push(d, nm); u16(d, 0x0032); u32(d, nu.length); push(d, nu);
+      u16(d, 0x001C); u32(d, 0); u16(d, 0x0048); u32(d, 0);
+      u16(d, 0x0031); u32(d, 4); u32(d, 0);            /* 소스가 스트림 맨 앞 */
+      u16(d, 0x001E); u32(d, 4); u32(d, 0);
+      u16(d, 0x002C); u32(d, 2); u16(d, 0xFFFF);
+      u16(d, m.kind === 'std' ? 0x0021 : 0x0022); u32(d, 0);
+      u16(d, 0x002B); u32(d, 0);
+    });
+    u16(d, 0x0010); u32(d, 0);
+    return new Uint8Array(d);
+  }
+
+  function projectStream(modules, projectId, noProtect) {
+    var L = ['ID="' + projectId + '"'];
+    modules.forEach(function (m) { L.push(m.kind === 'std' ? 'Module=' + m.name : 'Document=' + m.name + '/&H00000000'); });
+    L.push('Name="VBAProject"', 'HelpContextID="0"', 'VersionCompatible32="393222000"');
+    if (!noProtect) L.push('CMG="' + encrypt(projectId, [0, 0, 0, 0], 0x5A) + '"',
+      'DPB="' + encrypt(projectId, [0], 0x3C) + '"',
+      'GC="' + encrypt(projectId, [0xFF], 0x71) + '"');
+    L.push(
+      '', '[Host Extender Info]', '&H00000001={3832D640-CF90-11CF-8E43-00A0C911005A};VBE;&H00000000',
+      '', '[Workspace]');
+    modules.forEach(function (m) { L.push(m.name + '=0, 0, 0, 0, C'); });
+    return new Uint8Array(ascii(L.join('\r\n') + '\r\n'));
+  }
+  function projectWm(modules) {
+    var o = [];
+    modules.forEach(function (m) { push(o, ascii(m.name)); o.push(0); push(o, utf16(m.name)); o.push(0, 0); });
+    o.push(0, 0);
+    return new Uint8Array(o);
+  }
+
+  /* modules: [{name, kind:'workbook'|'sheet'|'std', code}] */
+  function build(CFB, modules, opts) {
+    opts = opts || {};
+    var projectId = opts.projectId || '{7B1C2E3A-4D5F-4A6B-9C8D-0E1F2A3B4C5D}';
+    var cfb = CFB.utils.cfb_new();
+    CFB.utils.cfb_add(cfb, '/PROJECT', projectStream(modules, projectId, opts.noProtect));
+    CFB.utils.cfb_add(cfb, '/PROJECTwm', projectWm(modules));
+    CFB.utils.cfb_add(cfb, '/VBA/_VBA_PROJECT', new Uint8Array([0xCC, 0x61, 0xFF, 0xFF, 0x00, 0x00, 0x00]));
+    CFB.utils.cfb_add(cfb, '/VBA/dir', compress(dirStream(modules, opts.codepage || 949)));
+    modules.forEach(function (m) { CFB.utils.cfb_add(cfb, '/VBA/' + m.name, compress(new Uint8Array(moduleSource(m)))); });
+    if (opts.dropSeed) CFB.utils.cfb_del(cfb, '/Sh33tJ5');
+    var out = CFB.write(cfb, { type: 'array', fileType: 'cfb' });
+    return out instanceof Uint8Array ? out : new Uint8Array(out);
+  }
+  return { build: build, compress: compress, decompress: decompress, encrypt: encrypt, moduleSource: moduleSource };
+})();
+
+
+var XM_MIME='application/vnd.ms-excel.sheet.macroEnabled.12';
+
+/* 매크로 문구. {n}{g}{b}{name} 은 VBA 가 채운다. */
+function xmMessages(){
+  var why=XM.block;
+  return [
+    ['title','재무모델 매크로'],
+    ['restore_confirm','입력칸을 이 파일을 내려받았을 때 값으로 모두 되돌립니다. 엑셀에서 직접 고친 값은 사라집니다. 계속할까요?'],
+    ['restore_done','받은 가정으로 되돌렸습니다 — 바뀐 칸 {n}개'],
+    ['scen_none','이 파일에는 시나리오별 값이 없습니다.'],
+    ['scen_confirm','{name} 시나리오로 바꿉니다. 화면에서 {name}를 골라 내려받은 파일과 같은 값으로 입력칸을 바꾸고, 시나리오와 무관한 칸은 그대로 둡니다. 계속할까요?'],
+    ['scen_done','{name} 시나리오 가정을 넣었습니다 — 바꾼 칸 {n}개'],
+    ['sens_none','이 파일에는 민감도 표가 없습니다 — 화면에서 모델 깊이를 「심층」으로 바꿔 내려받으면 들어갑니다.'],
+    ['sens_blocked', why? ('이 파일에서는 민감도 재계산을 하지 않습니다 — '+why) : ''],
+    ['sens_done','민감도 표 {g}개를 지금 가정으로 다시 계산했습니다 — {n}칸'],
+    ['rx_none','이 사업구조에는 목표 역산이 없습니다(화면에도 없습니다).'],
+    ['rx_blocked', why? ('이 파일에서는 목표 역산을 하지 않습니다 — '+why) : ''],
+    ['rx_now','지금'],
+    ['rx_target','기준'],
+    ['rx_ok','이미 기준을 충족합니다 — 역산할 필요가 없습니다.'],
+    ['rx_h_lever','한 항목만 바꾼다면'],
+    ['rx_h_cur','지금 값'],
+    ['rx_h_need','필요한 값'],
+    ['rx_h_edge','밀어 본 끝'],
+    ['rx_h_note','비고'],
+    ['rx_unreach','도달 불가'],
+    ['rx_foot','· 한 항목만 움직였을 때의 값입니다. 입력칸은 바꾸지 않았습니다 — 쓰려면 Assumptions 시트에 직접 넣으세요. 「도달 불가」는 「밀어 본 끝」까지 움직여도 기준을 넘지 못한다는 뜻입니다. 화면의 「목표 역산」과 같은 방식(16점 훑기 → 이분법 → 표시 자릿수에 맞춤 → 다시 확인)입니다.'],
+    ['rx_done','목표 역산 {b}건 · 항목 {n}개를 계산했습니다'],
+    ['anchor_none','이 파일에는 맞출 앵커가 없습니다.'],
+    ['anchor_done','본PF 약정액·총사업비 앵커를 반복 계산으로 맞췄습니다 — {n}회'],
+    ['error','실행 중 오류가 나서 멈췄습니다(바꾸던 입력칸은 실행 전 값으로 되돌렸습니다):']
+  ];
+}
+
+/* 시트 모양이 세 빌드에서 같은가 — 범위와 «수식 칸 배치»가 같아야 칸 주소로 맞출 수 있다.
+   고정값 칸의 유무는 따지지 않는다(비고처럼 시나리오에 따라 비었다 찼다 하는 칸이 있다). */
+function xmSameShape(shs){
+  var ref=shs[0]['!ref'];
+  if(shs.some(function(w){ return w['!ref']!==ref; })) return false;
+  function fk(w){ return Object.keys(w).filter(function(a){ return a.charAt(0)!=='!'&&w[a].f; }).sort().join(','); }
+  var k0=fk(shs[0]);
+  return shs.every(function(w){ return fk(w)===k0; });
+}
+
+function xmConfigRows(wb, books, cur){
+  var rows=[];
+  function row(){ rows.push(Array.prototype.slice.call(arguments)); }
+  var keys=['base','up','down'], skip={Macro:1,_JB_Macro:1};
+
+  xmMessages().forEach(function(p){ row('MSG',p[0],p[1]); });
+  row('UI','status','Macro','C'+XM.uiStatus);
+  row('UI','rx','Macro','B'+XM.uiRx);
+  if(XM.block){ row('SENSBLOCK',XM.block); row('RXBLOCK',XM.block); }
+  /* 앵커 — 화면이 반복 계산으로 수렴시키는 값을 엑셀에서도 같은 방식으로 맞춘다 */
+  (XM.anchors||[]).forEach(function(a){ var t=xmRef(a.ref), f=xmRef(a.src); row('ANCHOR',t.sh,t.a,f.sh,f.a); });
+
+  /* 시나리오 — 세 빌드에서 값이 다른 고정값 칸(한쪽에만 있는 칸은 빈 값으로 본다) */
+  keys.forEach(function(k){ row('SCENNAME',k,((G.scens||{})[k]||{}).name||k); });
+  var scenCells={};
+  if(keys.every(function(k){ return !!books[k]; })){
+    wb.SheetNames.forEach(function(nm){
+      if(skip[nm]) return;
+      var shs=keys.map(function(k){ return books[k].Sheets[nm]; });
+      if(shs.some(function(w){ return !w; }) || !xmSameShape(shs)) return;
+      var addrs={};
+      shs.forEach(function(w){ Object.keys(w).forEach(function(a){ if(a.charAt(0)!=='!'&&!w[a].f) addrs[a]=1; }); });
+      Object.keys(addrs).forEach(function(a){
+        var vs=shs.map(function(w){ var c=w[a]; return (c&&!c.f)? c.v : ''; });
+        if(vs[0]===vs[1]&&vs[0]===vs[2]) return;
+        keys.forEach(function(k,ki){ row('SCEN',k,nm,a,vs[ki]); });
+        scenCells[nm+'!'+a]=1;
+      });
+    });
+  }
+
+  /* 되돌리기 — 숫자 고정값 칸 전부, Assumptions C열 글자 입력, 시나리오가 바꾸는 칸 */
+  var aName=sheetNo('Assumptions'), inputSeen={};
+  wb.SheetNames.forEach(function(nm){
+    if(skip[nm]) return;
+    var ws=wb.Sheets[nm];
+    Object.keys(ws).forEach(function(a){
+      if(a.charAt(0)==='!') return;
+      var c=ws[a]; if(!c||c.f) return;
+      if(c.t==='n' || (nm===aName && c.t==='s' && /^C\d+$/.test(a)) || scenCells[nm+'!'+a]){
+        row('INPUT',nm,a,c.v); inputSeen[nm+'!'+a]=1;
+      }
+    });
+  });
+  /* 지금 파일에는 비어 있지만 다른 시나리오가 채우는 칸 — 되돌리면 다시 비운다 */
+  Object.keys(scenCells).forEach(function(key){
+    if(inputSeen[key]) return;
+    var i=key.indexOf('!'); row('INPUT',key.slice(0,i),key.slice(i+1),'');
+  });
+  row('INPUTSCEN',cur);
+
+  /* 민감도 */
+  var sName=sheetNo('Sensitivity');
+  XM.sens.forEach(function(g,gi){
+    var id='s'+(gi+1), o=xmRef(g.out), dn=g.den? xmRef(g.den) : {sh:'',a:''};
+    row('SENS',id,sName,g.r0,g.c0,g.nr,g.nc,o.sh,o.a,g.outKind||'value',dn.sh,dn.a);
+    ['row','col'].forEach(function(dim){
+      g[dim].forEach(function(t){
+        var r=xmRef(t.ref), v=(t.kind==='follow')? [0,0,0,0,0] : t.vals;
+        row.apply(null,['SAX',id,dim,t.kind,r.sh,r.a].concat(v));
+      });
+    });
+  });
+
+  /* 목표 역산 */
+  XM.rx.forEach(function(b){
+    var o=xmRef(b.out);
+    if(b.target.ref){ var t=xmRef(b.target.ref); row('RX',b.id,b.title,'cell',t.sh,o.sh,o.a,t.a,b.fmt); }
+    else row('RX',b.id,b.title,'lit',b.target.lit,o.sh,o.a,'',b.fmt);
+    b.levers.forEach(function(l){
+      var r=xmRef(l.ref);
+      row('RXL',b.id,l.l+(l.u?' ('+l.u+')':''),l.kind||'abs',r.sh,r.a,l.lo,l.hi,l.fmt,l.note||'',l.skipEmpty?'skip':'');
+    });
+  });
+  return rows;
+}
+
+/* 버튼 시트 — 칸 배치는 여기서, 버튼 도형은 xmPackage 가 얹는다 */
+function xmMacroSheet(){
+  var sh=SH(), btns=[];
+  /* 열 — B: 버튼·역산 항목, C~E: 역산 숫자(지금·필요·끝), F: 비고. 버튼 설명은 C~F 를 합친 칸에 쓴다 */
+  sh.cols=W(18,24,16,16,16,44);
+  head(sh,'Macro — 이 파일 안의 버튼',
+    '민감도 재계산·시나리오 전환·목표 역산·받은 값 되돌리기를 엑셀 안에서 실행한다',
+    'Assumptions 입력칸','민감도 표 갱신 · 시나리오 입력 · 역산 결과 · 복원','Sensitivity · Assumptions');
+  XM.uiStatus=P(sh,['','마지막 실행',T('아직 실행하지 않았습니다')]);
+  P(sh,[]);
+  P(sh,['버튼']);
+  function B(label,macro,desc){
+    var r=P(sh,['','',desc]); P(sh,[]);
+    /* 설명은 버튼 높이(두 줄)만큼 C~F 를 합친 칸에서 줄바꿈한다 — 합친 칸은 엑셀이
+       행 높이를 늘리지 않으므로 버튼 크기가 그대로다 */
+    sh.merges.push({s:{r:r-1,c:2},e:{r:r,c:5}});
+    btns.push({row:r,label:label,macro:macro});
+  }
+  var canCalc=!XM.block;
+  if(XM.sens.length&&canCalc) B('민감도 다시 계산','JB_Sensitivity',
+    '가정을 고친 뒤 누르면 Sensitivity 시트의 표를 지금 가정으로 다시 채웁니다. 표 한 칸마다 모델 전체를 다시 계산합니다 — 화면 민감도 표와 같은 조합입니다.');
+  if(XM.rx.length&&canCalc) B('목표 역산','JB_GoalSeek',
+    '기준(목표 IRR·DSCR 등)을 넘으려면 한 항목을 얼마로 바꿔야 하는지 찾아 아래 「목표 역산 결과」에 적습니다. 입력칸은 바꾸지 않습니다.');
+  if((XM.anchors||[]).length&&canCalc) B('PF 한도·총사업비 맞추기','JB_Converge',
+    '엑셀에서 가정을 고친 뒤 누르면, 화면처럼 반복 계산으로 본PF 약정액·총사업비 앵커를 다시 맞춥니다. 누르지 않으면 금리·공사비 등을 바꿨을 때 필요 PF 한도에 작은 잔차가 남습니다(민감도·역산 버튼은 이 계산을 스스로 합니다).');
+  B('Base 가정','JB_ScenBase','화면에서 Base 를 골라 내려받은 파일과 같은 입력값으로 바꿉니다.');
+  B('Upside 가정','JB_ScenUp','화면에서 Upside 를 골라 내려받은 파일과 같은 입력값으로 바꿉니다.');
+  B('Downside 가정','JB_ScenDown','화면에서 Downside 를 골라 내려받은 파일과 같은 입력값으로 바꿉니다.');
+  B('받은 가정으로 되돌리기','JB_Restore','엑셀에서 고친 입력칸을 이 파일을 내려받았을 때 값으로 모두 되돌립니다.');
+  if(!XM.sens.length) P(sh,['· 민감도 다시 계산은 모델 깊이 「심층」 파일에만 있습니다(민감도 시트가 심층에만 들어갑니다).']);
+  if(!XM.rx.length) P(sh,['· 이 사업구조는 화면에도 목표 역산이 없어 역산 버튼을 두지 않았습니다.']);
+  if(XM.block) P(sh,['· 민감도 재계산·목표 역산 버튼이 없는 이유: '+XM.block]);
+  P(sh,[]);
+  P(sh,['목표 역산 결과']);
+  P(sh,['· 「목표 역산」 버튼을 누르면 이 아래에 표가 생깁니다.']);
+  /* VBA 가 이 자리부터 24줄만 지우고 쓴다(DoGoalSeek) — 아래 안내를 지우지 않게 빈 줄로 비워 둔다 */
+  XM.uiRx=P(sh,[]);
+  for(var i=0;i<23;i++) P(sh,[]);
+  P(sh,['알아 둘 것']);
+  P(sh,['· 버튼은 이 시트와 숨긴 _JB_Macro 시트에 적힌 칸만 바꿉니다. 수식 칸은 건드리지 않습니다.']);
+  P(sh,['· 버튼을 눌러도 아무 일이 없으면 매크로가 막힌 것입니다 — 파일을 닫고, 파일을 오른쪽 클릭 → 속성 → 아래쪽 「차단 해제」를 체크 → 확인 → 다시 열어 「콘텐츠 사용」을 누르세요.']);
+  P(sh,['· 회사 보안 정책이 매크로를 막으면 버튼은 동작하지 않습니다. 그래도 수식은 그대로 계산되고, 기본 엑셀(.xlsx)과 내용이 같습니다.']);
+  XM.buttons=btns;
+  return sh;
+}
+
+/* 워크북 바이트(styleBook 결과)에 VBA·버튼 도형·코드 이름을 얹는다 */
+function xmPackage(bytes, wb){
+  var files=unzipStore(bytes), by={};
+  files.forEach(function(f){ by[f.name]=f; });
+  function get(n){ return by[n]? decU8(by[n].data) : null; }
+  function put(n,s){ var u=(typeof s==='string')? encU8(s) : s; if(by[n]) by[n].data=u; else { var f={name:n,method:0,data:u}; files.push(f); by[n]=f; } }
+
+  var mods=[{name:'ThisWorkbook',kind:'workbook',code:''}];
+  wb.SheetNames.forEach(function(nm,i){
+    var code='Sheet'+(i+1), key='xl/worksheets/sheet'+(i+1)+'.xml', x=get(key);
+    mods.push({name:code,kind:'sheet',code:''});
+    x=x.replace(/(<sheetPr\b[^>]*?)\scodeName="[^"]*"/,'$1');
+    x=/<sheetPr\b/.test(x)? x.replace('<sheetPr','<sheetPr codeName="'+code+'"')
+                        : x.replace(/(<worksheet\b[^>]*>)/,'$1<sheetPr codeName="'+code+'"/>');
+    if(nm==='Macro'){
+      if(!/xmlns:r=/.test(x)) x=x.replace('<worksheet ','<worksheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ');
+      x=x.replace('</worksheet>','<drawing r:id="rIdJBDr"/></worksheet>');
+      put('xl/worksheets/_rels/sheet'+(i+1)+'.xml.rels',
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+        '<Relationship Id="rIdJBDr" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>');
+    }
+    put(key,x);
+  });
+  mods.push({name:'JBMacro',kind:'std',code:XM_VBA});
+  put('xl/vbaProject.bin', OVBA.build(XLSX.CFB, mods, {}));
+
+  /* 버튼 도형 — 칸 B, 두 줄 높이. 글자는 DESIGN.md 주 파랑 위 흰색 */
+  var sp=XM.buttons.map(function(b,k){
+    var r0=b.row-1;
+    return '<xdr:twoCellAnchor editAs="absolute"><xdr:from><xdr:col>1</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>'+r0+'</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>'+
+      '<xdr:to><xdr:col>2</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>'+(r0+2)+'</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>'+
+      '<xdr:sp macro="[0]!'+b.macro+'" textlink=""><xdr:nvSpPr><xdr:cNvPr id="'+(k+2)+'" name="JB_btn'+(k+1)+'"/><xdr:cNvSpPr/></xdr:nvSpPr>'+
+      '<xdr:spPr><a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 12000"/></a:avLst></a:prstGeom><a:solidFill><a:srgbClr val="2457C5"/></a:solidFill><a:ln><a:noFill/></a:ln></xdr:spPr>'+
+      '<xdr:txBody><a:bodyPr vertOverflow="clip" horzOverflow="clip" anchor="ctr"/><a:lstStyle/><a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="ko-KR" sz="1000" b="1"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:rPr><a:t>'+esc(b.label)+'</a:t></a:r></a:p></xdr:txBody>'+
+      '</xdr:sp><xdr:clientData/></xdr:twoCellAnchor>';
+  }).join('');
+  put('xl/drawings/drawing1.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'+
+    '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'+sp+'</xdr:wsDr>');
+
+  var ct=get('[Content_Types].xml');
+  ct=ct.replace('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml','application/vnd.ms-excel.sheet.macroEnabled.main+xml');
+  /* SheetJS 는 bin 확장자를 이미 한 번 선언해 둔다 — 두 번 적으면 엑셀이 파일을 못 연다 */
+  ct=/<Default Extension="bin"/.test(ct)
+    ? ct.replace(/<Default Extension="bin"[^>]*\/>/,'<Default Extension="bin" ContentType="application/vnd.ms-office.vbaProject"/>')
+    : ct.replace('<Default Extension="xml"','<Default Extension="bin" ContentType="application/vnd.ms-office.vbaProject"/><Default Extension="xml"');
+  ct=ct.replace('</Types>','<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>');
+  put('[Content_Types].xml',ct);
+
+  var rels=get('xl/_rels/workbook.xml.rels');
+  put('xl/_rels/workbook.xml.rels', rels.replace('</Relationships>',
+    '<Relationship Id="rIdJBVBA" Type="http://schemas.microsoft.com/office/2006/relationships/vbaProject" Target="vbaProject.bin"/></Relationships>'));
+  var wx=get('xl/workbook.xml');
+  if(!/codeName=/.test(wx)) wx=/<workbookPr/.test(wx)? wx.replace('<workbookPr','<workbookPr codeName="ThisWorkbook"')
+                                                   : wx.replace(/(<workbook\b[^>]*>)/,'$1<workbookPr codeName="ThisWorkbook"/>');
+  put('xl/workbook.xml',wx);
+  return zipStore(files);
+}
+
+/* 매크로본 만들기. 세 시나리오를 각각 빌드하고 지금 시나리오를 마지막에 빌드한다
+   — 표지·검증 등 전역 상태(SHEETNUM·STY·LAST_*)가 지금 시나리오 것으로 남게. */
+function buildXlsm(){
+  var eng=E(), cur=G.scen||'base', books={};
+  if(G.depth==='quick') throw new Error('QUICK');
+  try{
+    ['base','up','down'].forEach(function(k){
+      if(k===cur) return;
+      G.scen=k; XM=null;
+      try{ books[k]=eng.build(); } finally{ G.scen=cur; }
+    });
+    xmReset(); LAST_XL_SCOPE=null;
+    var wb=eng.build(); books[cur]=wb;
+    /* 버튼 시트를 먼저 만든다 — 설정 행이 그 시트의 칸 번호(상태·결과 자리)를 쓴다 */
+    addSheet(wb, xmMacroSheet(), 'Macro');
+    /* 버튼 설명은 칸 테두리 없는 보조 설명 서식으로 */
+    XM.buttons.forEach(function(b){ STY.Macro.map['C'+b.row]=SC.NOTE; });
+    var cfg=xmConfigRows(wb, books, cur);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(cfg), '_JB_Macro');
+    /* Macro 를 표지 바로 뒤로 */
+    wb.SheetNames.splice(wb.SheetNames.indexOf('Macro'),1);
+    wb.SheetNames.splice(1,0,'Macro');
+    wb.Workbook=wb.Workbook||{};
+    wb.Workbook.Sheets=wb.SheetNames.map(function(nm){ return nm==='_JB_Macro'? {Hidden:1} : {}; });
+    var bytes=xmPackage(styleBook(wb), wb);
+    return {wb:wb, bytes:bytes, eng:eng};
+  } finally { XM=null; }
 }
 
 /* Control_Index 공통 */
@@ -3260,10 +4395,14 @@ function validationSheets(M,coreRows,keyMetrics){
     P(vd,['적용 시나리오',scenOf().name]);
     P(vd,[]);
     P(vd,['점검 통과 현황']);
-    P(vd,['총 점검 항목',N(C.checks.length,Z.i,'COUNTA(Validation_Checks!E'+first+':E'+last+')')]);
-    P(vd,['PASS',N(C.checks.filter(function(c){return c.ok&&!c.na;}).length,Z.i,'COUNTIF(Validation_Checks!E'+first+':E'+last+',"PASS")')]);
-    P(vd,['CHECK',N(C.checks.filter(function(c){return !c.ok&&!c.na;}).length,Z.i,'COUNTIF(Validation_Checks!E'+first+':E'+last+',"CHECK")')]);
-    P(vd,['종합 판정',T(C.errs.length?'검토 필요':'이상 없음','IF(COUNTIF(Validation_Checks!E'+first+':E'+last+',"CHECK")=0,"이상 없음","검토 필요")')]);
+    var vcE=(coreRows||[]).map(function(r){ var c=r&&r[4]; return (c==null)? '' : (typeof c==='object'? c.v : c); });
+    var vcAll=vcE.filter(function(v){ return v!==''&&v!=null; }).length,
+        vcPass=vcE.filter(function(v){ return v==='PASS'; }).length,
+        vcChk=vcE.filter(function(v){ return v==='CHECK'; }).length;
+    P(vd,['총 점검 항목',N(vcAll,Z.i,'COUNTA(Validation_Checks!E'+first+':E'+last+')')]);
+    P(vd,['PASS',N(vcPass,Z.i,'COUNTIF(Validation_Checks!E'+first+':E'+last+',"PASS")')]);
+    P(vd,['CHECK',N(vcChk,Z.i,'COUNTIF(Validation_Checks!E'+first+':E'+last+',"CHECK")')]);
+    P(vd,['종합 판정',T(vcChk?'검토 필요':'이상 없음','IF(COUNTIF(Validation_Checks!E'+first+':E'+last+',"CHECK")=0,"이상 없음","검토 필요")')]);
     P(vd,[]);
     P(vd,['핵심 지표']);
     P(vd,['지표','단위','값','','참조']);
@@ -3710,8 +4849,8 @@ function csvFallback(wb,base){
     toast('이 환경은 엑셀 저장이 막혀 있어 「'+pick+'」 시트를 CSV로 저장했습니다');
   });
 }
-function saveBook(wb,filename){
-  var bytes=styleBook(wb);
+function saveBook(wb,filename,bytes,mime){
+  bytes=bytes||styleBook(wb);
   if(window.claude&&window.claude.downloads){
     var buf=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
     window.claude.downloads.save({filename:filename,data:buf}).then(function(){
@@ -3733,7 +4872,7 @@ function saveBook(wb,filename){
        실패·취소와 어긋난 말을 하게 된다. 결과는 위 then/catch가 알린다. */
     return 'async';
   }
-  blobSave(bytes,filename,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  blobSave(bytes,filename,mime||'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   if(isEmbedded()){ dlPanel(wb,bytes,filename); return 'embedded'; }
   return 'saved';
 }
@@ -5162,9 +6301,26 @@ function build(){
   var rTgt=RS('보통주 목표 IRR','%',N(s.comTargetIRR,Z.p,R.tgt),'Assumptions');
   var rIRRrow=0;
   for(var ri=0;ri<rs.rows.length;ri++){ if(rs.rows[ri][0]==='보통주 세후 IRR'){ rIRRrow=ri+1; break; } }
-  P(rs,['목표 달성 여부','',T(M.passTarget?'충족':'미달','IF(NOT(ISNUMBER(C'+rIRRrow+')),"산출 불가",IF(C'+rIRRrow+'>=C'+rTgt+',"충족","미달"))'),'세후 IRR ≥ 목표 IRR']);
+  if(XM){
+    XM.out.irrCom='Return_Summary!$C$'+rIRRrow;
+    XM.out.minD='Return_Summary!$C$'+xmRowOf(rs,'최소 DSCR');
+    /* 목표 역산 — 화면 rxBlockCalc·rxLevers 와 같은 기준·레버·범위. 한쪽을 바꾸면 여기도 바꾼다. */
+    var kbX=(function(){ try{ var r=mktRow('base'); return (r&&r.v>0)? r.v : 0.0275; }catch(e){ return 0.0275; } })();
+    XM.rx.push({id:'irr', title:'보통주 목표 IRR', target:{ref:R.tgt}, out:XM.out.irrCom, fmt:'p', levers:[
+      {l:'매입가', u:unit, ref:R.price, lo:'cur*0.8', hi:'cur', fmt:'i'},
+      {l:'평당 월 임대료', u:'원', ref:R.rentPy, lo:'cur', hi:'cur*1.15', fmt:'i'},
+      {l:'운영비율', ref:R.opexR, lo:'MIN(0.25,cur*0.6)', hi:'cur', fmt:'p'},
+      {l:'Exit Cap', ref:R.cap, lo:'MIN(0.04,cur*0.85)', hi:'cur', fmt:'p'},
+      {l:'선순위 금리', ref:R.srRate, lo:String(Math.max(kbX,0.025)), hi:'cur', fmt:'p'}]});
+    XM.rx.push({id:'dscr', title:'DSCR 약정선 1.20x', target:{lit:1.2}, out:XM.out.minD, fmt:'x', levers:[
+      {l:'선순위 LTV', ref:R.srLTV, lo:'0.2', hi:'cur', fmt:'p'},
+      {l:'선순위 금리', ref:R.srRate, lo:'0.015', hi:'cur', fmt:'p'},
+      {l:'상각기간', u:'년', ref:R.srAmY, lo:'cur', hi:'40', fmt:'i'}]});
+  }
+  var irrOk=(typeof M.irrCom==='number'&&isFinite(M.irrCom));
+  P(rs,['목표 달성 여부','',T(!irrOk?'산출 불가':(M.passTarget?'충족':'미달'),'IF(NOT(ISNUMBER(C'+rIRRrow+')),"산출 불가",IF(C'+rIRRrow+'>=C'+rTgt+',"충족","미달"))'),'세후 IRR ≥ 목표 IRR']);
   var rSel=RS('매도자 제시 IRR','%',N(s.sellerIRR,Z.p,R.sIRR),'미입력 가정값');
-  P(rs,['매도자 제시 대비','',T(M.passSeller?'상회':'하회','IF(NOT(ISNUMBER(C'+rIRRrow+')),"산출 불가",IF(C'+rIRRrow+'>=C'+rSel+',"상회","하회"))'),'세후 IRR ≥ 매도자 제시 IRR']);
+  P(rs,['매도자 제시 대비','',T(!irrOk?'산출 불가':(M.passSeller?'상회':'하회'),'IF(NOT(ISNUMBER(C'+rIRRrow+')),"산출 불가",IF(C'+rIRRrow+'>=C'+rSel+',"상회","하회"))'),'세후 IRR ≥ 매도자 제시 IRR']);
   P(rs,[]);
   P(rs,['해석 유의사항']);
   P(rs,['· 도관과세 가정('+(M.conduit?'적용':'미적용')+')에서는 배당소득공제로 운영기간 법인세가 0에 수렴하므로 세전·세후 차이가 작게 나타납니다.']);
@@ -5198,7 +6354,7 @@ function build(){
       '',N(rt.area*rt.rentPy/1000000,Z.m2,'SUM(F'+rFirst+':F'+rLast+')'),'가중평균']);
     P(rr2,['연면적 대조',N(s.area,Z.m,R.area),'','','','','Assumptions 연면적']);
     P(rr2,['차이',N(rt.area-s.area,Z.m,'B'+(rr2.rows.length-1)+'-B'+rr2.rows.length),'','','',
-      T(Math.abs(rt.area-s.area)<1?'PASS':'CHECK','IF(ABS(B'+(rr2.rows.length)+')<1,"PASS","CHECK")'),'명세 합계 = 연면적']);
+      T(Math.abs(rt.area-s.area)<1?'PASS':'CHECK','IF(ABS(B'+(rr2.rows.length+1)+')<1,"PASS","CHECK")'),'명세 합계 = 연면적']);
     P(rr2,[]);
     P(rr2,['· 임대 명세는 설명용이며 NOI는 Assumptions의 평당 임대료·연면적 가정으로 산출합니다.']);
     made.Rent_Roll=rr2;
@@ -5236,7 +6392,9 @@ function build(){
       'Assumptions 가정값','시나리오별 보통주 IRR·최소 DSCR','Scenario_Manager · 투자심의');
     var capsL=[-0.006,-0.003,0,0.003,0.006], gsL=[-0.010,-0.005,0,0.005,0.010];
     P(sn,['보통주 세후 IRR — 행: Exit Cap / 열: NOI 성장률']);
-    P(sn,['Exit Cap'].concat(gsL.map(function(g){ return N(s.noiG+g,Z.p); })).concat(['비고']));
+    var xh1=P(sn,['Exit Cap'].concat(gsL.map(function(g){ return N(s.noiG+g,Z.p); })).concat(['비고']));
+    if(XM) XM.sens.push({r0:xh1+1, c0:2, nr:capsL.length, nc:gsL.length, out:XM.out.irrCom,
+      row:[{kind:'delta', ref:R.cap, vals:capsL}], col:[{kind:'delta', ref:R.g, vals:gsL}]});
     capsL.forEach(function(dc){
       var row=[N(s.exitCap+dc,Z.p)];
       gsL.forEach(function(dg,ci){ row[1+ci]=N(reModel({exitCap:d.exitCap+dc,noiG:d.noiG+dg}).irrCom,Z.p); });
@@ -5246,7 +6404,9 @@ function build(){
     P(sn,[]);
     P(sn,['최소 DSCR — 행: 선순위 금리 / 열: 공실률']);
     var rtsL=[-0.010,-0.005,0,0.005,0.010], vcsL=[0,0.03,0.05,0.08,0.12];
-    P(sn,['선순위 금리'].concat(vcsL.map(function(v){ return N(v,Z.p1); })).concat(['비고']));
+    var xh2=P(sn,['선순위 금리'].concat(vcsL.map(function(v){ return N(v,Z.p1); })).concat(['비고']));
+    if(XM) XM.sens.push({r0:xh2+1, c0:2, nr:rtsL.length, nc:vcsL.length, out:XM.out.minD,
+      row:[{kind:'delta', ref:R.srRate, vals:rtsL}], col:[{kind:'abs', ref:R.vac, vals:vcsL}]});
     rtsL.forEach(function(dr){
       var row=[N(s.srRate+dr,Z.p)];
       vcsL.forEach(function(vc,ci){ row[1+ci]=N(reModel({srRate:d.srRate+dr,vacancy:vc}).minD,Z.x); });
@@ -5330,36 +6490,38 @@ var FIELDS=[
     {k:'asset',l:'자산명',t:'text',w:1},
     {k:'area',l:'연면적',t:'num',u:'평'},
     {k:'price',l:'매입가',t:'num',u:'백만원'},
-    {k:'apprValue',l:'감정평가액',t:'num',u:'백만원'},
-    {k:'acqTax',l:'취득세율',t:'pct',u:'%'},
-    {k:'otherAcq',l:'기타 취득부대비',t:'pct',u:'%'}]},
+    /* sub:1 = 「세부 가정 N개」 아래로 접히는 항목(2026-09-24 사용자 승인 목록).
+       표시만 가른다 — 계산·저장·엑셀은 이 표시를 보지 않는다. */
+    {k:'apprValue',l:'감정평가액',t:'num',u:'백만원',sub:1},
+    {k:'acqTax',l:'취득세율',t:'pct',u:'%',sub:1},
+    {k:'otherAcq',l:'기타 취득부대비',t:'pct',u:'%',sub:1}]},
   {g:'임대 조건', f:[
     {k:'rentPy',l:'평당 월 임대료',t:'num',u:'원'},
-    {k:'mgmtPy',l:'평당 월 관리비',t:'num',u:'원'},
-    {k:'depositMonths',l:'보증금 배수',t:'num',u:'개월'},
-    {k:'depositAssume',l:'보증금 승계',t:'sel',o:[[1,'반영'],[0,'미반영']],w:1},
-    {k:'depositRate',l:'보증금 운용금리',t:'pct',u:'%'},
+    {k:'mgmtPy',l:'평당 월 관리비',t:'num',u:'원',sub:1},
+    {k:'depositMonths',l:'보증금 배수',t:'num',u:'개월',sub:1},
+    {k:'depositAssume',l:'보증금 승계',t:'sel',o:[[1,'반영'],[0,'미반영']],w:1,sub:1},
+    {k:'depositRate',l:'보증금 운용금리',t:'pct',u:'%',sub:1},
     {k:'vacancy',l:'안정 공실률',t:'pct',u:'%'}],
     hint:'보증금 운용금리는 원 자료에 미입력되어 1년 정기예금 수준으로 가정했습니다.'},
   {g:'운영 · 성장 · 매각', f:[
-    {k:'opexRatio',l:'운영비율 (EGI 대비)',t:'pct',u:'%'},
-    {k:'amFee',l:'운용보수율',t:'pct',u:'%'},
-    {k:'fixedCost',l:'기타 고정비',t:'num',u:'백만원'},
-    {k:'noiG',l:'NOI 성장률',t:'pct',u:'%'},
+    {k:'opexRatio',l:'운영비율 (EGI 대비)',t:'pct',u:'%',sub:1},
+    {k:'amFee',l:'운용보수율',t:'pct',u:'%',sub:1},
+    {k:'fixedCost',l:'기타 고정비',t:'num',u:'백만원',sub:1},
+    {k:'noiG',l:'NOI 성장률',t:'pct',u:'%',sub:1},
     {k:'hold',l:'보유기간',t:'num',u:'년'},
     {k:'exitCap',l:'Exit Cap',t:'pct',u:'%'},
-    {k:'saleFee',l:'매각 수수료율',t:'pct',u:'%'},
-    {k:'promoteFee',l:'매각성과보수율',t:'pct',u:'%'},
-    {k:'sellerIRR',l:'매도자 제시 IRR',t:'pct',u:'%'}],
+    {k:'saleFee',l:'매각 수수료율',t:'pct',u:'%',sub:1},
+    {k:'promoteFee',l:'매각성과보수율',t:'pct',u:'%',sub:1},
+    {k:'sellerIRR',l:'매도자 제시 IRR',t:'pct',u:'%',sub:1}],
     hint:'운영비율·매각성과보수율·매도자 제시 IRR은 미입력 항목으로, 자산유형 통상 수준을 가정했습니다.'},
   {g:'자본구조', f:[
     {k:'srLTV',l:'선순위 LTV',t:'pct',u:'%'},
     {k:'srRate',l:'선순위 금리',t:'pct',u:'%'},
-    {k:'srFee',l:'선순위 취급수수료',t:'pct',u:'%'},
-    {k:'srType',l:'선순위 상환방식',t:'sel',o:[['io','만기일시'],['amort','원리금균등']],w:1},
-    {k:'srAmY',l:'선순위 상각기간',t:'num',u:'년'},
-    {k:'srTerm',l:'선순위 대출 만기',t:'num',u:'년'},
-    {k:'prepayFee',l:'중도상환수수료',t:'pct',u:'%'},
+    {k:'srFee',l:'선순위 취급수수료',t:'pct',u:'%',sub:1},
+    {k:'srType',l:'선순위 상환방식',t:'sel',o:[['io','만기일시'],['amort','원리금균등']],w:1,sub:1},
+    {k:'srAmY',l:'선순위 상각기간',t:'num',u:'년',sub:1},
+    {k:'srTerm',l:'선순위 대출 만기',t:'num',u:'년',sub:1},
+    {k:'prepayFee',l:'중도상환수수료',t:'pct',u:'%',sub:1},
     {k:'comTargetIRR',l:'보통주 목표 IRR',t:'pct',u:'%'}],
     hint:'선순위 LTV의 분모는 <b>감정평가액</b>입니다. 보통주는 잔액(plug)입니다. 선순위 아래 층(중순위·후순위·우선주 등)은 <b>자본구조 탭</b>에서 원하는 만큼 추가·삭제합니다.'},
   {g:'세무 가정', detail:true, f:[
@@ -6809,6 +7971,22 @@ function build(){
   var pcLast0=pcFirst+NMO-1;
   var cLast='C'+pcLast0;                       /* 최종 누적 계약률 = 분양률 */
   var revRef='Unit_Mix_Pricing!F'+umRev;
+  /* 신규 계약률(B열)도 수식이다. 예전에는 흡수 일정이라며 상수로 두었는데, 그러면
+     엑셀에서 최종 분양률을 낮춰도 «초기 계약분 대 잔여 흡수분» 비중이 그대로라
+     유입 시점이 화면과 달라졌다(분양률 80%에서 사업이익률 1.2%p 차이).
+     화면 model()과 같은 식: 분양 개시월 = MIN(초기 계약률, 최종 분양률),
+     이후 흡수월 = MAX(0, 최종 분양률 − 초기 계약률) ÷ 흡수기간.
+     분양 개시월·흡수기간·공사기간은 행 배치를 정하는 값이라 여기서 상수(행 위치·
+     나눗수)로 굳는다 — 엑셀에서 바꿔도 반영되지 않는다고 시트에 적는다. */
+  var laterAt={};
+  (M.cohorts||[]).forEach(function(c,ci){ if(ci>0) laterAt[c.m]=(laterAt[c.m]||0)+1; });
+  var nAbsC=Math.max(1,s.absorbMonths);
+  function wFrm(m){
+    var t=[];
+    if(m===M.launchM) t.push('MIN('+R.init+','+R.final+')');
+    if(laterAt[m]) t.push(laterAt[m]+'*MAX(0,'+R.final+'-'+R.init+')/'+nAbsC);
+    return t.length? t.join('+') : '0';
+  }
   var instSet={}; M.instMonths.forEach(function(im){ instSet[im]=1; });
   var cohortAt={}; (M.cohorts||[]).forEach(function(c){ cohortAt[c.m]=(cohortAt[c.m]||0)+1; });
 
@@ -6831,7 +8009,7 @@ function build(){
     /* 잔금은 준공월에 전액 */
     var fFin=(m===NMO)? revRef+'*'+R.fin : null;
 
-    P(pc,[N(m,Z.i),N(ct.w,Z.p1),
+    P(pc,[N(m,Z.i),N(ct.w,Z.p1,wFrm(m)),
       N(ct.cum,Z.p1, m===1?'B'+rw:'C'+(rw-1)+'+B'+rw),
       N(ci.down,Z.m,fDown), N(ci.mid,Z.m,fMid), N(ci.fin,Z.m,fFin),
       N(ci.tot,Z.m,'D'+rw+'+E'+rw+'+F'+rw), N(cum,Z.m, m===1?'G'+rw:'H'+(rw-1)+'+G'+rw),
@@ -6888,7 +8066,7 @@ function build(){
      jd0·jd1 은 «부채 층 중 첫째·둘째»이고, 지분 층은 인출만 있어 열이 필요 없다. */
   var JDx=[]; (s.jr||[]).forEach(function(t,i){ if(t.kind!=='pref') JDx.push({i:i,t:t,n:t.n||('Tr.'+String.fromCharCode(66+i))}); });
   var jd0=JDx[0]||null, jd1=JDx[1]||null;
-  var pf=SH(); pf.cols=W(12,12,16,16,16,16,16,16,16,26, 16,16,16,16,16, 16,16,16,16,16, 16,16,16,16,16);
+  var pf=SH(); pf.cols=W(12,12,16,16,16,16,16,16,16,26, 16,16,16,16,16, 16,16,16,16,16, 16,16,16,16,16, 16);
   head(pf,'PF_Drawdown — PF 인출 스케줄','층별 인출·상환과 약정·인출·미인출 잔액을 관리한다',
     '월별 자금 부족액, 층별 금리·한도','월별 층별 잔액과 최대 소요액, 이자 자본화액','Interest_Capitalization · Profitability_Summary');
   var pfCommit=P(pf,['본PF 약정액',N(M.pfCommit,Z.m),'','최대 PF 잔액 기준']);
@@ -6932,13 +8110,34 @@ function build(){
       if(s.constMonths>0) lit-=((M.designAmt+M.contAmt)/s.constMonths);
     }
     if(NMO>0){ t.push(R.fixed+'/'+NMO); lit-=s.fixedCost/NMO; }
-    if(Math.abs(lit)>1e-9) t.push(String(+lit.toFixed(6)));
+    /* 판매비는 계약이 생긴 달에 계약 비중만큼 나간다 — 분양수입 × 판매비율 ×
+       (그달 신규 계약률 ÷ 계약률 합계). 예전에는 이 금액이 숫자로 박혀 있어
+       분양가·분양률을 바꿔도 지출 시점의 금액이 그대로였다. */
+    var wn=0; (M.cohorts||[]).forEach(function(c){ if(c.m===m) wn+=c.wn; });
+    if(wn>0){
+      t.push('IF(Payment_Cashin!$C$'+pcLast0+'=0,0,'+revRef+'*'+R.sales+'*Payment_Cashin!B'+(pcFirst+m-1)+'/Payment_Cashin!$C$'+pcLast0+')');
+      lit-=M.salesCost*wn;
+    }
+    if(m===M.launchM){ t.push(revRef+'*'+R.guar); lit-=M.guarantee; }
+    /* 중도금 무이자 부담은 Z열에 따로 편다(합계를 이자 자본화 시트가 받는다) */
+    t.push('Z'+(pfFirst+m-1)); lit-=((M.midInt&&M.midInt[m])||0);
+    (M.extras||[]).forEach(function(x){
+      if(x.when==='pre'){ if(m===lmM){ t.push(R['extra'+x.i]); lit-=x.v; } return; }
+      if(x.when==='const'){
+        if(m>=M.startM){ var nC=Math.max(1,NMO-M.startM+1); t.push(R['extra'+x.i]+'/'+nC); lit-=x.v/nC; }
+        return;
+      }
+      t.push(R['extra'+x.i]+'/'+NMO); lit-=x.v/NMO;
+    });
+    /* 남는 차이는 부동소수점 잔차뿐이어야 한다. 그보다 크면 빠진 항목이 있다는
+       뜻이라 예전처럼 숫자로 붙여 두어 합계가 틀리지 않게 한다. */
+    if(Math.abs(lit)>1e-6) t.push(String(+lit.toFixed(6)));
     return t.length? t.join('+') : '0';
   }
   var pfHdr=P(pf,['개월차','구간','기초잔액','인출','이자 (자본화)','상환','기말잔액','미인출 한도','자기자본 투입','비고',
     (jd0?jd0.n:'(부채 층 1)')+' 기초',(jd0?jd0.n:'')+' 이자',(jd0?jd0.n:'')+' 인출',(jd0?jd0.n:'')+' 상환',(jd0?jd0.n:'')+' 기말',
     (jd1?jd1.n:'(부채 층 2)')+' 기초',(jd1?jd1.n:'')+' 이자',(jd1?jd1.n:'')+' 인출',(jd1?jd1.n:'')+' 상환',(jd1?jd1.n:'')+' 기말',
-    '그달 사업비 유출','그달 분양수입 유입','가용현금 (조달 전)','누적 자기자본 (기초)','보유현금 (월말)']);
+    '그달 사업비 유출','그달 분양수입 유입','가용현금 (조달 전)','누적 자기자본 (기초)','보유현금 (월말)','중도금 무이자 부담']);
   var pfFirst=pfHdr+1, eqCum=0;
   M.rows.forEach(function(r,k){
     var rw3=pfFirst+k;
@@ -6971,7 +8170,9 @@ function build(){
       N(r.inflow,Z.m,'Payment_Cashin!G'+(pcFirst+k)),
       N((k===0?0:M.rows[k-1].cash)+r.inflow-r.out-(r.cashInt||0),Z.m, LIVE? wF : ''),
       N(eqCum,Z.m, LIVE? xF : ''),
-      N(r.cash,Z.m, LIVE? yF : '')]);
+      N(r.cash,Z.m, LIVE? yF : ''),
+      N((M.midInt&&M.midInt[r.m])||0,Z.m, r.m<2? '0' :
+        (R.midFree+'*'+R.midR+'/12*SUM(Payment_Cashin!E'+pcFirst+':E'+(pcFirst+r.m-2)+')'))]);
     eqCum+=r.eqDraw;
   });
   var pfLast=pfFirst+NMO-1;
@@ -7009,7 +8210,7 @@ function build(){
   P(pf,['· 착공 전에는 브릿지 금리, 착공 후에는 본PF 금리를 적용합니다 (착공월에 잔액이 본PF로 전환).']);
   if(LIVE){
     P(pf,['· 다만 본PF 약정액(B'+pfCommit+')과 총사업비 앵커(B'+pfTcR+')는 고정값입니다 — 한도·수수료가 총사업비에 다시 들어가는 순환을 끊기 위한 자리로, 화면이 반복 계산으로 수렴시킨 값입니다. 가정을 크게 바꾸면 화면에서 다시 내려받으세요.']);
-    P(pf,['· 중도금 무이자 부담과 추가 사업비는 U열 안에 상수로 들어갑니다(분양 납부 일정에서 산출되는 값이라 한 줄 수식으로 펴지 않았습니다).']);
+    P(pf,['· 판매비·분양보증 수수료·추가 사업비는 U열 수식 안에서, 중도금 무이자 부담은 Z열(그달 전까지 받은 중도금 × 중도금대출 금리 ÷ 12)에서 계산됩니다.']);
   } else {
     P(pf,['· 선순위 아래 층이 있어 인출·상환 순서가 층마다 갈라집니다 — 이 시트의 인출·상환·자기자본 투입은 화면 계산 결과값이며, 엑셀에서 가정을 바꿔도 자동으로 다시 계산되지 않습니다.']);
   }
@@ -7036,7 +8237,7 @@ function build(){
   var i4=P(ic,['본PF 약정수수료',unit,N(M.pfFee,Z.m,'PF_Drawdown!B'+pfFeeR),'약정액 × 약정수수료율']);
   var i4b=P(ic,['트랜치 취급수수료',unit,N(M.jrFeeTot,Z.m,'PF_Drawdown!B'+jrFeeR),'약정 한도 × 층별 취급수수료율']);
   var iFee=P(ic,['수수료 합계 (약정+취급)',unit,N(M.feeTot,Z.m,'C'+i4+'+C'+i4b),'약정수수료 + 취급수수료']);
-  var i5=P(ic,['중도금 무이자 부담',unit,N(M.midIntTotal,Z.m),'미상환 중도금 × 중도금대출금리 ÷ 12 (시행 부담)']);
+  var i5=P(ic,['중도금 무이자 부담',unit,N(M.midIntTotal,Z.m,'SUM(PF_Drawdown!Z'+pfFirst+':Z'+pfLast+')'),'미상환 중도금 × 중도금대출금리 ÷ 12 (시행 부담) — PF_Drawdown Z열 합계']);
   var i6=P(ic,['금융비용 합계',unit,N(M.totInt+M.feeTot+M.midIntTotal,Z.m,'C'+i3+'+C'+iFee+'+C'+i5),'이자 + 수수료 + 중도금 무이자']);
   P(ic,['선순위 All-in','%',N(M.allInSr,Z.p,R.pf+'+'+R.pfFee+'/(('+R.pre+'+'+R.cm+')/12)'),'본PF 금리 + 약정수수료율 ÷ 약정기간(착공 준비+공사)']);
   P(ic,[]);
@@ -7058,7 +8259,7 @@ function build(){
   for(var m3=1;m3<=NMO;m3++){
     var rw4=saFirst+m3-1, ct2=M.contract[m3];
     acum+=ct2.amt;
-    P(sa,[N(m3,Z.i),N(ct2.w,Z.p1),
+    P(sa,[N(m3,Z.i),N(ct2.w,Z.p1,wFrm(m3)),
       N(ct2.cum,Z.p1, m3===1?'B'+rw4:'C'+(rw4-1)+'+B'+rw4),
       N(ct2.amt,Z.m, 'IF('+saCum+'=0,0,'+revRef+'*B'+rw4+'/'+saCum+')'),
       N(acum,Z.m, m3===1?'D'+rw4:'E'+(rw4-1)+'+D'+rw4),
@@ -7066,7 +8267,7 @@ function build(){
   }
   P(sa,[]);
   P(sa,['· 초기 계약률 이후 잔여 물량은 흡수기간 '+s.absorbMonths+'개월 동안 균등 계약되는 것으로 가정']);
-  P(sa,['· B열(신규 계약률)은 흡수 일정 자체이므로 입력값입니다. C~E열은 B열과 Unit_Mix_Pricing 분양수입을 참조하는 수식이라, 계약률을 고치면 금액이 따라 계산됩니다.']);
+  P(sa,['· B열(신규 계약률)은 Assumptions의 초기 계약률·최종 분양률로 계산합니다. 분양 개시월·흡수기간은 행 배치를 정하는 값이라 엑셀에서 바꿔도 반영되지 않습니다 — 화면에서 바꿔 다시 내려받으세요.']);
   made.Sales_Absorption=sa;
 
   /* Cashflow_Model */
@@ -7136,7 +8337,7 @@ function build(){
   P(su,[]);
   var z1=P(su,['검증','자기자본 + 분양수입',N(M.eqUsed+M.revenue,Z.m,'C'+y1+'+C'+y3),'','유입 합계']);
   var z2=P(su,['검증','총사업비 + 잉여현금',N(M.totalCost+M.endCash,Z.m,'C'+xT+'+PF_Drawdown!I'+(pfLast+1)+'*0+'+M.endCash),'','유출 + 잔여']);
-  su.rows[z2-1][2]=N(M.totalCost+M.endCash,Z.m,'C'+xT+'+'+(inDepth('Cashflow_Model')?'Cashflow_Model!K'+(cmFirst+NMO):M.endCash));
+  su.rows[z2-1][2]=N(M.totalCost+M.endCash,Z.m,'C'+xT+'+'+(inDepth('Cashflow_Model')?'Cashflow_Model!K'+(cmFirst+NMO):'PF_Drawdown!Y'+pfLast));
   var zD=P(su,['검증','차이',N((M.eqUsed+M.revenue)-(M.totalCost+M.endCash),Z.m,'C'+z1+'-C'+z2),'','0 이어야 함']);
   P(su,['검증','균형 판정',T('PASS','IF(ABS(C'+zD+')<1,"PASS","CHECK")'),'','ABS(차이) < 1']);
   made.Sources_Uses=su;
@@ -7209,6 +8410,29 @@ function build(){
   var p_irr=PS('자기자본 IRR (연환산)','%',N(M.irrM,Z.p, irrR? ('PF_Drawdown!C'+irrR) : ''),
     irrR? 'PF_Drawdown 월별 자기자본 현금흐름의 IRR (연환산)' : '월별 현금흐름 IRR을 연복리 환산한 계산 결과값');
   PS('보통주 목표 IRR','%',N(s.comTargetIRR,Z.p,R.tgt),'Assumptions');
+  if(XM){
+    XM.out.margin='Profitability_Summary!$C$'+p_mar;
+    XM.out.irrM='Profitability_Summary!$C$'+p_irr;
+    /* 선순위 아래 층이 여럿이면 월별 자금수지가 계산값이다 — 엑셀 재계산으로
+       민감도·역산을 돌리면 화면과 다른 숫자가 나오므로 버튼을 두지 않는다. */
+    if(!LIVE) XM.block=(XS&&XS.why? XS.why+' ' : '')+'월별 자금수지가 계산값이라 엑셀 재계산이 화면과 달라집니다.';
+    XM.umRng='Unit_Mix_Pricing!$D$'+umFirst+':$D$'+umLast;
+    /* 앵커 ← 원천: 본PF 약정액 ← 선순위 최대 잔액(합계 행 G열), 총사업비 앵커 ← Sources_Uses 총사업비 */
+    if(LIVE) XM.anchors=[{ref:'PF_Drawdown!$B$'+pfCommit, src:'PF_Drawdown!$G$'+(pfLast+1)},
+                         {ref:'PF_Drawdown!$B$'+pfTcR,    src:'Sources_Uses!$C$'+xT}];
+    /* 목표 역산 — 화면 rxBlockCalc 와 같은 기준·레버·범위(사업이익률 블록은 범위가 빈 레버를 뺀다) */
+    XM.rx.push({id:'margin', title:'사업이익률 10%', target:{lit:0.10}, out:XM.out.margin, fmt:'p', levers:[
+      {l:'분양가 (전 평형, 배수)', kind:'scale', ref:XM.umRng, lo:'1', hi:'1.25', fmt:'mult', skipEmpty:1},
+      {l:'도급 공사비', u:unit, ref:R.constC, lo:'cur*0.85', hi:'cur', fmt:'i', skipEmpty:1},
+      {l:'토지비', u:unit, ref:R.land, lo:'cur*0.85', hi:'cur', fmt:'i', skipEmpty:1},
+      {l:'본PF 금리', ref:R.pf, lo:'0.045', hi:'cur', fmt:'p', skipEmpty:1},
+      {l:'최종 분양률', ref:R.final, lo:'cur', hi:'1', fmt:'p', skipEmpty:1}]});
+    XM.rx.push({id:'irr', title:'자기자본 IRR 목표', target:{ref:R.tgt}, out:XM.out.irrM, fmt:'p', levers:[
+      {l:'분양가 (전 평형, 배수)', kind:'scale', ref:XM.umRng, lo:'1', hi:'1.25', fmt:'mult'},
+      {l:'자기자본', u:unit, ref:R.eq, lo:'cur*0.5', hi:'cur', fmt:'i'},
+      {l:'도급 공사비', u:unit, ref:R.constC, lo:'cur*0.85', hi:'cur', fmt:'i'},
+      {l:'본PF 금리', ref:R.pf, lo:'0.045', hi:'cur', fmt:'p'}]});
+  }
   P(ps,['목표 달성 여부','',T(M.passTarget?'충족':'미달','IF(C'+p_irr+'>=C'+(p_irr+1)+',"충족","미달")'),'IRR ≥ 목표']);
   P(ps,[]);
   P(ps,['손익분기']);
@@ -7274,7 +8498,12 @@ function build(){
       'Assumptions 가정값','시나리오별 사업이익률·자기자본 IRR','Breakeven_Analysis · 투자심의');
     var rtsL=[-0.02,-0.01,0,0.01,0.02], sellsL=[0.80,0.85,0.90,0.95,1.00];
     P(sn,['사업이익률 — 행: 본PF 금리 / 열: 최종 분양률']);
-    P(sn,['본PF 금리'].concat(sellsL.map(function(v){ return N(v,Z.p1); })).concat(['비고']));
+    var xh1=P(sn,['본PF 금리'].concat(sellsL.map(function(v){ return N(v,Z.p1); })).concat(['비고']));
+    /* 엑셀의 최종 분양률 칸은 시나리오 조정이 이미 반영된 값이라, 화면이 쓰는 분양률에
+       같은 조정을 더해 넣는다(Base 에서는 조정이 0). */
+    var xSell=function(v){ return Math.max(0,Math.min(1,v+(s.absorbAdj||0))); };
+    if(XM) XM.sens.push({r0:xh1+1, c0:2, nr:rtsL.length, nc:sellsL.length, out:XM.out.margin,
+      row:[{kind:'delta', ref:R.pf, vals:rtsL},{kind:'follow', ref:R.br}], col:[{kind:'abs', ref:R.final, vals:sellsL.map(xSell)}]});
     rtsL.forEach(function(dr){
       var row=[N(s.pfRate+dr,Z.p)];
       sellsL.forEach(function(sv,ci){ row[1+ci]=N(reCalc({pfRate:d.pfRate+dr,brRate:d.brRate+dr,finalSell:sv}).margin,Z.p); });
@@ -7284,7 +8513,9 @@ function build(){
     P(sn,[]);
     var prL=[0.90,0.95,1.00,1.05,1.10];
     P(sn,['자기자본 IRR (연환산) — 행: 분양가 배수 / 열: 최종 분양률']);
-    P(sn,['분양가 배수'].concat(sellsL.map(function(v){ return N(v,Z.p1); })).concat(['비고']));
+    var xh2=P(sn,['분양가 배수'].concat(sellsL.map(function(v){ return N(v,Z.p1); })).concat(['비고']));
+    if(XM) XM.sens.push({r0:xh2+1, c0:2, nr:prL.length, nc:sellsL.length, out:XM.out.irrM,
+      row:[{kind:'scale', ref:XM.umRng, vals:prL}], col:[{kind:'abs', ref:R.final, vals:sellsL.map(xSell)}]});
     prL.forEach(function(pv){
       var row=[N(pv,Z.p1)];
       sellsL.forEach(function(sv,ci){ row[1+ci]=N(reCalc({priceScale:pv,finalSell:sv}).irrM,Z.p); });
@@ -7439,44 +8670,45 @@ DEAL.dev={
   fields:[
     {g:'사업 개요', f:[
       {k:'project',l:'사업명',t:'text',w:1},
-      {k:'projType',l:'사업 유형',t:'text',w:1},
-      {k:'siteArea',l:'부지면적',t:'num',u:'평'},
+      /* sub:1 = 「세부 가정 N개」 아래로 접히는 항목 — 표시만 가른다 */
+      {k:'projType',l:'사업 유형',t:'text',w:1,sub:1},
+      {k:'siteArea',l:'부지면적',t:'num',u:'평',sub:1},
       {k:'gfa',l:'연면적',t:'num',u:'평'},
-      {k:'totalCostInput',l:'총사업비 (입력)',t:'num',u:'백만원'}],
+      {k:'totalCostInput',l:'총사업비 (입력)',t:'num',u:'백만원',sub:1}],
       hint:'총사업비 (입력)은 <b>선택 입력</b>입니다 — 사업계획서에 적힌 총사업비가 있으면 넣으세요. 모델이 쌓은 항목 합계(토지·공사·부대비·금융비용)와 맞춰 보고 차이를 검증 탭에 표시합니다. 비워 두면 대사하지 않습니다. 모델은 어느 쪽이든 항목 합계를 씁니다.'},
     {g:'원가', f:[
       {k:'landCost',l:'토지비',t:'num',u:'백만원'},
-      {k:'landTaxPct',l:'토지 취득 제세',t:'pct',u:'%'},
+      {k:'landTaxPct',l:'토지 취득 제세',t:'pct',u:'%',sub:1},
       {k:'constCost',l:'도급 공사비',t:'num',u:'백만원'},
-      {k:'designPct',l:'설계·감리비율',t:'pct',u:'%'},
-      {k:'contingPct',l:'예비비율',t:'pct',u:'%'},
-      {k:'salesPct',l:'판매비율',t:'pct',u:'%'},
-      {k:'guaranteePct',l:'분양보증 수수료율',t:'pct',u:'%'},
-      {k:'fixedCost',l:'기타 고정비',t:'num',u:'백만원'}]},
+      {k:'designPct',l:'설계·감리비율',t:'pct',u:'%',sub:1},
+      {k:'contingPct',l:'예비비율',t:'pct',u:'%',sub:1},
+      {k:'salesPct',l:'판매비율',t:'pct',u:'%',sub:1},
+      {k:'guaranteePct',l:'분양보증 수수료율',t:'pct',u:'%',sub:1},
+      {k:'fixedCost',l:'기타 고정비',t:'num',u:'백만원',sub:1}]},
     {g:'일정 (개월)', f:[
-      {k:'preMonths',l:'토지 선매입~착공',t:'num',u:'개월'},
-      {k:'landDownPct',l:'토지 계약금 비율',t:'pct',u:'%'},
-      {k:'landBalM',l:'토지 잔금 시점',t:'num',u:'개월차'},
+      {k:'preMonths',l:'토지 선매입~착공',t:'num',u:'개월',sub:1},
+      {k:'landDownPct',l:'토지 계약금 비율',t:'pct',u:'%',sub:1},
+      {k:'landBalM',l:'토지 잔금 시점',t:'num',u:'개월차',sub:1},
       {k:'constMonths',l:'공사기간',t:'num',u:'개월'},
       {k:'launchM',l:'분양 개시',t:'num',u:'개월차'},
       {k:'absorbMonths',l:'흡수기간',t:'num',u:'개월'}]},
     {g:'분양 조건', f:[
       {k:'initSell',l:'초기 계약률',t:'pct',u:'%'},
       {k:'finalSell',l:'최종 분양률',t:'pct',u:'%'},
-      {k:'downPct',l:'계약금',t:'pct',u:'%'},
-      {k:'midPct',l:'중도금',t:'pct',u:'%'},
-      {k:'midCount',l:'중도금 횟수',t:'num',u:'회'},
-      {k:'finPct',l:'잔금',t:'pct',u:'%'},
-      {k:'midFree',l:'중도금 무이자',t:'sel',o:[[1,'반영 (시행 부담)'],[0,'미반영']],w:1},
-      {k:'midLoanRate',l:'중도금대출 금리',t:'pct',u:'%'}]},
+      {k:'downPct',l:'계약금',t:'pct',u:'%',sub:1},
+      {k:'midPct',l:'중도금',t:'pct',u:'%',sub:1},
+      {k:'midCount',l:'중도금 횟수',t:'num',u:'회',sub:1},
+      {k:'finPct',l:'잔금',t:'pct',u:'%',sub:1},
+      {k:'midFree',l:'중도금 무이자',t:'sel',o:[[1,'반영 (시행 부담)'],[0,'미반영']],w:1,sub:1},
+      {k:'midLoanRate',l:'중도금대출 금리',t:'pct',u:'%',sub:1}]},
     {g:'자금 조달', f:[
       {k:'equity',l:'자기자본',t:'num',u:'백만원'},
-      {k:'brRate',l:'브릿지 금리',t:'pct',u:'%'},
+      {k:'brRate',l:'브릿지 금리',t:'pct',u:'%',sub:1},
       {k:'pfRate',l:'본PF 금리',t:'pct',u:'%'},
-      {k:'pfFeePct',l:'본PF 수수료',t:'pct',u:'%'},
-      {k:'srPct',l:'선순위 비중',t:'pct',u:'%'},
+      {k:'pfFeePct',l:'본PF 수수료',t:'pct',u:'%',sub:1},
+      {k:'srPct',l:'선순위 비중',t:'pct',u:'%',sub:1},
       {k:'comTargetIRR',l:'목표 IRR',t:'pct',u:'%'},
-      {k:'taxRate',l:'법인세율',t:'pct',u:'%'}],
+      {k:'taxRate',l:'법인세율',t:'pct',u:'%',sub:1}],
       hint:'선순위 비중은 <b>총사업비 대비 약정 한도</b>입니다. 자금이 모자라면 <b>지분 층 → 자기자본 → 선순위 → 부채 층</b> 순으로 한도까지 끌어쓰고, 여유가 생기면 <b>선순위부터</b> 갚습니다. 선순위 아래 층은 <b>자금 구조 탭</b>에서 원하는 만큼 추가·삭제합니다.'},
     {g:'Exit', detail:true, f:[
       {k:'exitMode',l:'Exit 방식',t:'text',w:1},
@@ -9133,6 +10365,7 @@ function buildCost(d,M,R,made){
   P(rs,[]);
   P(rs,['· IRR 은 월별 현금흐름으로 구한 뒤 (1+월IRR)^12−1 로 연환산합니다 — 화면과 같은 방식입니다.']);
   made.Return_Summary=rs;
+  if(XM) XM.out.minCov='Return_Summary!$C$'+xmRowOf(rs,'최소 커버리지');
 
   /* Sensitivity — 다기간 모델을 단일 셀 수식으로 환원할 수 없어 값으로 적는다 */
   if(inDepth('Sensitivity')){
@@ -9141,7 +10374,11 @@ function buildCost(d,M,R,made){
       'Assumptions 회수 스케줄·금리','조합별 최소 커버리지','투자심의 · 조건 협의');
     var rts=sensRates(num(d.rate,0));
     P(sn,['최소 커버리지 (분할상환 구간) — 행: 회수액 수준 / 열: 금리']);
-    P(sn,['회수액 수준'].concat(rts.map(function(v){ return N(v,Z.p); })).concat(['비고']));
+    var xh1=P(sn,['회수액 수준'].concat(rts.map(function(v){ return N(v,Z.p); })).concat(['비고']));
+    var xn=M.sched.length;
+    if(XM&&xn>0) XM.sens.push({r0:xh1+1, c0:2, nr:SENS_MUL.length, nc:rts.length, out:XM.out.minCov,
+      row:[{kind:'scale', ref:R['recv0']+':'+String(R['recv'+(xn-1)]).replace(/^[^!]*!/,''), vals:SENS_MUL}],
+      col:[{kind:'delta', ref:R.rate, vals:rts.map(function(v){ return v-num(d.rate,0); })}]});
     SENS_MUL.forEach(function(mul){
       var row=[N(mul,Z.p1)];
       rts.forEach(function(rt,ci){ row[1+ci]=N(reModel({recv:scaleRecv(d.recv,mul), rate:rt}).minCov,Z.x); });
@@ -9440,6 +10677,7 @@ function buildSale(d,M,R,made){
   P(rs,[]);
   P(rs,['· IRR 은 월별 현금흐름으로 구한 뒤 (1+월IRR)^12−1 로 연환산합니다 — 화면과 같은 방식입니다.']);
   made.Return_Summary=rs;
+  if(XM) XM.out.unpaid='Return_Summary!$C$'+xmRowOf(rs,'만기 미상환 잔액');
 
   /* Sensitivity */
   if(inDepth('Sensitivity')){
@@ -9448,7 +10686,13 @@ function buildSale(d,M,R,made){
       'Assumptions 납부율·금리','조합별 만기 원금 상환율','투자심의 · 조건 협의');
     var rts=sensRates(num(d.rate,0));
     P(sn,['만기 원금 상환율 — 행: 잔금 납부율 / 열: 금리']);
-    P(sn,['잔금 납부율'].concat(rts.map(function(v){ return N(v,Z.p); })).concat(['비고']));
+    var xh1=P(sn,['잔금 납부율'].concat(rts.map(function(v){ return N(v,Z.p); })).concat(['비고']));
+    /* 엑셀의 납부율 칸은 시나리오 조정이 반영된 값 — 화면이 넣는 값과의 차이만큼 옮겨 넣는다 */
+    var xPay=num(M.basePayRate,0)-num(d.basePayRate,0);
+    if(XM) XM.sens.push({r0:xh1+1, c0:2, nr:SENS_PAY.length, nc:rts.length, out:XM.out.unpaid,
+      outKind:'oneMinusRatio', den:R.loan,
+      row:[{kind:'abs', ref:R.basePayRate, vals:SENS_PAY.map(function(v){ return v+xPay; })}],
+      col:[{kind:'delta', ref:R.rate, vals:rts.map(function(v){ return v-num(d.rate,0); })}]});
     SENS_PAY.forEach(function(pr){
       var row=[N(pr,Z.p1)];
       rts.forEach(function(rt,ci){
@@ -11762,6 +13006,51 @@ function changedFields(grp){
   });
   return n;
 }
+/* ── 핵심 입력 먼저 ──
+   그룹 안에서 sub:1 항목은 「세부 가정 N개」 줄 아래로 접는다. 접힘 상태는
+   그룹 접힘과 같은 G.fold 에 «세부:그룹명» 키로 기억한다 — 그룹 이름과 겹치지
+   않는다. 키가 없으면(처음·예전 저장 상태) 접혀 있다. */
+function subKey(grp){ return '세부:'+grp.g; }
+function subFoldedNow(grp){
+  var k=subKey(grp);
+  if(G.fold&&Object.prototype.hasOwnProperty.call(G.fold,k)) return !!G.fold[k];
+  return true;
+}
+/* 세부 줄의 글자. 접어 둔 채로도 «기본값에서 바뀐 값»과 «성립하지 않는 값»이
+   겉에 보여야 한다 — 안 보이는 칸에서 조용히 달라져 있으면 안 된다. */
+function subTogHtml(grp,open){
+  var sub=(grp.f||[]).filter(function(f){ return f.sub; }), d=D();
+  var ch=changedFields({f:sub});
+  var bad=sub.filter(function(f){ return boundWarn(f.k,d[f.k]); }).length;
+  return '<span class="caret" aria-hidden="true">'+(open?'▾':'▸')+'</span>'+
+    '<span class="sub-t">세부 가정 '+sub.length+'개'+
+      (ch?'<span class="sub-ed"> · '+ch+'개 수정됨</span>':'')+'</span>'+
+    (bad?' <span class="sub-bad">확인 필요 '+bad+'</span>':'');   /* 앞 공백: 읽어 주는 이름이 붙지 않게 */
+}
+/* 사이드바를 다시 그리지 않는 길(펴고 접기·값 입력)에서 세부 줄 글자를 새로 쓴다 */
+function syncSubTog(b){
+  var name=b.getAttribute('data-subfold');
+  var grp=(E().fields||[]).filter(function(g){ return g.g===name; })[0];
+  if(grp) b.innerHTML=subTogHtml(grp, b.getAttribute('aria-expanded')==='true');
+}
+/* 사이드바 칸으로 포커스를 보내기 전에 부른다. 그 칸이 접힌 그룹이나 접힌
+   세부 가정 안에 있으면 편다 — 숨은 칸에는 포커스가 가지 않는다.
+   무엇이든 폈으면 true(호출한 쪽이 사이드바를 다시 그린다). */
+function revealField(k){
+  var groups=E().fields||[];
+  for(var i=0;i<groups.length;i++){
+    var fs=groups[i].f||[];
+    for(var j=0;j<fs.length;j++){
+      if(fs[j].k!==k) continue;
+      var changed=false;
+      if(!G.fold) G.fold={};
+      if(foldedNow(groups[i])){ G.fold[groups[i].g]=false; changed=true; }
+      if(fs[j].sub&&subFoldedNow(groups[i])){ G.fold[subKey(groups[i])]=false; changed=true; }
+      return changed;
+    }
+  }
+  return false;
+}
 /* 입력 단계 목록 — 엔진 필드 그룹 + 본문 입력 단계(대안·명세 등) */
 function stepGroups(){
   var eng=E(), out=[], mi=eng.mainInputs||[];
@@ -11838,6 +13127,8 @@ function nudgeVal(key,dir){
   var inPane=!!(ae&&ae.closest&&ae.closest('#panes'));
   render(false);
   if(fk){
+    /* 돌아갈 버튼이 접힌 세부 가정·접힌 그룹 안이면 먼저 편다 */
+    if(!inPane&&revealField(fk)){ saveState(); renderSide(); }
     var sel='['+'data-nudge="'+fk+'"][data-nd="'+fd+'"]';
     var back=document.querySelector((inPane?'#panes ':'#side ')+sel);
     /* preventScroll 이 없으면 브라우저가 버튼을 화면 안으로 끌어온다.
@@ -11855,6 +13146,7 @@ function renderSide(){
      qadj 에 없는 값(공실률·LTV 등)은 사이드바가 유일한 조정 경로라
      그대로 둔다. */
   var qadjKeys=(eng.drivers?eng.drivers():[]);
+  var subN=0;                          /* 세부 가정 칸 id 번호 */
   var steps=stepGroups();
   var tot=0, done=0;
   steps.forEach(function(g){
@@ -11891,7 +13183,9 @@ function renderSide(){
       }
     }
     s+='</h3>';
-    if(grp.f&&grp.f.length) s+='<div class="fgrid">';
+    /* 핵심 입력(core)은 늘 보이고, sub:1 항목은 세부 가정 줄 아래에 둔다.
+       sub 가 없는 그룹은 예전과 같은 마크업 하나다. */
+    var core='', sub='';
     (grp.f||[]).forEach(function(f){
       var isG=(f.t.charAt(0)==='g'), t=isG?f.t.slice(1):f.t;
       var v=isG?G[f.k]:d[f.k], inp;
@@ -11916,13 +13210,22 @@ function renderSide(){
           'title="'+esc(NUDGE[f.k].t)+' 내림">▼</button></div></div>';
       var w=isG?null:boundWarn(f.k,v);
       var bn=isG?null:basisNote(f.k,v,t==='pct');
-      s+='<div class="fld'+(full?' full':'')+(w?' bad':'')+'"><label title="'+esc(f.l)+'"><span class="nm">'+esc(f.l)+'</span>'+
+      var fh='<div class="fld'+(full?' full':'')+(w?' bad':'')+'"><label title="'+esc(f.l)+'"><span class="nm">'+esc(f.l)+'</span>'+
          (f.u?'<span class="u">'+esc(f.u)+'</span>':'')+'</label>'+inp+
          (w?'<span class="fwarn">'+esc(w)+'</span>':'')+
          (bn&&bn.band?'<span class="fbase'+(bn.off?' off':'')+'"'+(bn.why?' title="'+esc(bn.why)+'"':'')+'>'+
             esc(bn.band)+(bn.off?' · 범위 밖':'')+(bn.why?'<i class="q">?</i>':'')+'</span>':'')+'</div>';
+      if(f.sub) sub+=fh; else core+=fh;
     });
-    if(grp.f&&grp.f.length) s+='</div>';
+    if(core) s+='<div class="fgrid">'+core+'</div>';
+    if(sub){
+      /* 진짜 버튼이라 Enter·Space 가 그대로 먹는다. 펴고 접을 때 사이드바를
+         다시 그리지 않는다 — 포커스와 스크롤 자리를 잃지 않게. */
+      var open=!subFoldedNow(grp), sid='subf-'+(++subN);
+      s+='<button type="button" class="subtog" data-subfold="'+esc(grp.g)+'" aria-expanded="'+(open?'true':'false')+
+         '" aria-controls="'+sid+'">'+subTogHtml(grp,open)+'</button>'+
+         '<div class="fgrid subgrid" id="'+sid+'"'+(open?'':' hidden')+'>'+sub+'</div>';
+    }
     if(grp.jump) s+='<button class="jump" data-jump="'+grp.jump+'">'+esc(grp.note||'해당 탭에서 입력')+'<span class="arw">→</span></button>';
     if(grp.hint) s+='<div class="hint">'+grp.hint+'</div>';
     return s+'</div>';
@@ -11951,6 +13254,18 @@ function renderSide(){
     b.addEventListener('click',flip);
     b.addEventListener('keydown',function(e){
       if(e.key===' '||e.key==='Enter'||e.keyCode===13||e.keyCode===32){ e.preventDefault(); flip(); }
+    });
+  });
+  document.getElementById('side').querySelectorAll('[data-subfold]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var open=b.getAttribute('aria-expanded')!=='true';   /* 화면에 보이는 상태를 뒤집는다 */
+      if(!G.fold) G.fold={};
+      G.fold[subKey({g:b.getAttribute('data-subfold')})]=!open;
+      saveState();
+      b.setAttribute('aria-expanded',open?'true':'false');
+      var box=document.getElementById(b.getAttribute('aria-controls'));
+      if(box) box.hidden=!open;
+      syncSubTog(b);
     });
   });
   document.getElementById('side').querySelectorAll('[data-jump]').forEach(function(b){
@@ -11990,6 +13305,10 @@ document.getElementById('side').addEventListener('change', function(ev){
     if(!left) delete QADJ_BASE[G.deal];
   }
   saveState();
+  /* 사이드바를 다시 그리지 않는 입력에서도 세부 줄의 «n개 수정됨»을 맞춘다 —
+     고치고 바로 접으면 옛 글자가 남아 수정한 값이 숨는다. */
+  var stg=el.closest&&el.closest('.grp'); stg=stg&&stg.querySelector('.subtog');
+  if(stg) syncSubTog(stg);
   /* 입력 경고·통용 범위 뱃지는 renderSide()가 만든다. 예전에는 딜·깊이·
      시나리오가 아니면 renderSide를 건너뛰어서, LTV에 120을 넣어도 그 자리에서는
      아무 표시가 없었다 — 딜을 바꾸거나 불러오기를 해야 그제서야 나타났다.
@@ -12288,6 +13607,25 @@ document.getElementById('btnXlsx').addEventListener('click', function(){
         }
       }
     }catch(err){ console.error(err); toast('엑셀 생성 중 오류: '+err.message); }
+    btn.disabled=false; btn.innerHTML=orig;
+  }, 30);
+});
+document.getElementById('btnXlsm').addEventListener('click', function(){
+  var btn=this, orig=btn.innerHTML;
+  btn.disabled=true; btn.textContent='생성 중…';
+  setTimeout(function(){
+    try{
+      var res=buildXlsm(), eng=res.eng, dep=eng.depths[G.depth];
+      var nm=(G.firm?G.firm.replace(/[\\\/:*?"<>|\s]/g,'')+'_':'')+
+        (eng.assetName()||'자산').replace(/[\\\/:*?"<>|\s]/g,'')+'_'+eng.name.replace(/[\s·]/g,'')+'_'+dep.name+'_'+(G.asOf||'').replace(/-/g,'')+'_매크로.xlsm';
+      var how=saveBook(res.wb, nm, res.bytes, XM_MIME);
+      if(how!=='embedded' && how!=='async'){
+        toast('매크로 포함 엑셀을 만들었습니다 — 버튼은 「Macro」 시트에 있습니다. 매크로가 막혀 있으면 파일을 오른쪽 클릭 → 속성 → 「차단 해제」 후 다시 여세요.');
+      }
+    }catch(err){
+      if(err&&err.message==='QUICK') toast('「빠른 검토」 깊이는 결과가 계산값이라 매크로본을 만들지 않습니다 — 모델 깊이를 「표준」 이상으로 바꿔 주세요');
+      else { console.error(err); toast('매크로 엑셀 생성 중 오류: '+err.message); }
+    }
     btn.disabled=false; btn.innerHTML=orig;
   }, 30);
 });
