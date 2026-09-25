@@ -531,6 +531,16 @@ td.neg{color:var(--bad)}
   font-variant-numeric:tabular-nums;background:#fff;color:var(--ink);
 }
 .alt-tbl input.nm{text-align:center;font-variant-numeric:normal}
+/* 본건 투자자 관점 — 트랜치·금액 고르는 줄(입력칸 모양은 표 안 파란 입력칸과 같다) */
+.bon-pick{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;font-size:12.5px;color:var(--ink-2)}
+.bon-pick label{display:inline-flex;align-items:center;gap:6px}
+.bon-pick select,.bon-pick input{border:1px solid #b7d0ee;background:#f0f6ff;border-radius:var(--r-ctl);padding:4px 8px;font:inherit;font-size:13px;color:var(--ink)}
+.bon-pick input{width:110px;text-align:right;font-variant-numeric:tabular-nums}
+.bon-pick select:focus,.bon-pick input:focus{outline:2px solid var(--navy-600);outline-offset:-1px}
+.bon-head{color:var(--ink)}
+/* 비누적 우선주의 «배당 사업연도 수» — 누적 여부 선택칸 아래 한 줄 */
+.alt-tbl label.divy{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:4px;font-size:12px;color:var(--ink-2);white-space:nowrap}
+.alt-tbl label.divy input{width:40px;text-align:center}
 .alt-tbl select{text-align:center;text-align-last:center}
 .alt-tbl tr.tot td{font-variant-numeric:tabular-nums}
 .alt-tbl tr.tot td:not(.l){text-align:right}
@@ -1668,6 +1678,72 @@ function xlScopeNow(){
   try{ return xlScopeOf(D().jr); }catch(e){ return null; }
 }
 var LAST_XL_SCOPE=null;
+
+/* ══ 본건 투자자 관점 (M1, 2026-09-25) ═══════════════════════════
+   당사는 대부분 트랜치 투자자(대출·수익증권·우선주)다. «사업이 되는가»와 별도로 «본건이
+   얼마를 언제 회수하는가»를 보인다. 첫 버전 범위(사용자 결정):
+     · 같은 트랜치를 같은 조건으로 비중대로 나눠 가진 경우만 — 본건 현금흐름 = 트랜치 × (본건 ÷ 약정)
+     · 원금 회수는 «이자·배당 먼저 충당» 기준(보수적). 손익분기는 원금 기준이 기본, 원리금은 따로
+     · 수수료는 넣지 않는다
+   엔진이 트랜치 숫자를 만들고(devBon·offBon), 여기서는 상태·공통 계산·화면만 맡는다.
+   계산은 화면이 필요할 때 한 번만 한다(M.bonOf) — 손익분기 역산이 모델을 수십 번 다시 돌리므로
+   모델 안에서 돌리면 민감도 표를 그릴 때마다 반복된다. */
+function bonState(){
+  var b=D().bon;
+  return (b&&b.tr)? {tr:String(b.tr), amt:Math.max(0,num(b.amt,0))} : null;
+}
+/* st: {kind:'debt'|'pref'|'com', P:원금(실제 투입), I:이자·배당 청구, R:회수액 합계} */
+function bonSummarize(st){
+  var prin=(st.kind==='com')? Math.min(st.P,Math.max(0,st.R)) : Math.min(st.P,Math.max(0,st.R-st.I));
+  return {prinRec:prin, prinRate:st.P>0.0001? prin/st.P : null, unpaid:Math.max(0,st.P-prin),
+          totRate:(st.P+st.I)>0.0001? st.R/(st.P+st.I) : null};
+}
+/* 전액 회수 경계 — ok(v)가 참이면 전액 회수. up=true면 값이 클수록 유리(분양률), false면 작을수록
+   유리(Exit Cap). 범위 끝에서 이미 참이면 'always', 유리한 끝에서도 거짓이면 'never'. */
+function bonEdge(ok,lo,hi,up){
+  var good=up? hi : lo, bad=up? lo : hi, g=ok(good), b=ok(bad);
+  if(g==null||b==null) return null;
+  if(b) return {state:'always', v:bad};
+  if(!g) return {state:'never', v:good};
+  for(var i=0;i<32;i++){ var mid=(good+bad)/2; if(ok(mid)) good=mid; else bad=mid; }
+  return {state:'edge', v:good};
+}
+/* B: {opts:[{k,n}], sel, amt, unset, missing, head, rows:[[항목,전체,본건,기준]|['SEC',제목]],
+       bep:[[항목,값,해석]], warn:[문장], notes:[문장]} */
+function bonCardHtml(B){
+  var pick='<div class="body bon-pick">'+
+    '<label>본건 트랜치 <select id="bonTr" class="on-blue"><option value="">고르지 않음</option>'+
+      B.opts.map(function(x){ return '<option value="'+esc(x.k)+'"'+(B.sel===x.k?' selected':'')+'>'+esc(x.n)+'</option>'; }).join('')+
+    '</select></label>'+
+    '<label>본건 투자금액 <input id="bonAmt" type="text" inputmode="decimal" class="on-blue" value="'+(B.amt? fnum(B.amt) : '')+'"> '+esc(G.unit)+'</label>'+
+    (B.head? '<span class="bon-head">'+B.head+'</span>' : '')+'</div>';
+  var inner;
+  if(B.unset) inner='<div class="body"><p class="hint">본건이 투자한(또는 투자할) 트랜치와 금액을 고르면, 그 트랜치의 원금·이자 회수와 전액 회수 손익분기를 본건 기준으로 보여 줍니다.</p></div>';
+  else if(B.missing) inner='<div class="body"><p class="hint">고른 트랜치가 지금 자본구조에 없습니다 — 다시 고르세요.</p></div>';
+  else {
+    var t='<table><thead><tr><th class="l">항목</th><th>트랜치 전체</th><th>본건</th><th class="l">기준</th></tr></thead><tbody>';
+    B.rows.forEach(function(r){
+      if(r[0]==='SEC'){ t+='<tr class="sec"><td class="l" colspan="4">'+esc(r[1])+'</td></tr>'; return; }
+      t+='<tr><td class="l">'+esc(r[0])+'</td><td>'+r[1]+'</td><td><b>'+r[2]+'</b></td><td class="l dim">'+esc(r[3]||'')+'</td></tr>';
+    });
+    t+='</tbody></table>';
+    var tb='<table><thead><tr><th class="l">전액 회수 손익분기</th><th>값</th><th class="l">해석</th></tr></thead><tbody>'+
+      B.bep.map(function(r){ return '<tr><td class="l">'+esc(r[0])+'</td><td><b>'+r[1]+'</b></td><td class="l dim">'+esc(r[2]||'')+'</td></tr>'; }).join('')+
+      '</tbody></table>';
+    inner=tblWrap(t)+tblWrap(tb)+
+      ((B.warn&&B.warn.length)? '<div class="body"><div class="cau"><b>유의</b> '+B.warn.map(function(w){ return '<span>'+esc(w)+'</span>'; }).join('')+'</div></div>' : '');
+  }
+  return card('본건 투자자 관점','본건 트랜치의 원금·이자 회수 — 같은 트랜치를 비중대로 나눠 가진 경우', pick+inner,
+    (B.notes||[]).join(' '),
+    role('본건(당사) 기준 회수·손익분기','자본구조 층별 인출·상환, 본건 트랜치·금액','본건 원금 회수율·IRR·전액 회수 손익분기','투자심의 · 리스크 검토'));
+}
+/* 입력 — 카드는 탭을 다시 그릴 때마다 새로 생기므로 문서 한 곳에서 받는다 */
+document.addEventListener('change',function(ev){
+  var t=ev.target; if(!t||(t.id!=='bonTr'&&t.id!=='bonAmt')) return;
+  var d=D(), b=d.bon||{};
+  if(t.id==='bonTr') b.tr=t.value||''; else b.amt=Math.max(0,num(t.value,0));
+  d.bon=b; saveState(); render(true);
+});
 /* 이름 «전체»가 맞아야 면제다. 부분 일치로 두면 'Cover'가
    'Coverage_Analysis'까지 삼켜, 결과 시트인 커버리지 대비표가 통째로
    실측에서 빠진다 — 하드코딩을 세는 장치가 하드코딩을 숨기는 꼴이다. */
@@ -5042,6 +5118,7 @@ var BASE={
   noiG:0.020, hold:5, exitCap:0.048, saleFee:0.018,
   prepayFee:0.010, promoteFee:0.10, sellerIRR:0.075,
   srLTV:0.55, srRate:0.042, srType:'io', srAmY:30, srTerm:5, srFee:0,
+  refiAmt:0, refiRate:0,                    /* 만기 차환 — 만기 < 보유기간일 때만. 0 = 미입력(금리 0은 선순위 금리) */
   /* 선순위 아래 층은 몇 개든 될 수 있다 — 딜마다 구성이 다르다.
      배열 순서가 곧 상환·분배 우선순위이고, kind 가 성격을 정한다:
        debt  … 부채 층. pct 는 감정평가액 대비 폭(LTV), pik 면 이자를 잔액에 얹는다.
@@ -5065,6 +5142,10 @@ function eff(key){
   o.mgmtPy=d.mgmtPy*(1+(sc.dRev||0));
   o.noiG=d.noiG+(sc.dG||0);
   o.srRate=d.srRate+(sc.dRate||0);
+  /* 만기 차환 — 사용자가 확인한 금액·금리만 쓴다(자동 한도 산출 없음, 2026-09-25 결정).
+     금리는 선순위와 같은 시나리오 델타를 받는다. 금리를 비워 두면(0 이하) 선순위 금리로 본다. */
+  o.refiAmt=Math.max(0,+d.refiAmt||0);
+  o.refiRate=((+d.refiRate>0)? +d.refiRate : d.srRate)+(sc.dRate||0);
   /* 금리 시나리오는 모든 부채 층에 같이 걸린다 — 한 층만 움직이면 시나리오가 아니다.
      지분 층(우선주)의 요구수익률은 시장금리 시나리오로 흔들지 않는다. */
   o.jr=(d.jr||[]).map(function(t){
@@ -5136,19 +5217,26 @@ function model(key){
   /* 트랜치 상환표. PIK 는 이자를 현금으로 내지 않고 잔액에 얹는다 —
      그래서 그 해 원리금(ds)에서 빠지고, 불어난 잔액이 만기에 한꺼번에 나간다.
      이자 자체(int)는 발생액이므로 과세소득 계산에는 그대로 들어간다. */
-  function trSched(loan,rate,type,amY,pik){
+  /* refi — 선순위 만기가 보유기간보다 짧을 때만(A-1-b, 2026-09-25). 만기 해 말 잔액 B를 입력한
+     차환 금액 F(잔액까지만)로 갈아타고, 모자라는 B − F(차환 차액)는 그해 보통주가 추가 출자해
+     갚는다고 본다. 차환 뒤로는 차환 금리로 이자만 낸다. 차액은 원리금(DSCR)에 넣지 않는다. */
+  function trSched(loan,rate,type,amY,pik,refi){
     var am=(type==='amort'), nn=am?(amY||s.srTerm):0;
     var kk=am?pmtConst(rate,nn):rate, pm=loan*kk;
     var b=loan, rows=[];
     for(var i=1;i<=s.hold;i++){
-      var op=b, itr=op*rate, cash=pik?0:itr;
-      var pri=(am&&!pik)? Math.min(Math.max(pm-itr,0),op) : 0;
+      var after=!!(refi&&i>refi.at);
+      var op=b, itr=op*(after? refi.rate : rate), cash=pik?0:itr;
+      var pri=(am&&!pik&&!after)? Math.min(Math.max(pm-itr,0),op) : 0;
       b=op-pri+(pik?itr:0);
-      rows.push({t:i,open:op,int:itr,cashInt:cash,prin:pri,ds:cash+pri,close:b});
+      var gap=0;
+      if(refi&&i===refi.at){ refi.bal=b; refi.used=Math.min(refi.amt,b); gap=b-refi.used; refi.gap=gap; b=refi.used; }
+      rows.push({t:i,open:op,int:itr,cashInt:cash,prin:pri,ds:cash+pri,close:b,gap:gap});
     }
     return {rows:rows,balloon:b,pmt:pm,isAm:am,amY:nn,k:kk};
   }
-  var SR=trSched(M.srLoan,s.srRate,s.srType,s.srAmY,0);
+  M.refi=(s.srTerm<s.hold)? {at:s.srTerm, amt:s.refiAmt, rate:s.refiRate, bal:0, used:0, gap:0} : null;
+  var SR=trSched(M.srLoan,s.srRate,s.srType,s.srAmY,0,M.refi);
   /* M.debt 은 예전부터 "선순위 상환표"였다 — 참조하는 곳이 많아 그대로 둔다 */
   M.debt=SR.rows;
   M.pmt=SR.pmt; M.isAm=SR.isAm; M.amY=SR.amY; M.k=SR.k;
@@ -5207,10 +5295,12 @@ function model(key){
       p.accr=p.cum? Math.max(0,due-paid) : 0;
       p.paidY.push(paid); accr+=p.accr;
     });
-    var comCF=left;
+    /* 만기 차환 차액(B − F)은 그해 보통주가 추가 출자해 갚는다 — 자동 차환을 가정하지 않는다 */
+    var refiGap=(M.refi&&y===M.refi.at)? M.refi.gap : 0;
+    var comCF=left-refiGap;
     M.years.push({t:y,noi:noiY,amFee:M.amFeeAmt,fixed:s.fixedCost,opCF:opCF,
       int:intY,prin:M.prinY[y-1],ds:dsY,close:M.closeY[y-1],open:M.openY[y-1],dep:M.dep,taxable:taxable,tax:tax,
-      avail:avail,prefReq:prefReq,prefPaid:prefPaid,accr:accr,comCF:comCF,
+      avail:avail,prefReq:prefReq,prefPaid:prefPaid,accr:accr,refiGap:refiGap,comCF:comCF,
       dscr: dsY>0? noiY/dsY : null, icr: intY>0? noiY/intY : null});
   }
   M.accrEnd=M.jrPref.reduce(function(a,p){ return a+p.accr; },0);
@@ -5229,11 +5319,13 @@ function model(key){
      음수로 넘긴다(추가 출자 가정). 숫자는 그대로 두고, 그 전제가 걸리는 경우를 따로 알린다 —
      운영 DSCR이 좋아도 만기에 못 갚을 수 있다. */
   M.termGap=(s.srTerm<s.hold);
-  M.srMatBal=M.termGap? SR.rows[s.srTerm-1].close : null;
+  M.srMatBal=M.termGap? M.refi.bal : null;          /* 만기 해 말 잔액(차환 전) */
+  M.refiUsed=M.termGap? M.refi.used : 0;            /* 실제로 반영한 차환 금액(잔액까지만) */
+  M.refiGap=M.termGap? M.refi.gap : 0;              /* 차환 차액 = 추가 출자 */
   M.exitShort=Math.max(0,-M.exitCash);
 
   /* 운영 중 원리금·법인세를 못 채운 해 — 보통주 CF 음수는 추가 출자 가정이다 */
-  M.opShort=M.years.filter(function(r){ return r.comCF<-0.001; }).map(function(r){ return {t:r.t, amt:-r.comCF}; });
+  M.opShort=M.years.filter(function(r){ return r.comCF+r.refiGap<-0.001; }).map(function(r){ return {t:r.t, amt:-(r.comCF+r.refiGap)}; });
   var dscrs=M.years.map(function(r){return r.dscr;}).filter(function(v){return v!=null&&isFinite(v);});
   M.minD=dscrs.length?Math.min.apply(null,dscrs):null;
   M.avgD=dscrs.length?dscrs.reduce(function(a,b){return a+b;},0)/dscrs.length:null;
@@ -5266,6 +5358,8 @@ function model(key){
   M.payback=payback(M.comCF);
   M.passTarget=(M.irrCom!=null)&&(M.irrCom>=s.comTargetIRR-1e-9);
   M.passSeller=(M.irrCom!=null)&&(M.irrCom>=s.sellerIRR-1e-9);
+  /* 본건 투자자 관점 — 필요할 때 한 번만 계산(손익분기 역산이 모델을 다시 돌린다) */
+  M.bonOf=function(){ return M._bon||(M._bon=offBon(M)); };
   return M;
 }
 function rollTotals(){
@@ -5358,6 +5452,125 @@ function rxBlockCalc(M){
   return out;
 }
 
+/* ── 본건 투자자 관점 (M1) — 매입형 ──
+   트랜치 한 층의 연도별 현금흐름과 원금·이자·회수액.
+     대출: −대출액 + 원리금(현금) + 만기·매각 때 잔액(PIK 이자 포함). 선순위가 만기 차환되면(A-1-b)
+           본건 선순위는 만기 해에 잔액을 받고 끝난다 — 차환 대출은 다른 대출로 본다.
+     우선주: −투자액 + 연 배당 + 매각 때 원금·미지급 배당
+     보통주: 보통주 현금흐름(M.comCF)
+   모델은 매각대금이 모자라면 보통주 추가 출자로 부채를 갚는다고 계산하므로(F0-3) 대출 회수율은
+   그 가정 아래의 값이다 — 추가 출자 없이 받을 수 있는 한계는 아래 손익분기(Exit Cap)로 본다. */
+function offTranche(M,key){
+  var s=M.s, H=s.hold, m=/^jr(\d+)$/.exec(key||''), i, tr;
+  var debt=function(tr){
+    var isSr=(tr.k==='sr'), endAt=(isSr&&M.refi)? M.refi.at : H, cf=[-tr.loan], I=0, R=0, rows=tr.sch.rows;
+    for(var y=1;y<=endAt;y++){
+      var r=rows[y-1], c=r.ds;
+      I+=r.int;
+      if(y===endAt) c+=(isSr&&M.refi)? M.refi.bal : tr.sch.balloon;
+      cf.push(c); R+=c;
+    }
+    return {n:tr.n, kind:'debt', lim:tr.loan, P:tr.loan, I:I, R:R, cf:cf, endAt:endAt};
+  };
+  if(key==='sr') return debt(M.trs[0]);
+  if(m){
+    i=+m[1];
+    tr=M.trs.filter(function(x){ return x.k==='jr'+i; })[0];
+    if(tr) return debt(tr);
+    var p=M.jrPref.filter(function(x){ return x.i===i; })[0]; if(!p) return null;
+    var cf=[-p.amt].concat(p.paidY.slice()), R=p.paidY.reduce(function(a,b){ return a+b; },0)+p.exit;
+    cf[cf.length-1]+=p.exit;
+    /* 배당 청구 — 누적적은 매년 요구배당 전체, 비누적은 받은 배당만(못 받은 해의 배당은 소멸) */
+    var I=p.cum? p.req*H : p.paidY.reduce(function(a,b){ return a+b; },0);
+    return {n:p.n, kind:'pref', lim:p.amt, P:p.amt, I:I, R:R, cf:cf, endAt:H};
+  }
+  if(key==='com'){
+    var Rc=0; for(var q=1;q<M.comCF.length;q++) Rc+=M.comCF[q];
+    return {n:'보통주 자기자본', kind:'com', lim:M.common, P:M.common, I:0, R:Rc, cf:M.comCF.slice(), endAt:H};
+  }
+  return null;
+}
+function offBon(M){
+  var s=M.s, bs=bonState();
+  var B={opts:[{k:'sr',n:'선순위 대출'}]
+    .concat(M.jrDebt.map(function(x){ return {k:'jr'+x.i, n:x.n}; }))
+    .concat(M.jrPref.map(function(x){ return {k:'jr'+x.i, n:x.n}; }))
+    .concat([{k:'com',n:'보통주 자기자본'}]), sel:bs? bs.tr:'', amt:bs? bs.amt:0};
+  if(!bs){ B.unset=true; return B; }
+  var st=offTranche(M,bs.tr); if(!st){ B.missing=true; return B; }
+  var sm=bonSummarize(st), base=st.lim, share=base>0.0001? Math.min(1,bs.amt/base) : 0;
+  var irrV=st.P>0.0001? irr(st.cf) : null;
+  var S=function(v){ return f0(v*share); };
+  /* 자본구조 위치 — 대출은 감정평가액 대비(LTV), 우선주·보통주는 총 사용액 대비 */
+  var pos, posNote;
+  if(st.kind==='debt'){
+    var before=0, order=M.trs.filter(function(x){ return x.loan>0.0001||x.k==='sr'; });
+    for(var q=0;q<order.length;q++){ if((order[q].k==='sr'&&bs.tr==='sr')||order[q].k===bs.tr) break; before+=order[q].loan; }
+    pos=s.apprValue>0? fp(before/s.apprValue,1)+' ~ '+fp((before+base)/s.apprValue,1) : '—';
+    posNote='LTV 구간 — 감정평가액 대비 · 앞 순위 대출 누적';
+  } else {
+    var b2=M.debtTot;
+    if(st.kind==='pref'){ for(var q2=0;q2<M.jrPref.length&&('jr'+M.jrPref[q2].i)!==bs.tr;q2++) b2+=M.jrPref[q2].amt; }
+    else b2+=M.pref+M.depSrc;
+    pos=M.uses>0? fp(b2/M.uses,1)+' ~ '+fp((b2+base)/M.uses,1) : '—';
+    posNote='총 사용액 대비 자본구조 위치(대출 LTV 아님)';
+  }
+  var endLbl=(st.kind==='debt'&&bs.tr==='sr'&&M.refi)? M.refi.at+'년차(만기 차환)' : st.endAt+'년차(매각)';
+  B.head='약정 '+f0(base)+' '+G.unit+' 중 <b>'+fp(share,1)+'</b>'+(bs.amt>base+1? ' — 약정보다 커서 100%로 봄' : '');
+  B.rows=[
+    ['SEC',st.n+' — '+endLbl+' 정산'],
+    ['약정 · 투자액',f0(base),S(base),st.kind==='debt'? '매입 시점 전액 실행' : '매입 시점 투입'],
+    ['이자 · 배당 청구',f0(st.I),S(st.I),st.kind==='debt'? '발생 이자(PIK 포함)' : st.kind==='pref'? (M.jrPref.filter(function(x){ return 'jr'+x.i===bs.tr; })[0]||{}).cum? '누적적 — 매년 요구배당' : '비누적 — 받은 배당만' : '보통주는 잔여 이익'],
+    ['회수액',f0(st.R),S(st.R),'원리금·배당 + 만기·매각 정산'],
+    ['원금 회수',f0(sm.prinRec),S(sm.prinRec),'이자·배당 먼저 충당한 뒤 남는 금액 · 회수율 '+fp(sm.prinRate,1)],
+    ['미회수 원금',f0(sm.unpaid),S(sm.unpaid),sm.unpaid>1? '못 받은 원금' : '없음'],
+    ['원리금 회수율',fp(sm.totRate,1),fp(sm.totRate,1),'회수액 ÷ (원금 + 이자·배당) — 비례 안분이라 같다'],
+    ['IRR',fp(irrV,2),fp(irrV,2),'연 현금흐름 · 수수료 제외 — 비례 안분이라 같다'],
+    ['자본구조 위치',pos,'트랜치 안 지분 '+fp(share,1),posNote]
+  ];
+  /* 전액 회수 손익분기 — Exit Cap만 바꿔 다시 계산. 추가 출자 없이 매각대금(수수료·양도세·보증금 반환 뒤)으로
+     이 층까지 다 받을 수 있는 가장 높은 Exit Cap. 대출은 매각 때 이자·원금을 함께 받으므로 두 기준이 같다. */
+  var claimOk=function(Mv){
+    if(st.kind==='debt'){
+      var need=0;
+      for(var q=0;q<Mv.trs.length;q++){ need+=Mv.trs[q].sch.balloon; if(Mv.trs[q].k===bs.tr) break; }
+      return Mv.exitCash+Mv.balloonAll>=need-1e-6;
+    }
+    var left=Mv.exitCash;
+    for(var q3=0;q3<Mv.jrPref.length;q3++){
+      var p=Mv.jrPref[q3], want=p.amt+p.accr;
+      if('jr'+p.i===bs.tr) return left>=want-1e-6;
+      left-=want;
+    }
+    return null;
+  };
+  var eg=null, bepRows;
+  if(st.kind==='com') bepRows=[['해당 없음','—','보통주는 잔여 지분이라 전액 회수 경계 대신 IRR로 본다']];
+  else if(bs.tr==='sr'&&M.refi) bepRows=[['매각가와 무관','—',M.refi.at+'년차 만기에 차환 '+f0(M.refiUsed)+' + 보통주 추가 출자 '+f0(M.refiGap)+'로 상환된다고 계산']];
+  else {
+    eg=bonEdge(function(cap){ return claimOk(recalcWith('exitCap',cap)); }, 0.005, 0.5, false);
+    var sv=function(cap){ return M.noi(s.hold+1)/cap; };
+    if(!eg) bepRows=[['원금·원리금 기준 — Exit Cap 상한','—','계산할 수 없음']];
+    else if(eg.state==='always') bepRows=[['원금·원리금 기준 — Exit Cap 상한','50% 이상','Exit Cap 50%에서도 전액 회수']];
+    else if(eg.state==='never') bepRows=[['원금·원리금 기준 — Exit Cap 상한','불가','Exit Cap 0.5%로도 추가 출자 없이는 전액 회수 안 됨']];
+    else bepRows=[
+      ['원금·원리금 기준 — Exit Cap 상한',fp(eg.v,2),'현재 '+fp(s.exitCap,2)+' · 여유 '+fpp(eg.v-s.exitCap,2)],
+      ['같은 조건의 최소 매각가',f0(sv(eg.v)),'현재 매각가 '+f0(M.saleValue)+' 대비 '+fp(1-sv(eg.v)/M.saleValue,1)+' 하락까지 전액 회수']];
+  }
+  B.bep=bepRows;
+  B.prinRate=sm.prinRate; B.irr=irrV; B.st=st; B.share=share;
+  B.warn=[];
+  if(M.exitShort>1&&st.kind!=='com') B.warn.push('지금 가정에서는 매각대금으로 부채를 다 갚지 못해(부족 '+f0(M.exitShort)+') 모델이 보통주 추가 출자를 가정합니다 — 추가 출자가 없으면 본건 회수가 줄어듭니다.');
+  if(bs.tr==='sr'&&M.refi&&M.refiGap>1) B.warn.push('본건 선순위는 만기 상환 재원 중 '+f0(M.refiGap)+'을 보통주 추가 출자에 기대고 있습니다 — 추가 출자가 없으면 그만큼 회수가 줄어듭니다.');
+  B.notes=['본건 = 트랜치 × 본건 비중 — 같은 트랜치·같은 조건의 비례 안분만 봅니다(첫 버전).',
+    '원금 회수는 이자·배당을 먼저 충당한 뒤 남는 금액이라 보수적입니다. 취급수수료는 넣지 않았습니다.',
+    '손익분기는 매각대금에서 수수료·양도세·보증금 반환을 먼저 뺀 뒤 앞 순위부터 채운다고 본 값입니다(계약상 순서는 따로 확인).'];
+  var capTxt=(bs.tr==='sr'&&M.refi)? M.refi.at+'년차 만기 상환(차환 + 추가 출자)'
+    : (eg&&eg.state==='edge')? 'Exit Cap 상한 '+fp(eg.v,2) : 'Exit Cap 상한 '+(bepRows[0]? bepRows[0][1] : '—');
+  B.verdict='원금 회수 <b class="'+(sm.prinRate>=1-1e-9?'g':'r')+'">'+fp(sm.prinRate,1)+'</b> <span class="qt">'+esc(st.n)+' '+fp(share,0)+
+    (st.kind==='com'? '' : ' · '+capTxt)+' · IRR '+fp(irrV,2)+'</span>';
+  return B;
+}
 /* ── 판정 요약 ── */
 function verdict(M){
   var s=M.s;
@@ -5373,13 +5586,20 @@ function verdict(M){
   out.lines.push({c:'만기 상환',t:(M.exitShort>1
     ? '<b class="r">매각대금으로 부채를 다 못 갚습니다</b> <span class="qt">부족 '+f0(M.exitShort)+' '+G.unit+' · 보통주 마지막 해 음수는 추가 출자 가정</span>'
     : '매각대금으로 <b class="g">전액 상환</b> <span class="qt">부채·보증금·양도세 정산 후 '+f0(M.exitCash)+' '+G.unit+'</span>')});
-  if(M.termGap) out.lines.push({c:'대출 만기',t:'<b class="r">보유기간보다 먼저 도래</b> <span class="qt">'+s.srTerm+'년차 말 선순위 잔액 '+
-    f0(M.srMatBal)+' '+G.unit+' — 차환 전제 필요</span>'});
+  /* 만기 차환 — 입력한 금액만 쓰고, 모자라는 차액은 그해 보통주 추가 출자로 본다(A-1-b) */
+  if(M.termGap) out.lines.push({c:'대출 만기',t:(M.refiGap>1
+    ? '<b class="r">만기 자금 부족 '+f0(M.refiGap)+'</b> '+G.unit+' <span class="qt">'+s.srTerm+'년차 말 잔액 '+f0(M.srMatBal)+' · 차환 '+f0(M.refiUsed)+' — 차액은 추가 출자 가정</span>'
+    : '차환 <b>'+f0(M.refiUsed)+'</b> '+G.unit+' <span class="qt">'+s.srTerm+'년차 말 잔액 '+f0(M.srMatBal)+' · 차환 금리 '+fp(s.refiRate,2)+' (입력)</span>')});
+  var BN=M.bonOf? M.bonOf() : null;                  /* 본건(당사) 기준 — 트랜치를 골랐을 때만 */
+  if(BN&&BN.verdict) out.lines.push({c:'본건',t:BN.verdict});
   out.lines.push({c:'가치 변동',t:'Cap '+(s.exitCap>M.entryCap?'<b class="r">확장</b>':'<b class="g">압축</b>')+' '+
     fpp(s.exitCap-M.entryCap,2)+' <span class="qt">진입 '+fp(M.entryCap,2)+' → Exit '+fp(s.exitCap,2)+'</span>'});
   if(M.minD!=null&&M.minD<1.2) out.caution.push('최소 DSCR이 '+fx(M.minD)+'로 통상 약정선(1.20x)을 밑돕니다.');
-  if(M.termGap) out.caution.push('선순위 만기('+s.srTerm+'년)가 보유기간('+s.hold+'년)보다 짧습니다. 모델은 만기에 갚거나 갈아타지 않고 보유기간 끝까지 같은 조건으로 빌리는 것으로 계산했습니다 — '+
-    s.srTerm+'년차 말 잔액 '+f0(M.srMatBal)+' '+G.unit+'의 차환 조건(금리·한도)이나 상환 재원을 따로 확인해야 합니다. 수익률·DSCR은 같은 조건으로 차환된다는 전제의 값입니다.');
+  if(M.termGap&&M.refiUsed<=0.0001) out.caution.push('선순위 만기('+s.srTerm+'년)가 보유기간('+s.hold+'년)보다 짧은데 차환 조건이 없습니다 — '+
+    s.srTerm+'년차 말 잔액 '+f0(M.srMatBal)+' '+G.unit+' 전액을 그해 보통주가 추가 출자해 갚는다고 계산했습니다(자동 차환을 가정하지 않음). 확인된 차환 금액·금리를 「만기 차환 금액」「차환 금리」에 넣으세요.');
+  else if(M.termGap&&M.refiGap>1) out.caution.push('차환 '+f0(M.refiUsed)+'로 '+s.srTerm+'년차 말 잔액 '+f0(M.srMatBal)+'을 다 갚지 못해 '+
+    f0(M.refiGap)+' '+G.unit+'을 그해 보통주 추가 출자로 메운다고 계산했습니다.');
+  if(M.termGap&&s.refiAmt>M.srMatBal+1) out.caution.push('입력한 차환 금액 '+f0(s.refiAmt)+'이 만기 잔액 '+f0(M.srMatBal)+'보다 커서 잔액까지만 반영했습니다(추가 인출은 계산하지 않음).');
   if(M.exitShort>1) out.caution.push('매각 순수입이 부채 잔액·승계 보증금·양도세를 다 갚지 못해 '+f0(M.exitShort)+' '+G.unit+'이 모자랍니다. 보통주 마지막 해의 음수 현금흐름은 이 부족분을 보통주가 추가 출자한다고 가정한 값입니다 — 비소구 구조라면 이 금액은 대주 등이 못 받는 미회수액입니다.'+
     (M.irrCom==null?' 보통주 IRR은 이 때문에 산출되지 않습니다.':''));
   if(M.opShort.length) out.caution.push('운영 중 '+M.opShort.map(function(x){ return x.t+'년차 '+f0(x.amt); }).join(', ')+' '+G.unit+
@@ -5420,13 +5640,14 @@ function checks(M){
   C.push({n:'⑧ 주요 지표의 셀 참조 경로',a:'전체',na:'설명 항목',v:'시트 연결 순서: Source_Data → Assumptions → Lease_NOI_Model · Debt_Schedule → Waterfall → Equity_Cashflow → Return_Summary (실제 참조 여부는 엑셀 표지 「표지 핵심 지표」가 셉니다)',ref:'시트 간 연결'});
   C.push({n:'⑨ 임대 명세 합계 = 연면적',a:'Rent_Roll',ok:Math.abs(rt.area-s.area)<1,
     v:'명세 합계 '+f0(rt.area)+'평 vs 연면적 '+f0(s.area)+'평',ref:'Rent_Roll'});
-  C.push({n:'⑩ 대출 만기 ≥ 보유기간',a:'선순위',rev:1,ok:!M.termGap,
-    v:M.termGap? '만기 '+s.srTerm+'년 < 보유 '+s.hold+'년 · '+s.srTerm+'년차 말 잔액 '+f0(M.srMatBal)+' — 모델은 같은 조건 차환을 전제로 계산'
-               : '만기 '+s.srTerm+'년 ≥ 보유 '+s.hold+'년',ref:'Debt_Schedule'});
+  C.push({n:'⑩ 만기 상환 재원 (차환)',a:'선순위',rev:1,ok:!M.termGap||M.refiGap<=1,
+    v:M.termGap? '만기 '+s.srTerm+'년 < 보유 '+s.hold+'년 · '+s.srTerm+'년차 말 잔액 '+f0(M.srMatBal)+' · 차환 '+f0(M.refiUsed)+
+                 (M.refiGap>1? ' · 차액 '+f0(M.refiGap)+'(보통주 추가 출자 가정)' : ' — 차환으로 전액 상환')
+               : '만기 '+s.srTerm+'년 ≥ 보유 '+s.hold+'년 — 매각 때 상환',ref:'Debt_Schedule'});
   C.push({n:'⑪ 매각대금으로 부채 상환',a:'매각연도',rev:1,ok:M.exitShort<=1,
     v:'매각 순수입 '+f0(M.saleProceeds)+' − 부채 '+f0(M.balloonAll)+' − 승계 보증금 '+f0(M.depSrc)+' − 양도세 '+f0(M.gainTax)+' = '+f0(M.exitCash),ref:'Waterfall'});
-  if(M.termGap) errs.push({e:'대출 만기가 보유기간보다 짧음',i:s.srTerm+'년차 말 선순위 잔액 '+f0(M.srMatBal),
-    c:'선순위 만기 '+s.srTerm+'년 / 보유기간 '+s.hold+'년',s:'차환 금리·한도를 확인해 반영하거나 보유기간을 만기에 맞춰 검토'});
+  if(M.termGap&&M.refiGap>1) errs.push({e:'만기 자금 부족(차환 차액)',i:'차액 '+f0(M.refiGap)+' — '+s.srTerm+'년차 말 잔액 '+f0(M.srMatBal)+' · 차환 '+f0(M.refiUsed),
+    c:'선순위 만기 '+s.srTerm+'년 / 보유기간 '+s.hold+'년',s:'확인된 차환 금액·금리를 입력하거나 만기 연장·보유기간 조정 검토 — 차액은 보통주 추가 출자로 계산됨'});
   if(M.exitShort>1) errs.push({e:'매각대금으로 부채 상환 부족',i:'부족 '+f0(M.exitShort),
     c:'Exit Cap '+fp(s.exitCap,2)+' / 부채 잔액 '+f0(M.balloonAll),s:'보통주 마지막 해 음수는 추가 출자 가정 — 비소구라면 대주 미회수로 따로 봐야 함'});
   if(Math.abs(rt.area-s.area)>=1) errs.push({e:'임대 명세 면적 합계가 연면적과 불일치',i:'차이 '+f0(rt.area-s.area)+'평',
@@ -5713,7 +5934,7 @@ PANES.stack=function(M){
     .concat(['보증금'])
     .concat(M.jrPref.filter(function(x){return x.amt>0.0001;}).map(function(x){return x.n;}))
     .concat(['보통주']).join(' → ');
-  return eCard + card('자금 조달 · 사용 (Sources & Uses)','단위 '+G.unit, tblWrap(u),
+  return eCard + bonCardHtml(M.bonOf()) + card('자금 조달 · 사용 (Sources & Uses)','단위 '+G.unit, tblWrap(u),
       '부채 층 비중은 LTV로 분모가 감정평가액이며, 지분 층 비중의 분모는 총 사용액입니다. 보통주는 잔액(plug)으로 산출되므로 입력 비중과 다를 수 있습니다. 층 추가·삭제는 이 탭 위쪽에서 합니다.',
       role('Uses와 Sources 연결, 양변 일치 검증','매입가·취득세·부대비, 층별 비중','Uses·Sources 합계, 보통주 plug','Capital_Stack · Equity_Cashflow'))
     + card('자본구조 (Capital_Stack)','상환·분배 우선순위: '+order, tblWrap(c),
@@ -5977,6 +6198,11 @@ function build(){
   items.push({cat:'5. 자본구조',item:'선순위 상환방식',v:d.srType==='amort'?'원리금균등':'만기일시',src:'대주 제시 조건'});
   items.push({k:'srAmY',cat:'5. 자본구조',item:'선순위 상각기간',v:d.srAmY,u:'년',src:'대주 제시 조건',z:Z.i});
   items.push({k:'srTerm',cat:'5. 자본구조',item:'선순위 대출 만기',v:d.srTerm,u:'년',src:'대주 제시 조건',z:Z.i});
+  /* 만기 차환 — 만기 < 보유기간일 때만 Debt_Schedule이 쓴다. 0이면 차환 없음(만기 잔액을 추가 출자로 상환) */
+  items.push({k:'refiAmt',cat:'5. 자본구조',item:'만기 차환 금액',v:s.refiAmt,u:unit,src:'차환 조건(사용자 확인)',
+    note:'만기 < 보유기간일 때만 사용 · 잔액까지만 반영 · 0이면 차환 없음(보통주 추가 출자로 상환)',z:Z.m});
+  items.push({k:'refiRate',cat:'5. 자본구조',item:'차환 금리',v:s.refiRate,src:'차환 조건(사용자 확인)',
+    note:'차환 뒤 이자만 지급'+((+d.refiRate>0)? '' : ' · 미입력 — 선순위 금리 적용')+(sc.dRate?' · 시나리오 '+fpp(sc.dRate,2):''),z:Z.p});
   items.push({k:'prepay',cat:'5. 자본구조',item:'중도상환수수료율',v:d.prepayFee,src:'미입력 — 통상 수준 가정',z:Z.p});
   /* 중순위·후순위는 층이 없어도(0) 자리를 남긴다 — 셀 주소가 고정돼야
      아래 시트의 참조가 층을 켜고 끌 때마다 흔들리지 않는다. */
@@ -6163,7 +6389,7 @@ function build(){
   /* 층마다 표를 따로 편 뒤 아래에서 합친다. PIK 층은 현금이자 열이 0이 되고
      그만큼 기말잔액이 불어나므로, 같은 산식 하나로 두 방식을 다 표현한다:
        기말 = 기초 − 원금상환 + (발생이자 − 현금이자) */
-  var dLoanSr=0, dPmt=0, blocks=[];
+  var dLoanSr=0, dPmt=0, blocks=[], srGapFirst=0, srGapLast=0;   /* 선순위 표의 차환 차액(H) 범위 */
   M.trs.forEach(function(x,ti){
     if(x.loan<=0.0001 && ti>0) return;          /* 안 쓰는 층은 표를 만들지 않는다 */
     var isSr=(ti===0);
@@ -6180,19 +6406,26 @@ function build(){
       dLoanSr=bLoan;
       dPmt=P(ds,['연간 원리금 (고정)', M.isAm?N(M.pmt,Z.m,'PMT('+R.srRate+','+R.srAmY+',-$B$'+bLoan+')'):N(M.pmt,Z.m,'$B$'+bLoan+'*'+R.srRate)]);
     }
-    var bHdr=P(ds,['연차','기초잔액','이자 (발생)','현금이자','원금상환','원리금 (DS)','기말잔액']);
+    var bHdr=P(ds,['연차','기초잔액','이자 (발생)','현금이자','원금상환','원리금 (DS)','기말잔액'].concat(isSr?['차환 차액 (추가 출자)']:[]));
     var bFirst=bHdr+1;
     x.sch.rows.forEach(function(r,k){
       var rr=bFirst+k;
-      P(ds,[N(r.t,Z.i),
+      /* 선순위 만기 차환(A-1-b) — 만기 < 보유기간이면 만기 해 말 잔액을 차환 금액(잔액까지만)으로
+         갈아타고 차액(H)은 보통주 추가 출자, 그 뒤로는 차환 금리로 이자만 낸다. 만기 ≥ 보유기간이면
+         아래 조건이 모두 거짓이라 예전 산식과 같다. 만기·차환 금액을 엑셀에서 바꿔도 따라온다. */
+      var afterF=isSr? 'AND(A'+rr+'>'+R.srTerm+','+R.srTerm+'<'+R.hold+')' : '';
+      var row=[N(r.t,Z.i),
         N(r.open,Z.m,k===0?('$B$'+bLoan):('G'+(rr-1))),
-        N(r.int,Z.m,'B'+rr+'*'+rateRef),
+        N(r.int,Z.m,'B'+rr+'*'+(isSr? 'IF('+afterF+','+R.refiRate+','+rateRef+')' : rateRef)),
         N(r.cashInt,Z.m,'C'+rr+'*(1-'+pikRef+')'),
-        (isSr&&M.isAm)?N(r.prin,Z.m,'MIN($B$'+dPmt+'-C'+rr+',B'+rr+')'):N(0,Z.m),
+        (isSr&&M.isAm)?N(r.prin,Z.m,'IF('+afterF+',0,MIN($B$'+dPmt+'-C'+rr+',B'+rr+'))'):N(0,Z.m),
         N(r.ds,Z.m,'D'+rr+'+E'+rr),
-        N(r.close,Z.m,'B'+rr+'-E'+rr+'+(C'+rr+'-D'+rr+')')]);
+        N(r.close,Z.m,'B'+rr+'-E'+rr+'+(C'+rr+'-D'+rr+')'+(isSr?'-H'+rr:''))];
+      if(isSr) row.push(N(r.gap||0,Z.m,'IF(AND(A'+rr+'='+R.srTerm+','+R.srTerm+'<'+R.hold+'),MAX(0,B'+rr+'-E'+rr+'+(C'+rr+'-D'+rr+')-'+R.refiAmt+'),0)'));
+      P(ds,row);
     });
     blocks.push({first:bFirst,last:bFirst+x.sch.rows.length-1,name:x.n});
+    if(isSr){ srGapFirst=bFirst; srGapLast=bFirst+x.sch.rows.length-1; }
   });
   /* 연도별 합계 — 아래 시트들이 참조하는 열 뜻은 예전과 같다.
      D=이자(발생, 세금용) · E=원금상환 · F=원리금(현금, DSCR용) · G=기말잔액 */
@@ -6254,10 +6487,10 @@ function build(){
   made.Tax_Disposition=tx;
 
   /* Waterfall */
-  var wf=SH(); wf.cols=W(10,16,16,16,16,16,16,16,16,16,40);
+  var wf=SH(); wf.cols=W(10,16,16,16,16,16,16,16,16,16,16,18);
   head(wf,'Waterfall — 분배 워터폴','우선주와 보통주 간 분배 우선순위에 따라 연도별·매각 시점 분배액을 계산한다',
     'Debt_Schedule 원리금, Tax_Disposition 법인세, Capital_Stack 우선주 조건','연도별 우선주·보통주 분배액과 누적 미지급','Equity_Cashflow');
-  var wHdr=P(wf,['연차','NOI','운용보수','고정비','원리금','법인세','배분전 CF','지분 층 요구','지분 층 지급','누적 미지급','보통주 분배']);
+  var wHdr=P(wf,['연차','NOI','운용보수','고정비','원리금','법인세','배분전 CF','지분 층 요구','지분 층 지급','누적 미지급','보통주 분배','차환 차액 (추가 출자)']);
   var wFirst=wHdr+1;
   /* 지분 층이 여럿일 수 있어 요구 배당은 층별 «금액 × 요구수익률»의 합이다.
      누적 이월은 층 중 하나라도 누적이면 적용한다(합계 열 기준). */
@@ -6282,7 +6515,9 @@ function build(){
          기준으로 이월 산식을 쓴다 — 합계 열이므로 그것이 맞는 표현이다. */
       N(r.prefPaid,Z.m,'MAX(0,MIN(G'+rr+',H'+rr+((k===0||!anyCum)?'':'+J'+(rr-1))+'))'),
       N(r.accr,Z.m,'MAX(0,H'+rr+((k===0||!anyCum)?'':'+J'+(rr-1))+'-I'+rr+')'),
-      N(r.comCF,Z.m,'G'+rr+'-I'+rr+''), '']);
+      /* 보통주 분배 = 배분전 CF − 지분 층 지급 − 차환 차액(만기 해의 추가 출자, L열) */
+      N(r.comCF,Z.m,'G'+rr+'-I'+rr+'-L'+rr),
+      N(r.refiGap||0,Z.m,'Debt_Schedule!H'+(srGapFirst+k))]);
   });
   var wLast=wFirst+M.years.length-1;
   P(wf,[]);
@@ -6431,6 +6666,7 @@ function build(){
     CM('세금 — 법인세',unit,function(r,k){ return N(-r.tax,Z.m,'-Tax_Disposition!C'+(txHdr+1+k)); },'Tax_Disposition');
     CM('배분전 현금흐름',unit,function(r,k){ return N(r.avail,Z.m,'Waterfall!G'+(wFirst+k)); },'Waterfall');
     CM('우선주 분배',unit,function(r,k){ return N(-r.prefPaid,Z.m,'-Waterfall!I'+(wFirst+k)); },'Waterfall');
+    if(M.termGap) CM('만기 차환 차액 (보통주 추가 출자)',unit,function(r,k){ return N(-(r.refiGap||0),Z.m,'-Waterfall!L'+(wFirst+k)); },'Waterfall · 보통주 분배에서 이미 차감');
     CM('보통주 분배',unit,function(r,k){ return N(r.comCF,Z.m,'Waterfall!K'+(wFirst+k)); },'Waterfall');
     P(cm,[]);
     P(cm,['· 매각 시점 현금흐름은 Waterfall 시트 하단의 매각 분배 표에 별도로 전개했습니다.']);
@@ -6518,8 +6754,8 @@ function build(){
       T(Math.abs(rt2.area-s.area)<1?'PASS':'CHECK')]);
   }
   /* 만기·매각 재원 — 화면 ⑩·⑪과 같다. CHECK는 계산 오류가 아니라 «전제를 확인하라»는 뜻이다 */
-  coreRows.push(['⑩ 대출 만기 ≥ 보유기간','선순위','만기가 보유기간보다 짧으면 같은 조건 차환을 전제로 계산한 값','Assumptions',
-    T(M.termGap?'CHECK':'PASS','IF('+R.srTerm+'>='+R.hold+',"PASS","CHECK")')]);
+  coreRows.push(['⑩ 만기 상환 재원 (차환)','선순위','만기 < 보유기간이면 만기 잔액을 차환 금액으로 갈아타고, 모자라는 차액은 보통주 추가 출자로 계산 — 차액이 있으면 CHECK','Debt_Schedule!H'+srGapFirst+':H'+srGapLast,
+    T((M.termGap&&M.refiGap>1)?'CHECK':'PASS','IF(SUM(Debt_Schedule!H'+srGapFirst+':H'+srGapLast+')<=1,"PASS","CHECK")')]);
   coreRows.push(['⑪ 매각대금으로 부채 상환','매각연도','분배 가능액(매각 순수입 − 부채 − 승계 보증금 − 양도세) ≥ 0 — 음수면 보통주 음수 CF는 추가 출자 가정','Waterfall!B'+e5,
     T(M.exitShort>1?'CHECK':'PASS','IF(Waterfall!B'+e5+'>=-1,"PASS","CHECK")')]);
   var keyM=[
@@ -6578,6 +6814,9 @@ var FIELDS=[
     {k:'srType',l:'선순위 상환방식',t:'sel',o:[['io','만기일시'],['amort','원리금균등']],w:1,sub:1},
     {k:'srAmY',l:'선순위 상각기간',t:'num',u:'년',sub:1},
     {k:'srTerm',l:'선순위 대출 만기',t:'num',u:'년',sub:1},
+    /* 만기가 보유기간보다 짧을 때만 쓴다 — 사용자가 확인한 차환 조건(자동 한도 산출 없음) */
+    {k:'refiAmt',l:'만기 차환 금액',t:'num',u:'백만원',sub:1},
+    {k:'refiRate',l:'차환 금리',t:'pct',u:'%',sub:1},
     {k:'prepayFee',l:'중도상환수수료',t:'pct',u:'%',sub:1},
     {k:'comTargetIRR',l:'보통주 목표 IRR',t:'pct',u:'%'}],
     hint:'선순위 LTV의 분모는 <b>감정평가액</b>입니다. 보통주는 잔액(plug)입니다. 선순위 아래 층(중순위·후순위·우선주 등)은 <b>자본구조 탭</b>에서 원하는 만큼 추가·삭제합니다.'},
@@ -6648,7 +6887,7 @@ function makeEngine(key,name,over,purpose){
       if(srLoan>d.price) w.push('선순위 대출액 '+f0(srLoan)+'이 매입가 '+f0(d.price)+'을 넘습니다 (LTV는 감정평가액 기준).');
       if(srLoan+pref>uses) w.push('선순위 '+f0(srLoan)+' + 우선주 '+f0(pref)+'이 총 사용액 '+f0(uses)+'을 넘어 보통주 자기자본이 음수가 됩니다.');
       if(d.srTerm>d.hold) w.push('대출 만기 '+d.srTerm+'년이 보유기간 '+d.hold+'년보다 깁니다. 매각 시점에 잔액이 남습니다.');
-      if(d.srTerm<d.hold) w.push('대출 만기 '+d.srTerm+'년이 보유기간 '+d.hold+'년보다 짧습니다. 모델은 만기에 갚거나 갈아타지 않고 같은 조건으로 계속 빌린다고 계산합니다 — 차환 전제를 확인하세요.');
+      if(d.srTerm<d.hold&&!(+d.refiAmt>0)) w.push('대출 만기 '+d.srTerm+'년이 보유기간 '+d.hold+'년보다 짧습니다. 차환 금액·금리를 넣지 않으면 만기 잔액을 그해 보통주 추가 출자로 갚는다고 계산합니다 — 확인된 차환 조건을 넣으세요.');
       if(d.srType==='amort'&&d.srAmY<d.srTerm) w.push('상각기간 '+d.srAmY+'년이 만기 '+d.srTerm+'년보다 짧습니다.');
       return w;
     },
@@ -7097,20 +7336,34 @@ function model(key){
      받지 못한다.
        누적적: 인출한 달부터 준공 달까지 요구수익률로 단리 누적(미지급 배당에 다시 이자를
                붙이지 않는다 — 매입형과 같다)
-       비누적: 개발 기간 중에는 배당 재원이 없으므로 준공이 속한 마지막 12개월분만 */
+       비누적: 배당권은 사업연도(회계연도) 단위로 판단한다 — 준공이 속한 사업연도를 포함해
+               마지막 N개 사업연도(입력 divY, 기본 1) 안의 투입 기간에만 배당이 붙는다.
+               정산이 다음 사업연도로 넘어가거나 진행기준으로 이익을 인식하면 N을 늘린다
+               (2026-09-25 사용자 결정 — 예전의 «마지막 12개월» 고정 규칙은 버렸다).
+               모델에 달력 날짜가 없으므로 1개월차 = 분석 기준일이 속한 달, 사업연도 = 1~12월로 본다.
+     누적 여부를 적지 않은 옛 저장본은 누적적으로 본다(개발PF 화면에는 고르는 칸이 없었다 —
+     매입형 새 층의 기본값도 누적적이다). */
   M.distrib=M.endCash-M.tax;
   var dLeft=Math.max(0,M.distrib);
+  var asOfMo=(/^\d{4}-(\d{2})/.exec(String(G.asOf||''))||[0,'01'])[1]-1;   /* 1개월차의 달(0~11) */
+  var fyOf=function(m){ return Math.floor((asOfMo+m-1)/12); };            /* 개월차 → 사업연도 번호 */
   M.prefTiers=JP.map(function(x){
     var rt=Math.max(0,+x.t.rate||0), drawn=0, div=0, cfP=[];
+    var cum=(x.t.cum==null)? true : !!x.t.cum;
+    var divY=Math.max(1,Math.round(+x.t.divY||1));
+    /* 비누적 배당이 붙는 첫 달 — 마지막 divY개 사업연도의 첫 달(개월차) */
+    var winFirst=(fyOf(T)-divY+1)*12-asOfMo+1;
     M.rows.forEach(function(r){
-      var d=r.drawJ[x.i]||0, mo=T-r.m;   /* 그달 인출분이 준공까지 남아 있는 개월 수 */
+      var d=r.drawJ[x.i]||0;
+      /* 그달 인출분에 배당이 붙는 개월 수 — (인출월, 준공월] 가운데 배당 대상 기간 */
+      var mo=cum? (T-r.m) : Math.max(0, T-Math.max(r.m, winFirst-1));
       drawn+=d; cfP.push(-d);
-      div+=d*rt*(x.t.cum? mo : Math.min(12,mo))/12;
+      div+=d*rt*mo/12;
     });
     var want=drawn+div, paid=Math.min(dLeft,want);
     dLeft-=paid;
     if(T>0) cfP[T-1]+=paid;
-    return {i:x.i, n:x.t.n||('Tr.'+String.fromCharCode(66+x.i)), cum:!!x.t.cum, rate:rt,
+    return {i:x.i, n:x.t.n||('Tr.'+String.fromCharCode(66+x.i)), cum:cum, divY:divY, rate:rt,
             drawn:drawn, div:div, want:want, paid:paid, divPaid:Math.min(paid,div),
             unpaid:want-paid, cf:cfP, irr:(drawn>0.0001? irrM([0].concat(cfP)) : null)};
   });
@@ -7140,6 +7393,8 @@ function model(key){
       M.bePrice   =beSolve(function(v){ return reCalc({priceScale:v}).profit; }, 0.50, 1.50);
     } finally { BE_LOCK=false; }
   } else { M.beSellRate=null; M.bePrice=null; }
+  /* 본건 투자자 관점 — 필요할 때 한 번만 계산(손익분기 역산이 모델을 다시 돌린다) */
+  M.bonOf=function(){ return M._bon||(M._bon=devBon(M)); };
   return M;
 }
 var BE_LOCK=false;
@@ -7220,6 +7475,101 @@ function rxBlockCalc(M){
   return out;
 }
 
+/* ── 본건 투자자 관점 (M1) — 개발PF ──
+   트랜치 한 층의 월별 현금흐름과 원금·이자·회수액. 모든 층은 준공(T개월차)에 정산된다.
+     선순위: −인출 + 상환(자본화 이자 포함)
+     부채 층: −인출 + 상환 + (현금이자 층이면 매달 이자)
+     지분 층: 우선주 배분(M.prefTiers)
+     보통주: 자기자본 현금흐름(M.eqCF) */
+function devTranche(M,key){
+  var s=M.s, rows=M.rows, i, m=/^jr(\d+)$/.exec(key||'');
+  if(key==='sr'){
+    var P=0,I=0,R=0,cf=[];
+    rows.forEach(function(r){ P+=r.draw; I+=r.int; R+=r.repay; cf.push(-r.draw+r.repay); });
+    return {n:'선순위 PF', kind:'debt', lim:(M.limits.sr===Infinity? null : M.limits.sr), P:P, I:I, R:R, cf:cf, endBal:M.endBal};
+  }
+  if(m){
+    i=+m[1]; var t=(s.jr||[])[i]; if(!t) return null;
+    var nm=t.n||('Tr.'+String.fromCharCode(66+i));
+    if(t.kind==='pref'){
+      var p=(M.prefTiers||[]).filter(function(x){ return x.i===i; })[0]; if(!p) return null;
+      return {n:nm, kind:'pref', lim:M.limits.jr[i]||0, P:p.drawn, I:p.div, R:p.paid, cf:p.cf.slice(), endBal:p.unpaid};
+    }
+    var P2=0,I2=0,R2=0,cf2=[];
+    rows.forEach(function(r){
+      var d=r.drawJ[i]||0, rp=r.repayJ[i]||0, it=r.intJ[i]||0, cash=t.pik? 0 : it;
+      P2+=d; I2+=it; R2+=rp+cash; cf2.push(-d+rp+cash);
+    });
+    return {n:nm, kind:'debt', lim:M.limits.jr[i]||0, P:P2, I:I2, R:R2, cf:cf2,
+            endBal:rows.length? (rows[rows.length-1].closeJ[i]||0) : 0};
+  }
+  if(key==='com') return {n:'보통주 자기자본', kind:'com', lim:s.equity, P:M.eqUsed, I:0, R:Math.max(0,M.comRecovery), cf:M.eqCF.slice(), endBal:0};
+  return null;
+}
+function devBon(M){
+  var bs=bonState(), B={opts:M.tiers.map(function(t){ return {k:t.k, n:t.n}; }), sel:bs? bs.tr:'', amt:bs? bs.amt:0};
+  if(!bs){ B.unset=true; return B; }
+  var st=devTranche(M,bs.tr); if(!st){ B.missing=true; return B; }
+  var sm=bonSummarize(st), s=M.s;
+  /* 본건 비중의 분모는 약정 한도. 선순위 한도가 없으면(비중 0) 실제 최대 잔액을 쓴다 */
+  var base=(st.lim!=null&&st.lim>0.0001)? st.lim : (st.kind==='debt'? M.pfPeak : st.P);
+  var share=base>0.0001? Math.min(1,bs.amt/base) : 0;
+  var irr=st.P>0.0001? irrM([0].concat(st.cf)) : null;
+  var lastIn=0; st.cf.forEach(function(v,k){ if(v>0.0001) lastIn=k+1; });
+  /* 자본구조 위치 — 준공 정산 순서(선순위 → 부채 층 → 지분 층 → 보통주), 약정 한도 기준, 총사업비 대비 */
+  var order=['sr'].concat(M.tiers.filter(function(t){ return t.k!=='sr'&&t.k!=='com'&&t.kind==='debt'; }).map(function(t){ return t.k; }))
+    .concat(M.tiers.filter(function(t){ return t.k!=='com'&&t.kind==='equity'; }).map(function(t){ return t.k; })).concat(['com']);
+  var limOf=function(k){ var t=M.tiers.filter(function(x){ return x.k===k; })[0]; if(!t) return 0;
+    return (t.lim==null||t.lim===Infinity)? t.used : t.lim; };
+  var before=0; for(var q=0;q<order.length&&order[q]!==bs.tr;q++) before+=limOf(order[q]);
+  var tc=M.totalCost>0? M.totalCost : null;
+  B.head='약정 '+f0(base)+' '+G.unit+' 중 <b>'+fp(share,1)+'</b>'+(bs.amt>base+1? ' — 약정보다 커서 100%로 봄' : '');
+  var S=function(v){ return f0(v*share); };
+  var noDraw=st.P<=0.0001;
+  B.rows=[
+    ['SEC',st.n+' — 준공('+M.T+'개월차) 정산'],
+    ['약정 한도',f0(base),f0(base*share),(st.lim==null? '선순위 한도 없음 — 실제 최대 잔액' : '총사업비 × 비중')],
+    ['실제 투입 (원금)',f0(st.P),S(st.P),noDraw? '실행 없음' : '월별 인출 합계'],
+    ['이자 · 배당 청구',f0(st.I),S(st.I),st.kind==='debt'? '발생 이자(자본화·현금 포함)' : st.kind==='pref'? '요구배당' : '보통주는 잔여 이익'],
+    ['회수액',f0(st.R),S(st.R),'상환 + 현금이자·배당'],
+    ['원금 회수',noDraw? '—' : f0(sm.prinRec),noDraw? '—' : S(sm.prinRec),noDraw? '실행 없음' : '이자·배당 먼저 충당한 뒤 남는 금액 · 회수율 '+fp(sm.prinRate,1)],
+    ['미회수 원금',noDraw? '—' : f0(sm.unpaid),noDraw? '—' : S(sm.unpaid),sm.unpaid>1? '준공 시점 못 받은 원금' : '없음'],
+    ['원리금 회수율',fp(sm.totRate,1),fp(sm.totRate,1),'회수액 ÷ (원금 + 이자·배당) — 비례 안분이라 같다'],
+    ['IRR (연환산)',fp(irr,2),fp(irr,2),'월별 현금흐름 · 수수료 제외 — 비례 안분이라 같다'],
+    ['마지막 회수 시점',lastIn? lastIn+'개월차' : '—',lastIn? lastIn+'개월차' : '—','준공 '+M.T+'개월차'],
+    ['자본구조 위치',tc? fp(before/tc,1)+' ~ '+fp((before+base)/tc,1) : '—','트랜치 안 지분 '+fp(share,1),'총사업비 대비 · 약정 기준 · 앞 순위 누적'+(st.kind==='debt'? '' : ' (지분 층 — 대출 LTV 아님)')]
+  ];
+  /* 전액 회수 손익분기 — 최종 분양률을 바꿔 모델을 다시 돌린다(다른 조건은 고정) */
+  var prevLock=BE_LOCK; BE_LOCK=true;
+  var edge=function(which){
+    return bonEdge(function(v){
+      var Mv=reCalc({finalSell:v}), sv=devTranche(Mv,bs.tr); if(!sv) return null;
+      if(sv.P<=0.0001) return true;
+      var q2=bonSummarize(sv); return (which==='prin'? q2.prinRate : q2.totRate)>=1-1e-9;
+    }, 0.05, 1.0, true);
+  };
+  var eP, eT;
+  try{ eP=edge('prin'); eT=edge('tot'); } finally { BE_LOCK=prevLock; }
+  var cur=M.absorb;
+  var txt=function(e){
+    if(!e) return ['—','계산할 수 없음'];
+    if(e.state==='always') return ['5% 이하','최종 분양률 5%에서도 전액 회수'];
+    if(e.state==='never') return ['불가','최종 분양률 100%에서도 전액 회수 안 됨'];
+    return [fp(e.v,1),'현재 '+fp(cur,1)+' · 여유 '+fpp(cur-e.v,1)];
+  };
+  var tP=txt(eP), tT=txt(eT);
+  B.bep=[['원금 기준 — 최종 분양률',tP[0],tP[1]],['원리금 기준 — 최종 분양률',tT[0],tT[1]]];
+  B.prinRate=sm.prinRate; B.irr=irr; B.bepPrin=eP; B.st=st; B.share=share;
+  B.warn=[];
+  if(M.shortfall>1) B.warn.push('지금 가정은 조달 한도로 사업비를 다 대지 못합니다(부족 '+f0(M.shortfall)+') — 완공을 전제로 한 회수 판정이라 참고만 하십시오.');
+  if(noDraw) B.warn.push('이 트랜치는 지금 가정에서 실제로 인출되지 않습니다 — 회수율 100%가 아니라 «실행 없음»입니다.');
+  B.notes=['본건 = 트랜치 × 본건 비중(약정 기준) — 같은 트랜치·같은 조건의 비례 안분만 봅니다(첫 버전).',
+    '원금 회수는 이자·배당을 먼저 충당한 뒤 남는 금액이라 보수적입니다. 취급·약정 수수료는 넣지 않았습니다.',
+    '손익분기는 다른 가정을 그대로 두고 최종 분양률만 바꿔 다시 계산한 값입니다. 준공 때 한 번에 정산하는 층은 이자를 먼저 충당하므로 원금·원리금 기준이 같게 나올 수 있습니다.'];
+  B.verdict=noDraw? '실행 없음 <span class="qt">'+esc(st.n)+'</span>'
+    : '원금 회수 <b class="'+(sm.prinRate>=1-1e-9?'g':'r')+'">'+fp(sm.prinRate,1)+'</b> <span class="qt">'+esc(st.n)+' '+fp(share,0)+' · 원금 손익분기 분양률 '+tP[0]+' · IRR '+fp(irr,2)+'</span>';
+  return B;
+}
 /* 층 비고 — 화면 자본구조 표와 엑셀 Capital_Stack이 같이 쓴다. 예전엔 옛 키(mz·sb·pref)로
    찾아서, 층 키가 jr0·jr1로 바뀐 뒤로는 메자닌에도 「잔여 이익 귀속」이 적혔다. */
 function devTierNote(t,M){
@@ -7230,7 +7580,7 @@ function devTierNote(t,M){
     return (debts[0]===t? '선순위 다음' : '앞 부채 층 다음')+' · '+(t.pik?'PIK(잔액 누적)':'이자 현금 지급');
   }
   var p=(M.prefTiers||[]).filter(function(x){ return x.i===t.jr; })[0];
-  return '준공 때 보통주보다 먼저 요구배당·원금 배분'+(p? ' · '+(p.cum?'누적적':'비누적') : '');
+  return '준공 때 보통주보다 먼저 요구배당·원금 배분'+(p? ' · '+(p.cum?'누적적':'비누적 · 마지막 '+p.divY+'개 사업연도 배당') : '');
 }
 function verdict(M){
   var s=M.s;
@@ -7251,6 +7601,10 @@ function verdict(M){
     ' <span class="qt">자기자본 실투입 '+f0(M.eqUsed)+'</span>'});
   out.lines.push({c:'손익분기',t:'분양률 <b>'+fp(M.beSellRate,1)+'</b>'+
     ' <span class="qt">또는 분양가 '+fp(M.bePrice,1)+' 수준</span>'});
+  /* 본건(당사) 기준 — 트랜치를 골랐을 때만 */
+  var BN=M.bonOf? M.bonOf() : null;
+  if(BN&&BN.verdict) out.lines.push({c:'본건',t:BN.verdict});
+  if(BN&&BN.st&&BN.prinRate!=null&&BN.prinRate<1-1e-9) out.caution.push('본건 트랜치('+BN.st.n+')의 원금이 '+fp(1-BN.prinRate,1)+' 회수되지 않습니다 — 본건 기준 미회수 원금 '+f0(bonSummarize(BN.st).unpaid*BN.share)+' '+G.unit+'.');
   /* 조달 한도로 사업비를 못 대면 «수치가 좋아 보이는 쪽»으로 틀린다 —
      못 빌린 돈에는 이자가 안 붙어 원가가 낮게 잡히기 때문이다.
      그래서 이익률·IRR 을 믿지 말라고 가장 먼저, 강하게 적는다. */
@@ -7726,7 +8080,10 @@ PANES.su=function(M){
         : '<td class="dim">—</td><td class="dim">—</td>')+
       '<td>'+(isDebt
         ? '<select class="on-blue" data-ji="'+i+'" data-jf="pik"><option value="1"'+(x.pik?' selected':'')+'>PIK (잔액 누적)</option><option value="0"'+(x.pik?'':' selected')+'>현금 지급</option></select>'
-        : '<span class="dim">자기자본처럼 투입</span>')+'</td>'+
+        /* 우선주 배당 — 누적 여부를 적지 않은 옛 저장본은 누적적(엔진과 같은 기본값) */
+        : ((function(){ var cum=(x.cum==null)||!!x.cum;
+            return '<select class="on-blue" data-ji="'+i+'" data-jf="cum" aria-label="우선배당 누적 여부"><option value="1"'+(cum?' selected':'')+'>누적적</option><option value="0"'+(cum?'':' selected')+'>비누적</option></select>'+
+              (cum? '' : '<label class="divy">배당 사업연도 <input type="text" inputmode="numeric" class="on-blue" data-ji="'+i+'" data-jf="divY" value="'+Math.max(1,Math.round(+x.divY||1))+'" aria-label="배당 받는 사업연도 수"></label>'); })()))+'</td>'+
       '<td>'+f0(t.lim)+'</td><td><b>'+f0(t.used)+'</b></td>'+
       '<td><button class="xbtn" data-jup="'+i+'"'+(i===0?' disabled':'')+'>↑</button>'+
         '<button class="xbtn" data-jdel="'+i+'">삭제</button></td></tr>';
@@ -7812,7 +8169,7 @@ PANES.su=function(M){
        '<td>'+fp(t.rate,1)+'</td><td class="l dim">'+esc(note)+(t.used>0.0001?'':' · 미사용')+'</td></tr>';
   });
   c+='</tbody></table>';
-  return eCard + xCard + card('자금 조달 · 사용 (Sources & Uses)','단위 '+G.unit, tblWrap(kvTable(u)),
+  return eCard + bonCardHtml(M.bonOf()) + xCard + card('자금 조달 · 사용 (Sources & Uses)','단위 '+G.unit, tblWrap(kvTable(u)),
       '개발사업의 Sources는 자기자본·PF·분양수입으로 구성되며, 분양수입이 PF를 상환하고 잔여가 사업이익이 됩니다. 총사업비는 금융비용을 포함한 항목 합계입니다.',
       role('총사업비와 조달 재원을 연결하고 양변 일치 검증','토지·공사·부대비·금융비용, 자기자본·PF','총사업비, 조달 구성, 균형 차이','Capital_Stack · Validation_Checks'))
     + card('자본구조 (Capital_Stack)','조달 순서: 자기자본 → 선순위 → 중순위 → 후순위 · 상환 순서: 선순위 → 중순위 → 후순위', tblWrap(c),
@@ -7883,6 +8240,8 @@ function bindPanes(){
         else if(f==='rate') t.rate=Math.max(0,round1(el.value)/100);
         else if(f==='fee')  t.fee=Math.max(0,(+el.value||0)/100);
         else if(f==='pik')  t.pik=(el.value==='1')?1:0;
+        else if(f==='cum')  t.cum=(el.value==='1')?1:0;
+        else if(f==='divY') t.divY=Math.min(10,Math.max(1,Math.round(+el.value||1)));
         saveState(); render(true);
       });
     });
@@ -7902,7 +8261,7 @@ function bindPanes(){
     });
     var aP=document.getElementById('addJrPref');
     if(aP) aP.addEventListener('click',function(){
-      d.jr.push({n:'Tr.'+String.fromCharCode(66+d.jr.length), kind:'pref', pct:0, rate:0.08});
+      d.jr.push({n:'Tr.'+String.fromCharCode(66+d.jr.length), kind:'pref', pct:0, rate:0.08, cum:1, divY:1});
       saveState(); render(true);
     });
   }
@@ -8027,6 +8386,14 @@ function build(){
       note:'약정 한도 대비 1회 · 최초 지출월에 계상',z:Z.p});
     if(isDebt) items.push({k:'jrFlag'+i,cat:'5. 자금',item:nm+' PIK 여부',v:t.pik?1:0,u:'1=PIK',
       src:'자금구조',note:'1이면 이자를 현금 지급하지 않고 잔액에 누적',z:Z.i});
+    /* 우선주 배당 조건 — 지분 층이 있으면 월별 자금수지가 계산값이라 여기서 바꿔도 따라오지 않는다 */
+    if(!isDebt){
+      var cumP=(t.cum==null)||!!t.cum;
+      items.push({k:'jrFlag'+i,cat:'5. 자금',item:nm+' 누적 여부',v:cumP?1:0,u:'1=누적',src:'우선주 조건',
+        note:'1이면 투입~준공 단리 누적 · 계산값 구간(표지 참조)',z:Z.i});
+      if(!cumP) items.push({k:'jrDivY'+i,cat:'5. 자금',item:nm+' 배당 사업연도 수',v:Math.max(1,Math.round(+t.divY||1)),u:'개',
+        src:'우선주 조건',note:'준공이 속한 사업연도를 포함해 마지막 N개 사업연도 · 1개월차 = 기준일이 속한 달, 사업연도 = 1~12월',z:Z.i});
+    }
   });
   items.push({k:'tgt',cat:'5. 자금',item:'보통주 목표 IRR',v:d.comTargetIRR,src:'투자 기준',z:Z.p});
   items.push({k:'tax',cat:'6. 세무',item:'법인세율',v:d.taxRate,src:'세무 검토',note:'일반 시행법인 가정',z:Z.p});
@@ -11424,6 +11791,16 @@ var REPORT=(function(){
   }
   /* 하위 제목 — 「1) 건축개요」. 번호는 부르는 쪽이 센다(절마다 1부터). */
   function sub(n,title){ return '<h3 class="rpt-sub">'+n+') '+esc(title)+'</h3>'; }
+  /* 본건 트랜치 회수 분석(M1) — 화면 「본건 투자자 관점」과 같은 계산. 트랜치를 고르지 않았으면 싣지 않는다 */
+  function bonBody(M,n){
+    var B=M.bonOf? M.bonOf() : null;
+    if(!B||!B.st) return '';
+    var rows=[['SEC',B.st.n+' — 본건 비중 '+fp(B.share,1)+' (약정 기준, 비례 안분)']];
+    B.rows.forEach(function(r){ if(r[0]!=='SEC') rows.push([r[0],'',r[2],r[3]]); });
+    rows.push(['SEC','전액 회수 손익분기']);
+    B.bep.forEach(function(r){ rows.push([r[0],'',r[1],r[2]]); });
+    return sub(n,'본건 트랜치 회수 분석')+tblWrap(kv2(rows))+foot(B.notes.join(' '))+((B.warn&&B.warn.length)? foot(B.warn.join(' ')) : '');
+  }
 
   /* 채권보전·조항은 항목 구성과 문형이 규격(8건 공통), 값·선택은 수기다. */
   var SECURITY_ITEMS=['우선수익권 비율','연대보증 (보증인·범위)','책임준공 확약 (기한·주체)',
@@ -11659,7 +12036,7 @@ var REPORT=(function(){
     var rBody=sub(4,'수익률')+tblWrap(kv2(ret))+
       foot('IRR 옆 꼬리표는 정의(세전·세후, 복리 기준)를 못박은 것으로 코드에 고정되어 딜별로 달라지지 않는다'+
         (s.taxMode==='conduit'?' · 도관과세 가정이라 세전·세후 IRR이 같거나 거의 같게 나온다':''));
-    return sec('사업성', aBody+oBody+rBody);
+    return sec('사업성', aBody+oBody+rBody+bonBody(M,5));
   }
 
   /* ── 민감도 — pb3 민감도 탭의 생성 함수를 그대로 부른다.
@@ -11935,7 +12312,7 @@ var REPORT=(function(){
     ];
     var rBody=sub(3,'수익률')+tblWrap(kv2(ret))+devShortfallNote(M)+
       foot('개발 PF의 자기자본 IRR은 월별 현금흐름 IRR을 월복리로 연환산한 값이라 실물 매입의 연복리 IRR과 직접 비교할 수 없다');
-    return sec('사업성', aBody+cBody+rBody);
+    return sec('사업성', aBody+cBody+rBody+bonBody(M,4));
   }
 
   /* ── 리스크(dev) — 개발형 점검 목록. 판단 서술은 수기. ── */

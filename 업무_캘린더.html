@@ -312,6 +312,10 @@ table.cal td:focus-visible{outline:2px solid var(--navy-600);outline-offset:-2px
 .ev.shared{border-left-style:dotted;border-left-color:var(--navy-600);
   background:var(--surface-2);color:var(--ink-2);opacity:.9}
 .ev.more{background:transparent;color:var(--ink-2);border-left-color:transparent;padding-left:6px;font-weight:600}
+/* 정기업무 회차 — 할 일과 같은 막대에 짙은 남색. 아직 만들지 않은 앞날 회차는 점선 */
+.ev.occ{border-left-color:var(--navy-800)}
+.ev.occ.late{border-left-color:var(--bad)} .ev.occ.done{border-left-color:var(--ink-3)}
+.ev.occ.proj{border-left-style:dashed}
 
 /* 선택 날짜의 업무 목록 — 달력 오른쪽 3~4열 */
 .calside{position:sticky;top:104px}
@@ -323,12 +327,26 @@ table.cal td:focus-visible{outline:2px solid var(--navy-600);outline-offset:-2px
 .cs-bar.late{background:var(--bad)} .cs-bar.done{background:var(--ink-3)}
 .cs-bar.hold{background:var(--hold)} .cs-bar.abs{background:var(--ink-3)}
 .cs-bar.shared{background:var(--line)}
+.cs-bar.occ{background:var(--navy-800)} .cs-bar.occ.late{background:var(--bad)}
+.cs-bar.occ.done{background:var(--ink-3)} .cs-bar.occ.proj{background:var(--line)}
 .cs-main{min-width:0;flex:1}
 .cs-name{font-size:14px;color:var(--ink);line-height:1.45;word-break:break-word;font-weight:500}
 .cs-meta{font-size:12px;color:var(--ink-2);margin-top:3px}
 .cs-src{display:inline-block;font-size:12px;color:var(--ink-2);background:var(--surface-2);
   border:1px solid var(--line);border-radius:999px;padding:1px 8px;margin-right:6px}
 .cs-foot{padding:14px var(--pad-card);border-top:1px solid var(--line-soft)}
+
+/* 정기업무 — 규칙 불러오기 줄 · 빠진 값 입력칸 · 회차 표시 */
+.reg-bar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:12px var(--pad-card);
+  border-bottom:1px solid var(--line-soft)}
+.reg-bar .t-meta{margin-top:0}
+.occ-need{color:var(--warn);font-weight:600;font-size:13px}
+.rin{display:flex;gap:6px;justify-content:center;margin-top:5px}
+.rin input{width:112px;height:30px;padding:0 8px;border:1px solid var(--line);border-radius:var(--r-ctl);
+  font:inherit;font-size:13px;color:var(--ink);background:var(--surface)}
+.occ-late{color:var(--bad);font-weight:700}
+.occ-undo{padding:2px 8px;font-size:12px}
+.occ-more{padding:10px var(--pad-card);font-size:13px;color:var(--ink-2);border-top:1px solid var(--line-soft)}
 
 /* ── 기타 ───────────────────────────────── */
 .empty{padding:34px 16px;text-align:center;color:var(--ink-2);font-size:13.5px}
@@ -427,6 +445,8 @@ table.cal td:focus-visible{outline:2px solid var(--navy-600);outline-offset:-2px
 }
 @media (max-width:900px){
   .tbl-wrap table{min-width:720px}
+  /* 정기업무 표는 버튼 열이 둘(회차·절차)이라 720px 이면 업무명·관련이 서너 줄로 쪼개진다 */
+  .tbl-wrap table.reg-tbl{min-width:960px}
   .tbl-free table{min-width:0}
   .pv-step{min-width:820px}
   .topbar{height:52px;padding:0 12px;gap:10px}
@@ -3734,39 +3754,72 @@ var SAMPLE_TASKS=[
  }
 ];
 
-/* 예시 정기업무 — d 는 다음 예정일까지의 상대 일수(null이면 수시) */
+/* 예시 정기업무 — d 는 다음 예정일까지의 상대 일수(null이면 수시). r 이 있으면 반복 규칙으로 회차를 만든다 */
 var SAMPLE_REGS=[
  {
-  "c": "연 4회",
+  "c": "연간",
   "t": "제세공과금 납부",
   "f": "전 실물 사업장",
-  "d": 12,
   "proc": "제세공과금 납부",
-  "n": "재산세 2기분"
+  "n": "재산세 2기분",
+  "rid": "S-00",
+  "r": {
+   "type": "yearly",
+   "month": 9,
+   "day": 30
+  }
  },
  {
   "c": "반기",
   "t": "제세공과금 납부",
   "f": "전 실물 사업장",
-  "d": 62,
   "proc": "제세공과금 납부",
-  "n": "2기 확정신고"
+  "n": "2기 확정신고",
+  "rid": "S-01",
+  "r": {
+   "type": "months",
+   "months": [
+    1,
+    7
+   ],
+   "day": 25
+  }
  },
  {
   "c": "분기",
   "t": "정기 운용보고서 작성·발송",
   "f": "전 운용펀드",
-  "d": 26,
   "proc": "정기 운용보고서 작성·발송",
-  "n": "수익자 발송"
+  "n": "수익자 발송",
+  "rid": "S-02",
+  "r": {
+   "type": "months",
+   "months": [
+    2,
+    5,
+    8,
+    11
+   ],
+   "day": "last"
+  }
  },
  {
   "c": "분기",
   "t": "결산 및 분배",
   "f": "전 운용펀드",
-  "d": 26,
   "proc": "결산 및 분배",
-  "n": "규약상 결산일"
+  "n": "규약상 결산일",
+  "rid": "S-03",
+  "r": {
+   "type": "months",
+   "months": [
+    3,
+    6,
+    9,
+    12
+   ],
+   "day": "last"
+  }
  },
  {
   "c": "월간",
@@ -3788,17 +3841,26 @@ var SAMPLE_REGS=[
   "c": "월간",
   "t": "집합투자기구 내부통제 월단위 점검보고",
   "f": "전 운용펀드",
-  "d": 9,
   "proc": "집합투자기구 내부통제 월단위 점검보고",
-  "n": "컴플라이언스"
+  "n": "컴플라이언스",
+  "rid": "S-06",
+  "r": {
+   "type": "monthly",
+   "day": 10
+  },
+  "from": -40
  },
  {
   "c": "월간",
   "t": "집합투자재산 점검리스트(월간 사후관리)",
   "f": "전 운용펀드",
-  "d": 9,
   "proc": "집합투자재산 점검리스트(월간 사후관리)",
-  "n": "리스크"
+  "n": "리스크",
+  "rid": "S-07",
+  "r": {
+   "type": "monthly",
+   "day": "last"
+  }
  },
  {
   "c": "수시",
@@ -3828,17 +3890,26 @@ var SAMPLE_REGS=[
   "c": "월간",
   "t": "수익자·판매사·대주 요청자료 회신",
   "f": "전 운용펀드",
-  "d": 5,
   "proc": "수익자·판매사·대주 요청자료 회신",
-  "n": "직전 달 말일 기준"
+  "n": "직전 달 말일 기준",
+  "rid": "S-11",
+  "r": {
+   "type": "monthly",
+   "day": 15
+  }
  },
  {
   "c": "격주",
   "t": "지주 보고자료 작성",
   "f": "본부 전체",
-  "d": 4,
   "proc": "지주 보고자료 작성",
-  "n": ""
+  "n": "",
+  "rid": "S-12",
+  "r": {
+   "type": "interval_days",
+   "every": 14,
+   "anchor": "2026-01-08"
+  }
  },
  {
   "c": "월간",
@@ -3860,17 +3931,32 @@ var SAMPLE_REGS=[
   "c": "분기",
   "t": "채권평가사 질의 회신",
   "f": "전 운용펀드",
-  "d": 40,
   "proc": "채권평가사 질의 회신",
-  "n": ""
+  "n": "",
+  "rid": "S-15",
+  "r": {
+   "type": "months",
+   "months": [
+    1,
+    4,
+    7,
+    10
+   ],
+   "day": 20
+  }
  },
  {
   "c": "분기",
   "t": "수익자·판매사·대주 요청자료 회신",
   "f": "전 판매사",
-  "d": 40,
   "proc": "수익자·판매사·대주 요청자료 회신",
-  "n": ""
+  "n": "결산 뒤 10일",
+  "rid": "S-16",
+  "r": {
+   "type": "after",
+   "base": "S-03",
+   "offset_days": 10
+  }
  },
  {
   "c": "격주",
@@ -3961,7 +4047,7 @@ var GUBUN=['수익자보고','내부보고','공문','결산','검토','제세�
 var PRIORITY=['높음','보통','낮음'];
 var CYCLES=['월간','분기','반기','연간','연 4회','수시'];
 
-var S={ tasks:[], regs:[], seq:1 };
+var S={ tasks:[], regs:[], seq:1, occ:[] };   /* occ — 정기업무 회차(syncOcc 가 규칙에서 만든다) */
 /* 수행의 원장 — 프로세스를 실제로 굴리는 인스턴스(RUN). S 와 별도로 저장한다. */
 var RUNS={ items:[], seq:1 };
 /* 프로세스 수정 — 실사용자가 카탈로그 설명을 자기 브라우저에서 고칠 수 있게.
@@ -4165,6 +4251,8 @@ function load(){
     if(!o||!(o.tasks instanceof Array)||!(o.regs instanceof Array)) return false;
     S.tasks=o.tasks.map(normTask).filter(isTask);
     S.regs=o.regs.map(normReg).filter(isReg);
+    S.occ=normOccList(o.occ);
+    attachSampleRules();
     /* id 가 없거나 겹치면 다시 매긴다. 겹치면 삭제·완료가 엉뚱한 행을 건드린다. */
     var seen={}, maxId=0, i;
     for(i=0;i<S.tasks.length;i++){
@@ -4195,12 +4283,244 @@ function normTask(t){
 }
 function normReg(r){
   if(!r||typeof r!=='object'||typeof r.task!=='string'||!r.task) return null;
-  return { id:(typeof r.id==='number'&&isFinite(r.id))? Math.floor(r.id) : 0,
+  var o={ id:(typeof r.id==='number'&&isFinite(r.id))? Math.floor(r.id) : 0,
     cycle:safeText(r.cycle,20), task:safeText(r.task,120), fund:safeText(r.fund,60),
     note:safeText(r.note,120), next:cleanYmd(r.next), proc:safeText(r.proc,60) };
+  /* 반복 규칙은 있을 때만 붙인다. rid 는 회차 번호의 앞부분이라 규칙과 짝이다 —
+     규칙이 없는 불러온 줄(수시)도 다시 불러올 때 같은 줄을 찾으려고 rid 를 둔다. */
+  var rid=(typeof r.rid==='string')? safeText(r.rid,60) : '';
+  if(rid) o.rid=rid;
+  var rule=normRule(r.rule);
+  if(rule&&rid){ o.rule=rule; o.occFrom=cleanYmd(r.occFrom); }
+  if(r.src==='sample'||r.src==='import') o.src=r.src;
+  return o;
 }
 function isTask(t){ return !!t; }
 function isReg(r){ return !!r; }
+
+/* ══ 정기업무 회차 ══════════════════════════════════════════
+   규칙(rule)은 «언제 돌아오나», 회차(S.occ)는 «그 한 번»이다. 회차는
+   { oid, rid, due0(규칙상 날짜), due(휴일 보정한 기한), done, unsure } 이고
+   oid = rid+'|'+due0 라 같은 규칙·같은 날짜의 회차는 하나뿐이다 — 새로고침·
+   복원·완료 취소를 몇 번 해도 겹쳐 생기지 않는다.
+   · 기한은 만들 때 한 번 정해 저장한다. 규칙을 고쳐도 지난 회차의 기한은
+     그대로다(고친 뒤의 미래 미완료 회차만 다시 만든다).
+   · 다음 회차가 와도 앞 회차가 미완료면 지연으로 남는다. 완료일 기준으로
+     다음을 계산하지 않는다 — 그러면 밀린 회차가 사라지고 마감이 계속 밀린다.
+   · 휴일 보정은 규칙의 business_day(기본 prev = 앞 영업일)만 따른다. 음력 휴일
+     표가 있는 해(LUNAR_HOL)가 아니면 unsure 로 두고 «주말·양력 휴일만 보정»이라
+     말한다. 형식은 schedule_rules.json 과 같다. */
+var RULE_TYPES=['monthly','months','yearly','weekly','interval_days','interval_months','after'];
+function intIn(v,lo,hi){
+  if(typeof v==='string'&&/^-?\d+$/.test(v)) v=+v;
+  return (typeof v==='number'&&isFinite(v)&&Math.floor(v)===v&&v>=lo&&v<=hi)? v : null;
+}
+function normRule(x){
+  if(!x||typeof x!=='object'||RULE_TYPES.indexOf(x.type)<0) return null;
+  var months=(x.months instanceof Array)? x.months.map(function(m){ return intIn(m,1,12); })
+    .filter(function(m,i,a){ return m!==null&&a.indexOf(m)===i; }).sort(function(a,b){ return a-b; }) : [];
+  return { type:x.type, day:(x.day==='last')? 'last' : intIn(x.day,1,31), months:months,
+    month:intIn(x.month,1,12), every:intIn(x.every,1,x.type==='interval_days'? 366 : 60),
+    anchor:cleanYmd(x.anchor), weekday:intIn(x.weekday,0,6), base:safeText(x.base,60),
+    offset_days:intIn(x.offset_days,-366,366)||0, lead_days:intIn(x.lead_days,0,366)||0,
+    business_day:(x.business_day==='next')? 'next' : 'prev' };
+}
+function regByRid(rid){
+  if(!rid) return null;
+  for(var i=0;i<S.regs.length;i++) if(S.regs[i].rid===rid) return S.regs[i];
+  return null;
+}
+/* 규칙에 빠진 값 — '' 이면 계산할 수 있다 */
+function ruleNeed(r,depth){
+  var R=r&&r.rule; if(!R) return '';
+  switch(R.type){
+    case 'monthly': return R.day==null? 'day' : '';
+    case 'months':  return !R.months.length? 'months' : (R.day==null? 'day' : '');
+    case 'yearly':  return (R.month==null||R.day==null)? 'monthday' : '';
+    case 'weekly':  return R.weekday==null? 'weekday' : '';
+    case 'interval_days': case 'interval_months':
+      return !R.every? 'every' : (!R.anchor? 'anchor' : '');
+    case 'after':
+      var b=regByRid(R.base);
+      if(!b||b===r||!b.rule||(depth||0)>3) return 'base';
+      return ruleNeed(b,(depth||0)+1)? 'basein' : '';
+  }
+  return 'type';
+}
+var NEED_TEXT={ day:'일자 입력 필요', months:'도래 월 입력 필요', monthday:'월·일 입력 필요',
+  weekday:'요일 입력 필요', every:'간격 입력 필요', anchor:'기준일 입력 필요',
+  base:'기준 업무를 찾지 못함', basein:'기준 업무의 일자 입력 필요', type:'규칙 형식 오류' };
+function dayText(d){ return d==='last'? '말일' : d+'일'; }
+function ruleText(r){
+  var R=r.rule; if(!R) return '';
+  var t='';
+  if(R.type==='monthly') t='매월 '+(R.day==null? '?' : dayText(R.day));
+  else if(R.type==='months') t=R.months.join('·')+'월 '+(R.day==null? '?' : dayText(R.day));
+  else if(R.type==='yearly') t='매년 '+(R.month==null? '?' : R.month)+'월 '+(R.day==null? '?' : dayText(R.day));
+  else if(R.type==='weekly') t='매주 '+(R.weekday==null? '?' : '월화수목금토일'.charAt(R.weekday))+'요일';
+  else if(R.type==='interval_days') t=R.every+'일마다'+(R.anchor? ' ('+R.anchor+'부터)' : '');
+  else if(R.type==='interval_months') t=R.every+'개월마다'+(R.anchor? ' ('+R.anchor+'부터)' : '');
+  else if(R.type==='after'){ var b=regByRid(R.base);
+    t=(b? b.task : '기준 업무')+' '+(R.offset_days>=0? R.offset_days+'일 뒤' : (-R.offset_days)+'일 앞'); }
+  return t+' · 휴일이면 '+(R.business_day==='next'? '다음' : '앞')+' 영업일';
+}
+/* y 년 m0 월(0부터, 넘쳐도 된다)의 day 일. 그 달에 없는 날(31일 등)은 말일로 */
+function mkDay(y,m0,day){
+  var f=new Date(y,m0,1), last=new Date(f.getFullYear(),f.getMonth()+1,0).getDate();
+  return new Date(f.getFullYear(),f.getMonth(),day==='last'? last : Math.min(day,last));
+}
+function isOffDay(d){
+  var w=d.getDay();
+  return w===0||w===6||!!holidaysOf(d.getFullYear())[ymd(d)];
+}
+function bizDay(d,mode){
+  var x=d, g=0;
+  while(isOffDay(x)&&g++<20) x=addDays(x,mode==='next'? 1 : -1);
+  return x;
+}
+/* 규칙상 날짜(보정 전) 중 [from, to] 에 드는 것 */
+function rawDates(r,from,to,depth){
+  var R=r.rule, out=[], d, k;
+  function push(x){ if(x>=from&&x<=to) out.push(x); }
+  if(R.type==='monthly'||R.type==='months'){
+    var k1=to.getFullYear()*12+to.getMonth();
+    for(k=from.getFullYear()*12+from.getMonth();k<=k1;k++){
+      if(R.type==='months'&&R.months.indexOf(k%12+1)<0) continue;
+      push(mkDay(Math.floor(k/12),k%12,R.day));
+    }
+  } else if(R.type==='yearly'){
+    for(k=from.getFullYear();k<=to.getFullYear();k++) push(mkDay(k,R.month-1,R.day));
+  } else if(R.type==='weekly'){
+    /* 규칙의 weekday 는 0=월(파이썬), Date 는 0=일 */
+    var js=(R.weekday+1)%7;
+    for(d=addDays(from,(js-from.getDay()+7)%7);d<=to;d=addDays(d,7)) out.push(d);
+  } else if(R.type==='interval_days'){
+    var a=parseYmd(R.anchor), n=days(from,a);
+    for(d=addDays(a,n>0? Math.ceil(n/R.every)*R.every : 0);d<=to;d=addDays(d,R.every)) push(d);
+  } else if(R.type==='interval_months'){
+    var a2=parseYmd(R.anchor);
+    for(k=0;k<2400;k++){ d=mkDay(a2.getFullYear(),a2.getMonth()+k*R.every,a2.getDate()); if(d>to) break; push(d); }
+  } else if(R.type==='after'){
+    /* 기준 업무의 «보정한» 기한 + offset_days. 기준 쪽 보정 폭만큼 창을 넓혀 읽는다 */
+    var b=regByRid(R.base);
+    occDates(b,addDays(from,-R.offset_days-20),addDays(to,-R.offset_days+20),(depth||0)+1)
+      .forEach(function(x){ push(addDays(parseYmd(x.due),R.offset_days)); });
+  }
+  return out;
+}
+/* 회차 후보 — [{due0, due, unsure}] (due0 순) */
+function occDates(r,from,to,depth){
+  if(!r||!r.rule||ruleNeed(r,depth)) return [];
+  return rawDates(r,from,to,depth).map(function(d0){
+    var d=bizDay(d0,r.rule.business_day);
+    return { due0:ymd(d0), due:ymd(d), unsure:!lunarKnown(d0.getFullYear())||!lunarKnown(d.getFullYear()) };
+  });
+}
+function normOcc(o){
+  if(!o||typeof o!=='object'||typeof o.rid!=='string'||!o.rid) return null;
+  var due0=cleanYmd(o.due0), due=cleanYmd(o.due);
+  if(!due0||!due) return null;
+  var rid=safeText(o.rid,60);
+  return { oid:rid+'|'+due0, rid:rid, due0:due0, due:due, done:cleanYmd(o.done), unsure:!!o.unsure };
+}
+function normOccList(list){
+  var seen={};
+  return (list instanceof Array? list : []).map(normOcc).filter(function(o){
+    if(!o||seen[o.oid]) return false;
+    seen[o.oid]=1; return true;
+  });
+}
+/* 밀린 회차는 이만큼만 되짚는다 — 오래 안 연 브라우저가 수십 회차를 한꺼번에 만들지 않게 */
+var OCC_BACK=400;
+/* 규칙마다 «시작일(occFrom)부터 오늘까지»의 회차와, 오늘 뒤의 첫 미완료 회차
+   하나를 만든다. 이미 있는 oid 는 건드리지 않는다. 처음 보는 규칙은 오늘부터
+   시작한다 — 불러오자마자 지난 회차가 무더기로 지연이 되지 않게. */
+function syncOcc(){
+  if(!(S.occ instanceof Array)) S.occ=[];
+  var t0=today(), ts=ymd(t0), changed=false, have={};
+  S.occ.forEach(function(o){ have[o.oid]=o; });
+  S.regs.forEach(function(r){
+    if(!r.rule||!r.rid||ruleNeed(r)) return;
+    if(!r.occFrom){ r.occFrom=ts; changed=true; }
+    var from=parseYmd(r.occFrom), floor=addDays(t0,-OCC_BACK);
+    if(from<floor) from=floor;
+    var list=occDates(r,from,addDays(t0,400)), ahead=0;
+    for(var i=0;i<list.length;i++){
+      var x=list[i], oid=r.rid+'|'+x.due0, o=have[oid];
+      /* 시작일보다 앞으로 당겨진 기한(오늘이 휴일이라 앞 영업일로 간 것)은 추적 전의 일이다 —
+         불러오자마자 «지연»이 되지 않게 건너뛴다 */
+      if(!o&&x.due<r.occFrom) continue;
+      if(!o){ o={ oid:oid, rid:r.rid, due0:x.due0, due:x.due, done:'', unsure:x.unsure };
+              S.occ.push(o); have[oid]=o; changed=true; }
+      if(x.due0>ts&&(!o.done||++ahead>=6)) break;
+    }
+  });
+  if(changed) save();
+  return changed;
+}
+/* 규칙을 바꾼 뒤 — 오늘 뒤의 미완료 회차만 지운다(다음 syncOcc 가 새 규칙으로 다시 만든다).
+   지난 회차·완료 기록은 남긴다. 이 규칙을 기준으로 삼는 «연계» 규칙도 같이. */
+function ruleChanged(rid){
+  var ts=ymd(today()), hit={}; hit[rid]=1;
+  S.regs.forEach(function(r){ if(r.rule&&r.rule.type==='after'&&r.rule.base===rid&&r.rid) hit[r.rid]=1; });
+  S.occ=S.occ.filter(function(o){ return !(hit[o.rid]&&!o.done&&o.due0>ts); });
+}
+function occStatus(o){ return o.done? '완료' : (parseYmd(o.due)<today()? '지연' : '진행중'); }
+/* 화면에 쓸 회차 — 규칙 줄이 남아 있고 펀드 필터를 통과한 것만 */
+function viewOcc(){
+  var by={};
+  S.regs.forEach(function(r){ if(r.rid&&r.rule&&fundOk(r.fund)) by[r.rid]=r; });
+  return S.occ.filter(function(o){ return !!by[o.rid]; }).map(function(o){ return { o:o, r:by[o.rid] }; });
+}
+/* 그 달의 회차를 날짜별로 — 저장된 회차 + 아직 만들지 않은 오늘 뒤 회차(예정, 읽기 전용) */
+function occByDay(y,mo){
+  var byDay={}, first=new Date(y,mo,1), last=new Date(y,mo+1,0), t0=today(), have={};
+  function put(ds,x){ var d=parseYmd(ds); if(d.getFullYear()!==y||d.getMonth()!==mo) return;
+    (byDay[d.getDate()]=byDay[d.getDate()]||[]).push(x); }
+  viewOcc().forEach(function(x){ have[x.o.oid]=1; put(x.o.due,x); });
+  var from=addDays(t0,1); if(from<first) from=first;
+  if(from<=last) S.regs.forEach(function(r){
+    if(!r.rid||!r.rule||!fundOk(r.fund)) return;
+    /* 보정으로 달이 넘어갈 수 있어 앞뒤로 조금 넓혀 읽고 기한 기준으로 거른다 */
+    occDates(r,addDays(from,-7),addDays(last,10)).forEach(function(c){
+      var oid=r.rid+'|'+c.due0;
+      if(have[oid]||c.due0<=ymd(t0)||c.due<=ymd(t0)) return;
+      have[oid]=1;
+      put(c.due,{ o:{ oid:oid, rid:r.rid, due0:c.due0, due:c.due, done:'', unsure:c.unsure }, r:r, proj:true });
+    });
+  });
+  return byDay;
+}
+/* 규칙이 생기기 전에 저장된 예시 정기업무에 같은 예시의 규칙을 붙인다 —
+   저장을 지우고 예시로 되돌려야만 회차가 보이는 방식이 되지 않게.
+   업무명·관련·비고가 예시와 같은 줄만, 한 예시에 한 줄만 붙인다. */
+function attachSampleRules(){
+  var used={};
+  S.regs.forEach(function(r){ if(r.rid) used[r.rid]=1; });
+  S.regs.forEach(function(r){
+    if(r.src) return;
+    for(var i=0;i<SAMPLE_REGS.length;i++){
+      var s=SAMPLE_REGS[i];
+      if(s.t!==r.task||s.f!==r.fund||(s.n||'')!==r.note) continue;
+      if(s.rid&&used[s.rid]) continue;
+      r.src='sample';
+      if(s.r&&s.rid&&!r.rid){
+        r.rid=s.rid; r.rule=normRule(s.r); r.occFrom=''; r.cycle=s.c; r.next=''; used[s.rid]=1;
+      }
+      break;
+    }
+  });
+}
+function occSetDone(oid,on){
+  var o=null;
+  for(var i=0;i<S.occ.length;i++) if(S.occ[i].oid===oid){ o=S.occ[i]; break; }
+  if(!o) return;
+  var r=regByRid(o.rid);
+  o.done=on? ymd(today()) : '';
+  save();
+  toast((on? '완료로 표시했습니다 — ' : '완료를 취소했습니다 — ')+(r? r.task : '')+' '+o.due);
+  render();
+}
 
 function fillSample(){
   var t0=today();
@@ -4215,9 +4535,11 @@ function fillSample(){
              hold:!!s.hold };
   });
   S.regs=SAMPLE_REGS.map(function(s,i){
-    return { id:i+1, cycle:s.c, task:s.t, fund:s.f, note:s.n||'',
-             next:(s.d==null? '' : ymd(addDays(t0,s.d))), proc:s.proc||'' };
+    return normReg({ id:i+1, cycle:s.c, task:s.t, fund:s.f, note:s.n||'',
+             next:(s.d==null? '' : ymd(addDays(t0,s.d))), proc:s.proc||'',
+             rid:s.rid||'', rule:s.r||null, occFrom:(s.r? ymd(addDays(t0,s.from||0)) : ''), src:'sample' });
   });
+  S.occ=[];
   S.seq=S.tasks.length+1;
   /* 수행(RUN) 예시 — 첫 본부에만 원본 일부해지 1건, STEP 1~2 완료 상태로.
      시연을 열면 대시보드에 "진행중 2/6"이 떠 있고 STEP 3(운용지시) 이 다음
@@ -5149,7 +5471,7 @@ function renderTabs(){
     {id:'dash', t:'대시보드'},
     {id:'task', t:'할 일',   n:c.open, hot:c.지연>0},
     {id:'cal',  t:'캘린더'},
-    {id:'reg',  t:'정기업무', n:viewRegs().length},
+    {id:'reg',  t:'정기업무', n:viewRegs().length, hot:viewOcc().some(function(x){ return occStatus(x.o)==='지연'; })},
     {id:'proc', t:'업무 프로세스', n:PROCS.length}
   ];
   document.getElementById('tabs').innerHTML=defs.map(function(d){
@@ -5311,6 +5633,10 @@ function paneDash(){
       ['다음주 금요일까지 B호 수익자보고서','8.31일 D호 PFV 보고서 작성'],
       '말하듯 적으면 날짜를 계산해서 넣습니다.')+'</div>';
 
+  /* ③-2 정기업무 회차 (12열) — 규칙에서 만든 회차 중 밀린 것과 7일 안의 것.
+     위 타일·표의 «할 일» 집계와 섞지 않는다(집계 규칙은 그대로). */
+  h+='<div class="b12">'+dashOccCard()+'</div>';
+
   /* ④ 월간 일정 요약 (8열) — 캘린더와 같은 묶음(tasksByDay)을 본다.
      날짜를 누르면 캘린더 탭의 그 날짜로 간다. */
   var my=t0.getFullYear(), mm=t0.getMonth();
@@ -5361,6 +5687,32 @@ function paneDash(){
      GUBUN.map(function(g){ return '<td class="mid" style="font-size:20px;font-weight:700;font-variant-numeric:tabular-nums">'+by[g]+'</td>'; }).join('')+
      '</tr></tbody></table></div></div></div></div>';
   return h+'</div>';
+}
+function dashOccCard(){
+  var t0=today(), lim=ymd(addDays(t0,7)), late=0;
+  var list=viewOcc().filter(function(x){ return !x.o.done&&x.o.due<=lim; })
+    .sort(function(a,b){ return a.o.due<b.o.due?-1:(a.o.due>b.o.due?1:0); });
+  list.forEach(function(x){ if(occStatus(x.o)==='지연') late++; });
+  var h='<div class="card" id="dashOcc"><header><h2>정기업무 회차</h2>'+
+    '<span class="desc">지연 '+late+'건 · 7일 안 '+(list.length-late)+'건 · 반복 규칙에서 자동으로 만든 회차 · 위 할 일 건수에는 들어가지 않습니다</span></header>'+
+    '<div class="body flush">';
+  if(!list.length) return h+'<div class="empty">밀렸거나 7일 안에 돌아오는 정기업무 회차가 없습니다.</div></div></div>';
+  h+='<div class="tbl-wrap"><table><thead><tr>'+
+     '<th>업무명</th><th>관련</th><th class="due">기한</th><th class="dday">D-Day</th><th>상태</th><th></th>'+
+     '</tr></thead><tbody>';
+  list.slice(0,8).forEach(function(x){
+    var o=x.o, st=occStatus(o), n=days(parseYmd(o.due),t0);
+    h+='<tr class="'+(st==='지연'?'is-late':'')+'">'+
+       '<td class="task">'+esc(x.r.task)+'<div class="t-meta">'+esc(ruleText(x.r))+'</div></td>'+
+       '<td>'+esc(x.r.fund)+'</td>'+
+       '<td class="due">'+esc(ymdw(o.due))+'</td>'+
+       '<td class="dday">'+(n===0?'D-Day':(n>0?'D-'+n:'D+'+(-n)))+'</td>'+
+       '<td class="mid st"><span class="badge '+BADGE[st]+'">'+st+'</span></td>'+
+       '<td class="mid"><button class="rbtn" data-occdone="'+esc(o.oid)+'">완료</button></td></tr>';
+  });
+  h+='</tbody></table></div>';
+  if(list.length>8) h+='<div class="occ-more">외 '+(list.length-8)+'건 — <button class="rbtn" data-tabgo="reg">정기업무 탭에서 보기</button></div>';
+  return h+'</div></div>';
 }
 function tile(lab,val,unit,sub,cls){
   var n=(typeof val==='number')?val:parseInt(val,10);
@@ -5515,11 +5867,15 @@ function fld(lab,inp){
 /* ── 정기업무 ──────────────────────────────────────────── */
 function paneReg(){
   var h='<div class="card"><header><h2>정기 · 반복 업무</h2>'+
-    /* 정기업무는 «주기표»지 «할 일»이 아니다 — 회차를 업무로 만들어
-       두지 않으므로 달력·할 일·대시보드에는 안 나온다. 화면이 그렇다고
-       말하지 않으면 「D-2 인데 달력에 왜 없나」로 읽힌다. */
-    '<span class="desc">다음 예정일은 여기서만 봅니다 — 회차를 업무로 등록해야 달력·할 일·대시보드에 나옵니다 · '+
-    '프로세스를 누르면 그 업무의 절차가 바로 열립니다</span></header>';
+    /* 규칙이 있는 줄은 회차가 생겨 달력·대시보드에 나온다. 규칙이 없는 줄은
+       여전히 «주기표»라 여기서만 보인다 — 둘이 다르다는 것을 화면이 말한다. */
+    '<span class="desc">반복 규칙이 있는 업무는 회차가 자동으로 생겨 달력·대시보드에 「정기」로 나옵니다 · '+
+    '규칙이 없는 업무는 다음 예정일을 여기서만 봅니다 · 프로세스를 누르면 절차가 열립니다</span></header>';
+  /* 규칙 원자료(실제 펀드명 포함)는 도구에 넣지 않는다 — 가진 사람이 자기 PC 에서 고른다 */
+  h+='<div class="reg-bar"><button class="rbtn" id="ruleImport">규칙 불러오기 (JSON)</button>'+
+    '<input type="file" id="ruleFile" accept=".json,application/json" multiple hidden>'+
+    '<span class="t-meta">schedule_rules.json(필수)과 fund_master.json(선택 · 펀드명)을 함께 고르세요 · '+
+    '이 브라우저에만 저장되고 서버로 보내지 않습니다</span></div>';
   /* 펀드 필터로 전부 가려졌으면 표 대신 안내만 — 좁은 화면의 표는 최소 폭(720px)이라
      표 안에 두면 안내와 해제 버튼이 옆으로 밀려 화면 밖에 걸린다 */
   var vr=viewRegs();
@@ -5527,17 +5883,56 @@ function paneReg(){
     return h+'<div class="body flush"><div class="empty"><b>이 필터에 해당하는 정기업무가 없습니다.</b> '+
       '다른 펀드·사업장의 '+S.regs.length+'건은 필터로 가려져 있습니다.'+
       '<br><span class="em-act" data-fund-clear>필터 해제</span></div></div></div>';
-  h+='<div class="body flush"><div class="tbl-wrap"><table><thead><tr>'+
-    '<th>주기</th><th>업무명</th><th>관련</th><th>다음 예정일</th><th>D-Day</th><th>절차</th><th>비고</th>'+
+  h+='<div class="body flush"><div class="tbl-wrap"><table class="reg-tbl"><thead><tr>'+
+    '<th>주기</th><th>업무명</th><th>관련</th><th>다음 예정일</th><th>D-Day</th><th>회차</th><th>절차</th><th>비고</th>'+
     '</tr></thead><tbody>';
-  if(!S.regs.length) h+='<tr><td colspan="7" class="empty">등록된 정기업무가 없습니다.</td></tr>';
+  if(!S.regs.length) h+='<tr><td colspan="8" class="empty">등록된 정기업무가 없습니다.</td></tr>';
+  var t0=today(), byRid={};
+  S.occ.forEach(function(o){ (byRid[o.rid]=byRid[o.rid]||[]).push(o); });
   vr.forEach(function(r){
-    var n=r.next? days(parseYmd(r.next),today()) : null;
+    var next='', n=null, occCell='—', meta='';
+    if(r.rule&&r.rid){
+      meta='<div class="t-meta">'+esc(ruleText(r))+'</div>';
+      var need=ruleNeed(r);
+      if(need){
+        next='<span class="occ-need">'+esc(NEED_TEXT[need])+'</span>';
+        if(need==='day'||need==='monthday'||need==='anchor')
+          next+='<span class="rin"><input type="'+(need==='anchor'? 'date' : 'text')+'" data-rulein="'+esc(r.rid)+'"'+
+            ' aria-label="'+esc(r.task+' '+NEED_TEXT[need])+'"'+
+            (need==='day'? ' placeholder="10 또는 말일"' : (need==='monthday'? ' placeholder="9/30"' : ''))+'>'+
+            '<button class="rbtn" data-ruleset="'+esc(r.rid)+'" data-need="'+need+'">저장</button></span>';
+      } else {
+        var list=(byRid[r.rid]||[]).slice().sort(function(a,b){ return a.due<b.due?-1:(a.due>b.due?1:0); });
+        var open=null, late=0, lastDone=null;
+        list.forEach(function(o){
+          if(o.done){ if(!lastDone||o.due0>lastDone.due0) lastDone=o; return; }
+          if(!open) open=o;
+          if(parseYmd(o.due)<t0) late++;
+        });
+        if(open){
+          n=days(parseYmd(open.due),t0);
+          next=esc(ymdw(open.due))+
+            (open.due!==open.due0? '<div class="t-meta">규칙상 '+esc(ymdw(open.due0))+' · '+
+              (r.rule.business_day==='next'? '다음 영업일로 미룸' : '앞 영업일로 당김')+'</div>' : '')+
+            (open.unsure? '<div class="t-meta">휴일표(2024~2027년) 밖 — 주말·양력 휴일만 보정</div>' : '');
+        } else next='—';
+        occCell=(open? '<button class="rbtn" data-occdone="'+esc(open.oid)+'"'+
+            ' title="'+esc(open.due)+' 회차를 오늘 날짜로 완료합니다">완료</button>' : '')+
+          (late? '<div class="t-meta occ-late">지연 '+late+'건</div>' : '')+
+          (lastDone? '<div class="t-meta">직전 완료 '+esc(lastDone.done.slice(5))+
+            ' <button class="rbtn occ-undo" data-occundo="'+esc(lastDone.oid)+'"'+
+            ' title="'+esc(lastDone.due)+' 회차 완료를 취소합니다">완료 취소</button></div>' : '');
+      }
+    } else {
+      next=esc(r.next?ymdw(r.next):'수시');
+      n=r.next? days(parseYmd(r.next),t0) : null;
+    }
     var hot=(n!==null&&n<=7);
-    h+='<tr><td class="mid">'+esc(r.cycle)+'</td><td>'+esc(r.task)+'</td>'+
-      '<td>'+esc(r.fund)+'</td><td class="mid">'+esc(r.next?ymdw(r.next):'수시')+'</td>'+
+    h+='<tr><td class="mid">'+esc(r.cycle)+'</td><td>'+esc(r.task)+meta+'</td>'+
+      '<td>'+esc(r.fund)+'</td><td class="mid">'+next+'</td>'+
       '<td class="mid"'+(hot?' style="color:var(--bad);font-weight:700"':'')+'>'+
         (n===null?'—':(n===0?'D-Day':(n>0?'D-'+n:'D+'+(-n))))+'</td>'+
+      '<td class="mid">'+occCell+'</td>'+
       '<td class="mid">'+(r.proc?'<button class="rbtn" data-proc="'+esc(r.proc)+'">절차 보기</button>':'—')+'</td>'+
       '<td>'+esc(r.note)+'</td></tr>';
   });
@@ -5756,7 +6151,7 @@ function paneCal(){
   var HOL=holidaysOf(y);
 
   /* 그 달의 마감 건·공유 건을 날짜별로 모은다 (대시보드와 같은 helper) */
-  var byDay=tasksByDay(y,mo), shDay=sharedByDay(y,mo);
+  var byDay=tasksByDay(y,mo), shDay=sharedByDay(y,mo), ocDay=occByDay(y,mo);
 
   /* 보고 있는 달에 선택 날짜가 없으면 오늘(같은 달일 때)·없으면 1일로 둔다.
      선택은 «보기» 상태일 뿐이라 저장하지 않는다. */
@@ -5769,7 +6164,7 @@ function paneCal(){
     '<button class="btn" id="calNext">다음 →</button>'+
     '<button class="btn" id="calToday">오늘로 이동</button>'+
     '<span class="sp"></span>'+
-    '<span class="note">할 일 목록의 마감일이 자동으로 올라옵니다 · 날짜를 누르면 오른쪽에 그 날 목록이, 두 번 누르면 그 날로 등록됩니다'+
+    '<span class="note">할 일 목록의 마감일과 정기업무 회차(「정기」)가 자동으로 올라옵니다 · 날짜를 누르면 오른쪽에 그 날 목록이, 두 번 누르면 그 날로 등록됩니다'+
     (lunarKnown(y)? '' : ' &middot; '+y+'년은 설·추석·부처님오신날이 표에 없어 양력 휴일만 표시합니다')+
     '</span></div>';
 
@@ -5805,6 +6200,14 @@ function paneCal(){
       h+='<div class="ev '+ec+'" title="'+esc(t.task+(t.fund?' · '+t.fund:'')+' · '+st)+'">'+esc(t.task)+'</div>';
     });
     if(list.length>3) h+='<div class="ev more">외 '+(list.length-3)+'건</div>';
+    /* 정기업무 회차 — 내 할 일 다음에. 아직 만들지 않은 앞날 회차는 점선(예정) */
+    var occ=ocDay[d]||[];
+    occ.slice(0,2).forEach(function(x){
+      var st=occStatus(x.o);
+      var oc='occ'+(x.proj?' proj':(st==='완료'?' done':(st==='지연'?' late':'')));
+      h+='<div class="ev '+oc+'" title="'+esc('정기 · '+x.r.task+(x.r.fund?' · '+x.r.fund:'')+' · '+(x.proj?'예정':st))+'">정기 · '+esc(x.r.task)+'</div>';
+    });
+    if(occ.length>2) h+='<div class="ev more">정기 외 '+(occ.length-2)+'건</div>';
     shared.slice(0,2).forEach(function(x){
       h+='<div class="ev shared" title="'+esc(x.b.sender+' · '+x.t.task)+'">'+
          esc(x.b.sender)+' · '+esc(x.t.task)+'</div>';
@@ -5826,10 +6229,11 @@ function calSideInner(){
   var y=dd?dd.getFullYear():0, mo=dd?dd.getMonth():0, dnum=dd?dd.getDate():0;
   var mine=dd? (tasksByDay(y,mo)[dnum]||[]) : [];
   var shared=dd? (sharedByDay(y,mo)[dnum]||[]) : [];
+  var occ=dd? (occByDay(y,mo)[dnum]||[]) : [];
   var h='<header><h2>'+esc(ymdw(ds))+'</h2>'+
-        '<span class="desc">내 일정 '+mine.length+'건'+(shared.length? ' · 받은 일정 '+shared.length+'건':'')+'</span></header>'+
+        '<span class="desc">내 일정 '+mine.length+'건'+(occ.length? ' · 정기 '+occ.length+'건':'')+(shared.length? ' · 받은 일정 '+shared.length+'건':'')+'</span></header>'+
         '<div class="body flush">';
-  if(!mine.length&&!shared.length){
+  if(!mine.length&&!shared.length&&!occ.length){
     h+='<div class="empty">이 날짜에 마감인 업무가 없습니다.</div>';
   }
   mine.forEach(function(t){
@@ -5840,6 +6244,17 @@ function calSideInner(){
        '<div class="cs-meta"><span class="badge '+BADGE[st]+'">'+st+'</span>'+
          (t.fund? ' '+esc(t.fund) : '')+(t.note? ' · '+esc(t.note) : '')+'</div>'+
        '</div><button class="rbtn" data-gotask="'+t.id+'">열기</button></div>';
+  });
+  occ.forEach(function(x){
+    var o=x.o, st=occStatus(o);
+    var bc='occ'+(x.proj?' proj':(st==='완료'?' done':(st==='지연'?' late':'')));
+    h+='<div class="cs-row"><span class="cs-bar '+bc+'"></span><div class="cs-main">'+
+       '<div class="cs-name">'+esc(x.r.task)+'</div>'+
+       '<div class="cs-meta">'+(x.proj? '<span class="cs-src">예정</span>' : '<span class="badge '+BADGE[st]+'">'+st+'</span> ')+
+         esc('정기 · '+ruleText(x.r))+(x.r.fund? ' · '+esc(x.r.fund) : '')+
+         (o.due!==o.due0? ' · 규칙상 '+esc(o.due0.slice(5)) : '')+(o.unsure? ' · 휴일표 밖' : '')+'</div>'+
+       '</div>'+(x.proj? '' : (o.done? '<button class="rbtn" data-occundo="'+esc(o.oid)+'">완료 취소</button>'
+                                    : '<button class="rbtn" data-occdone="'+esc(o.oid)+'">완료</button>'))+'</div>';
   });
   shared.forEach(function(x){
     h+='<div class="cs-row"><span class="cs-bar shared"></span><div class="cs-main">'+
@@ -5961,6 +6376,8 @@ function renderDept(){
 }
 
 function render(){
+  /* 날짜가 바뀐 채 열어 둔 화면도 새 회차를 받게, 그릴 때마다 맞춘다(바뀐 게 없으면 저장도 안 한다) */
+  syncOcc();
   var keep=grabInputs();
   if(FORM_ID!==EDIT_ID){
     FORM_INPUTS.forEach(function(id){ delete keep[id]; });
@@ -6011,6 +6428,162 @@ document.addEventListener('click',function(e){
     if(!dt.contains(e.target)) dt.open=false;
   });
 });
+/* 정기업무 회차 버튼 — 대시보드·정기업무·달력 옆 목록 세 곳에 같은 버튼이 있고,
+   달력 옆 목록은 render() 없이 다시 그려진다. 그래서 그릴 때마다 묶지 않고 한 번만 위임한다. */
+document.addEventListener('click',function(e){
+  var t=e.target&&e.target.closest? e.target.closest('[data-occdone],[data-occundo],[data-ruleset],[data-tabgo],#ruleImport') : null;
+  if(!t) return;
+  if(t.hasAttribute('data-occdone')) occSetDone(t.getAttribute('data-occdone'),true);
+  else if(t.hasAttribute('data-occundo')) occSetDone(t.getAttribute('data-occundo'),false);
+  else if(t.hasAttribute('data-ruleset')) applyRuleInput(t.getAttribute('data-ruleset'),t.getAttribute('data-need'));
+  else if(t.hasAttribute('data-tabgo')){ TAB=t.getAttribute('data-tabgo'); render(); window.scrollTo(0,0); }
+  else { var f=document.getElementById('ruleFile'); if(f){ f.value=''; f.click(); } }
+});
+document.addEventListener('keydown',function(e){
+  var t=e.target;
+  if((e.key==='Enter'||e.keyCode===13)&&t&&t.hasAttribute&&t.hasAttribute('data-rulein')){
+    var b=t.parentNode.querySelector('[data-ruleset]');
+    if(b){ e.preventDefault(); applyRuleInput(b.getAttribute('data-ruleset'),b.getAttribute('data-need')); }
+  }
+});
+document.addEventListener('change',function(e){
+  if(e.target&&e.target.id==='ruleFile') readRuleFiles(e.target.files);
+});
+/* 빠진 일자·월일·기준일을 채운다. 채운 뒤에는 오늘부터 회차를 만든다 */
+function applyRuleInput(rid,need){
+  var r=regByRid(rid), inp=document.querySelector('[data-rulein="'+rid+'"]');
+  if(!r||!r.rule||!inp) return;
+  var v=String(inp.value||'').trim(), R=r.rule, m;
+  function dayOf(x){ return /^(말일?|last)$/i.test(x)? 'last' : intIn(x,1,31); }
+  if(need==='day'){
+    var d=dayOf(v);
+    if(d==null){ toast('일자는 1~31 또는 「말일」로 적어 주세요'); inp.focus(); return; }
+    R.day=d;
+  } else if(need==='monthday'){
+    m=/^(\d{1,2})\s*(?:[\/.\-]|월)\s*(\d{1,2}|말일?)\s*일?$/.exec(v);
+    var mo=m? intIn(m[1],1,12) : null, dd=m? dayOf(m[2]) : null;
+    if(mo==null||dd==null){ toast('월·일은 「9/30」 또는 「9월 말일」처럼 적어 주세요'); inp.focus(); return; }
+    R.month=mo; R.day=dd;
+  } else if(need==='anchor'){
+    if(!cleanYmd(v)){ toast('기준일을 골라 주세요'); inp.focus(); return; }
+    R.anchor=v;
+  } else return;
+  ruleChanged(rid);
+  save();
+  toast('규칙을 채웠습니다 — '+r.task+' · '+ruleText(r));
+  render();
+}
+
+/* ── 규칙 불러오기 ──────────────────────────────────────────
+   schedule_rules.json(+fund_master.json)을 사용자가 자기 PC 에서 고른다. 원자료에는
+   실제 펀드명이 있어 도구에 넣지 않는다. 읽은 내용은 이 브라우저 저장소에만 간다.
+   같은 rule_id 가 이미 있으면 내용을 바꾸고(규칙이 달라졌으면 오늘 뒤 미완료
+   회차만 다시 만든다), 지난 회차·완료 기록은 남긴다. 예시 정기업무는 뺀다 —
+   가상 예시와 실제 규칙이 한 목록에 섞이면 무엇이 진짜인지 헷갈린다. */
+function readRuleFiles(files){
+  files=Array.prototype.slice.call(files||[]);
+  if(!files.length) return;
+  var texts=[], left=files.length, bad='';
+  files.forEach(function(f,i){
+    if(f.size>SHARED_MAX){ bad=f.name+' — 파일이 너무 큽니다 (1MB 초과)'; }
+    var rd=new FileReader();
+    rd.onload=function(){ texts[i]=String(rd.result||''); if(--left===0) done(); };
+    rd.onerror=function(){ bad=f.name+' — 읽지 못했습니다'; if(--left===0) done(); };
+    rd.readAsText(f,'utf-8');
+  });
+  function done(){
+    if(bad){ toast(bad); return; }
+    var r=parseRuleFiles(texts);
+    if(!r.ok){ toast(r.why+' — 지금 정기업무는 그대로 둡니다'); return; }
+    var nSample=S.regs.filter(function(g){ return g.src==='sample'; }).length;
+    var nNeed=r.regs.filter(function(g){ return g.rule&&ruleNeedIn(g,r.regs); }).length;
+    askConfirm('규칙 파일: 반복 '+r.nRule+'건 · 수시 '+r.nTrig+'건'+
+      (r.nFund? ' · 펀드명 '+r.nFund+'개' : ' · 펀드명 파일 없음(펀드 코드로 표시)')+
+      (nNeed? '\n일자·기준일이 빠진 '+nNeed+'건은 정기업무 탭에서 채워야 회차가 생깁니다.' : '')+
+      (nSample? '\n\n예시 정기업무 '+nSample+'건과 그 회차는 목록에서 빠집니다.' : '')+
+      '\n같은 규칙 번호가 이미 있으면 내용을 새 파일로 바꾸고, 지난 회차와 완료 기록은 남깁니다.'+
+      '\n\n이 브라우저에만 저장되고 서버로 보내지 않습니다. 계속할까요?',function(){ applyRuleImport(r); });
+  }
+}
+/* 불러온 목록 안에서 기준 업무를 찾는 ruleNeed — 아직 S.regs 에 넣기 전이라 */
+function ruleNeedIn(g,list){
+  if(g.rule.type!=='after') return ruleNeed(g);
+  var b=null; for(var i=0;i<list.length;i++) if(list[i].rid===g.rule.base){ b=list[i]; break; }
+  return (!b||!b.rule||b.rule.type==='after')? 'base' : ruleNeed(b);
+}
+function parseRuleFiles(texts){
+  var rules=null, trig=[], funds={}, nFund=0;
+  for(var i=0;i<texts.length;i++){
+    var t=texts[i]; if(t.charCodeAt(0)===0xFEFF) t=t.slice(1);
+    var o; try{ o=JSON.parse(t); }catch(e){ return {ok:false,why:'JSON 형식이 아닌 파일이 있습니다'}; }
+    if(o&&o.rules instanceof Array){ rules=o.rules; if(o.trigger_only instanceof Array) trig=o.trigger_only; }
+    else if(o&&o.funds instanceof Array){
+      o.funds.forEach(function(f){ if(f&&typeof f.id==='string'&&typeof f.name==='string'){ funds[f.id]=safeText(f.name,60); nFund++; } });
+    } else return {ok:false,why:'규칙 파일(rules)도 펀드 파일(funds)도 아닌 파일이 있습니다'};
+  }
+  if(!rules) return {ok:false,why:'schedule_rules.json(규칙 파일)을 함께 골라 주세요'};
+  function fundName(id){ return funds[id]||(id==='COMMON'? '본부 공통' : safeText(id,60)); }
+  function procOf(tpl){ for(var k=0;k<PROCS.length;k++) if(PROCS[k].tpl===tpl) return PROCS[k].name; return ''; }
+  function cycleOf(R){
+    if(R.type==='monthly') return '월간';
+    if(R.type==='months') return R.months.length===4? '분기' : (R.months.length===2? '반기' : '연 '+R.months.length+'회');
+    if(R.type==='yearly') return '연간';
+    if(R.type==='weekly') return '매주';
+    if(R.type==='interval_days') return R.every===14? '격주' : (R.every||'?')+'일 간격';
+    if(R.type==='interval_months') return (R.every||'?')+'개월';
+    return '연계';
+  }
+  var regs=[], seen={};
+  rules.forEach(function(x){
+    if(!x||typeof x.rule_id!=='string'||!x.rule_id||seen[x.rule_id]) return;
+    var R=normRule(x); if(!R) return;
+    /* 연계 규칙의 base 는 «같은 펀드의 템플릿 코드»다 — 규칙 번호로 바꿔 둔다 */
+    if(R.type==='after'){
+      R.base='';
+      for(var k=0;k<rules.length;k++){ var y=rules[k];
+        if(y&&y.fund_id===x.fund_id&&y.tpl===x.base&&y.rule_id!==x.rule_id){ R.base=safeText(y.rule_id,60); break; } }
+    }
+    seen[x.rule_id]=1;
+    var proc=procOf(x.tpl);
+    regs.push(normReg({ rid:x.rule_id, rule:R, src:'import', cycle:cycleOf(R),
+      task:safeText(x.label,120)||proc||safeText(x.tpl,20)||'(이름 없음)', fund:fundName(x.fund_id),
+      note:safeText(x.note,120), proc:proc }));
+  });
+  var nRule=regs.length;
+  trig.forEach(function(x){
+    if(!x||typeof x.tpl!=='string') return;
+    var rid=safeText(x.fund_id,20)+'-'+safeText(x.tpl,20)+'-T';
+    if(seen[rid]) return; seen[rid]=1;
+    var proc=procOf(x.tpl);
+    regs.push(normReg({ rid:rid, src:'import', cycle:'수시', task:proc||safeText(x.tpl,20),
+      fund:fundName(x.fund_id), note:safeText(x.note,120), proc:proc }));
+  });
+  regs=regs.filter(isReg);
+  if(!regs.length) return {ok:false,why:'읽을 수 있는 규칙이 없습니다'};
+  return { ok:true, regs:regs, nRule:nRule, nTrig:regs.length-nRule, nFund:nFund };
+}
+function applyRuleImport(r){
+  var drop={};
+  S.regs.forEach(function(g){ if(g.src==='sample'&&g.rid) drop[g.rid]=1; });
+  S.regs=S.regs.filter(function(g){ return g.src!=='sample'; });
+  S.occ=S.occ.filter(function(o){ return !drop[o.rid]; });
+  var maxId=0, added=0, updated=0, changed=[];
+  S.regs.forEach(function(g){ if(g.id>maxId) maxId=g.id; });
+  r.regs.forEach(function(g){
+    var old=regByRid(g.rid);
+    if(old){
+      if(JSON.stringify(old.rule||null)!==JSON.stringify(g.rule||null)) changed.push(g.rid);
+      old.task=g.task; old.fund=g.fund; old.cycle=g.cycle; old.note=g.note; old.proc=g.proc; old.src='import';
+      if(g.rule){ old.rule=g.rule; old.occFrom=old.occFrom||''; } else { delete old.rule; delete old.occFrom; }
+      updated++;
+    } else { g.id=++maxId; S.regs.push(g); added++; }
+  });
+  changed.forEach(ruleChanged);
+  save();
+  var nNeed=S.regs.filter(function(g){ return g.rule&&ruleNeed(g); }).length;
+  toast('불러왔습니다 — 새로 '+added+'건 · 바꾼 '+updated+'건'+(nNeed? ' · 일자 입력 필요 '+nNeed+'건' : ''));
+  render();
+}
 
 function bind(){
   document.getElementById('tabs').querySelectorAll('.tab').forEach(function(b){
@@ -6536,7 +7109,7 @@ var BACKUP_FORMAT='jb-work-backup';
 function buildBackup(){
   return { format:BACKUP_FORMAT, ver:1, madeAt:new Date().toISOString(),
     deptKey:DEPT, deptName:(DEPTS[DEPT]||{}).name||'',
-    tasks:S.tasks, regs:S.regs, runs:RUNS.items, procEdits:PROC_EDITS };
+    tasks:S.tasks, regs:S.regs, occ:S.occ, runs:RUNS.items, procEdits:PROC_EDITS };
 }
 function downloadBackup(){
   var short=(DEPTS[DEPT]||{}).short||DEPT;
@@ -6565,6 +7138,11 @@ function parseRestore(txt){
      오해가 생기므로 아예 보지 않는다. */
   var runs=null;
   if(kind==='backup'&&o.runs instanceof Array) runs=o.runs.map(normRun).filter(function(r){ return !!r; });
+  /* 정기업무 회차도 백업 파일에만 있다. 회차 없이 들어오면(공유 파일·옛 백업) 규칙마다
+     오늘부터 다시 시작한다 — 시작일을 그대로 두면 지난 회차가 모두 «지연»으로 새로 생긴다. */
+  var occ=null;
+  if(kind==='backup'&&o.occ instanceof Array) occ=normOccList(o.occ);
+  if(!occ) regs.forEach(function(g){ if(g.rule) g.occFrom=''; });
   var edits=null;
   if(kind==='backup'&&o.procEdits&&typeof o.procEdits==='object'&&!(o.procEdits instanceof Array)) edits=o.procEdits;
   /* 못 읽는 날짜는 normTask/normReg 가 조용히 비운다. 되돌린 사람은 마감일이
@@ -6580,7 +7158,7 @@ function parseRestore(txt){
     var g=regs[i];
     if(g && raw && raw.next && !g.next) badDates++;
   });
-  return { ok:true, kind:kind, tasks:tasks, regs:regs, runs:runs, edits:edits,
+  return { ok:true, kind:kind, tasks:tasks, regs:regs, occ:occ||[], runs:runs, edits:edits,
     dropped:(o.tasks.length-tasks.length)+(o.regs.length-regs.length),
     badDates:badDates,
     madeAt:o.madeAt||'', deptName:safeText(o.deptName,40) };
@@ -6603,7 +7181,7 @@ function applyRestore(r){
   for(i=0;i<tasks.length;i++) if(!tasks[i].id) tasks[i].id=++maxId;
   r.reId=reId;
 
-  var nextS={ tasks:tasks, regs:r.regs.slice(), seq:maxId+1 };
+  var nextS={ tasks:tasks, regs:r.regs.slice(), seq:maxId+1, occ:(r.occ||[]).slice() };
   var nextR=null;
   if(r.runs){
     var rmax=0;
@@ -6634,7 +7212,7 @@ function applyRestore(r){
     return false;
   }
   /* 저장이 끝난 뒤에야 메모리를 바꾼다 */
-  S.tasks=nextS.tasks; S.regs=nextS.regs; S.seq=nextS.seq;
+  S.tasks=nextS.tasks; S.regs=nextS.regs; S.seq=nextS.seq; S.occ=nextS.occ;
   if(nextR){ RUNS.items=nextR.items; RUNS.seq=nextR.seq; }
   if(nextE) PROC_EDITS=nextE;
   EDIT_ID=0; RUN_PICK=0; PROC_EDIT=false;
@@ -6645,11 +7223,12 @@ function restoreFromText(txt){
   var r=parseRestore(txt);
   if(!r.ok){ toast(r.why+' — 지금 데이터는 그대로 둡니다'); return false; }
   var what='되돌릴 내용: 할 일 '+r.tasks.length+'건 · 정기업무 '+r.regs.length+'건'+
+           (r.occ.length? ' · 정기업무 회차 '+r.occ.length+'건' : '')+
            (r.runs? ' · 수행 원장 '+r.runs.length+'건' : '')+
            (r.dropped>0? '  (형식이 달라 '+r.dropped+'건 제외)' : '');
   var now='지금 이 브라우저: 할 일 '+S.tasks.length+'건 · 정기업무 '+S.regs.length+'건';
   var note=(r.kind==='shared')
-    ? '이 파일은 동료에게 보내는 «공유 파일»입니다. 수행 원장과 프로세스 수정은 들어 있지 않아 지금 것이 그대로 남습니다.'
+    ? '이 파일은 동료에게 보내는 «공유 파일»입니다. 수행 원장과 프로세스 수정은 들어 있지 않아 지금 것이 그대로 남습니다. 정기업무 회차 기록은 들어 있지 않아 오늘부터 다시 시작합니다.'
     : '수행 원장과 프로세스 수정까지 파일 내용으로 바뀝니다.';
   /* 고쳐서 넣는 것이 있으면 넣기 «전»에 말한다 — 마감일이 조용히 비워지면
      되돌린 사람은 한참 뒤에나 안다. */
@@ -6983,7 +7562,16 @@ window.__cal={ S:S, nlParse:nlParse, statusOf:statusOf, holidaysOf:holidaysOf,
   /* 복원 레이어 — 겹쳐 보기와 다른 경로라 따로 낸다 */
   backupObj:buildBackup,
   restoreText:function(txt){ return restoreFromText(txt); },
-  parseRestore:parseRestore };
+  parseRestore:parseRestore,
+  /* 정기업무 회차 */
+  occ:function(){ return S.occ; },
+  syncOcc:syncOcc,
+  occDates:function(rid,from,to){ return occDates(regByRid(rid),parseYmd(from),parseYmd(to)); },
+  ruleNeed:function(rid){ return ruleNeed(regByRid(rid)); },
+  occDone:function(oid,on){ occSetDone(oid,on!==false); },
+  /* 확인창 없이 규칙 파일 텍스트를 바로 얹는다(검사용) */
+  importRules:function(texts){ var r=parseRuleFiles(texts); if(r.ok) applyRuleImport(r); return r.ok? {ok:true,nRule:r.nRule,nTrig:r.nTrig,nFund:r.nFund} : r; },
+  readRuleFiles:readRuleFiles };
 
 })();
 </script>
