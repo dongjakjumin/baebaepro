@@ -6490,7 +6490,11 @@ function importSharedText(txt){
   return true;
 }
 function bundleAge(b){
-  var d=parseYmd((b.madeAt||'').slice(0,10));
+  /* 만든 시각은 UTC ISO(…Z)로 적힌다. 날짜만 잘라 쓰면 오전 9시 전에 만든 파일이 전날 파일로
+     세어졌다 — 시간대가 붙은 값은 이 PC의 날짜로 바꿔 센다. */
+  var s=String(b.madeAt||''), t=new Date(s);
+  var d=/(Z|[+-]\d\d:?\d\d)$/i.test(s)&&!isNaN(t.getTime())
+    ? new Date(t.getFullYear(),t.getMonth(),t.getDate()) : parseYmd(s.slice(0,10));
   if(!d) return '만든 시각 불명';
   var n=days(today(),d);
   if(n<0) return '만든 시각 불명';

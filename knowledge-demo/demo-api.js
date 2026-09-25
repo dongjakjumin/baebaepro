@@ -21,6 +21,14 @@
   var DEMO_KEY = 'jb-km-demo-v1';   /* 이 데모 말고는 아무것도 쓰지 않는 키 */
   var NOW = '2026-09-19T09:00:00.000Z';
 
+  /* 체험 중에 새로 생기는 기록의 시각. 화면은 저장된 문자열을 잘라 보인다(위 NOW도 그렇게
+     "09:00"으로 보인다). 그래서 UTC(toISOString)로 적으면 한국에서 9시간 이르게 찍혔다 —
+     이 PC의 현지 시각을 같은 모양(시간대 표시 없이)으로 적는다. */
+  function nowStamp() {
+    var d = new Date();
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 23);
+  }
+
   /* ── 가상 자료 ────────────────────────────────────────────
      실제 사내 자료가 아니다. 펀드·사업장·문서·사람 이름은 전부 지어낸 것이다. */
   function seed() {
@@ -486,7 +494,7 @@
     it.versionNo += 1;
     it.value = value;
     it.updatedBy = actor || '담당자(체험)';
-    it.updatedAt = new Date().toISOString();
+    it.updatedAt = nowStamp();
     it.note = note || '';
     if (evidenceDocVersionId) {
       var fv = findVersion(evidenceDocVersionId);
@@ -513,9 +521,9 @@
     var vid = D().nextIds.ver++;
     var doc = {
       id: D().nextIds.doc++, scope: 'project', fund_id: null, project_id: +body.projectId, kind: 'memo',
-      title: String(body.title || '메모') + ' (체험 메모)', created_at: new Date().toISOString(),
+      title: String(body.title || '메모') + ' (체험 메모)', created_at: nowStamp(),
       versions: [{ id: vid, version_no: 1, original_filename: String(body.title || '메모') + '.txt',
-        extract_status: 'ready', extract_warnings: null, uploaded_at: new Date().toISOString(),
+        extract_status: 'ready', extract_warnings: null, uploaded_at: nowStamp(),
         size: text.length, blocks: text.split(/\n+/).filter(Boolean) }]
     };
     D().documents.push(doc); save();
@@ -526,7 +534,7 @@
      준비된 v2 를 붙이고, 그 v2 를 근거로 하는 변경 제안을 만든다.
      이 둘이 곧 «근거 확인 → 승인» 흐름의 출발점이다. */
   function runDemoSync() {
-    var started = new Date().toISOString();
+    var started = nowStamp();
     var doc = D().documents.filter(function (d) { return d.id === PREPARED_V2.documentId; })[0];
     var added = 0, proposed = 0;
     if (doc && !D().demoSyncDone) {
@@ -541,7 +549,7 @@
           proposed_value: '회신 확인 완료 — 미결사항 해소 (근거: 인수인계 노트 v2)',
           base_version_no: target.versionNo,
           reason: '예시 문서 갱신 체험 — 미리 준비된 v2 본문을 근거로 든 예시 제안입니다. AI 분석 결과가 아닙니다.',
-          proposed_by: '담당자(체험)', proposed_at: new Date().toISOString(),
+          proposed_by: '담당자(체험)', proposed_at: nowStamp(),
           evidence_doc_version_id: PREPARED_V2.version.id,
           evidence_segment_id: ev ? ev.id : null,
           decided_by: null, decided_at: null, decision_note: null
@@ -551,7 +559,7 @@
       db.demoSyncDone = true;
     }
     var run = { id: D().nextIds.run++, source_connection_id: 1, started_at: started,
-      finished_at: new Date().toISOString(), status: 'success',
+      finished_at: nowStamp(), status: 'success',
       items_total: added, items_ok: added, items_failed: 0 };
     D().runs.push(run); save();
     return { ok: true, runId: run.id, status: 'success',
@@ -567,7 +575,7 @@
       source_type: body.sourceType || 'synthetic',
       proposed_value: body.proposedValue, base_version_no: it.versionNo,
       reason: body.reason, proposed_by: body.proposedBy || '담당자(체험)',
-      proposed_at: new Date().toISOString(),
+      proposed_at: nowStamp(),
       evidence_doc_version_id: body.evidenceDocVersionId || null,
       evidence_segment_id: body.evidenceSegmentId || null,
       decided_by: null, decided_at: null, decision_note: null };
@@ -583,7 +591,7 @@
     if (!it) return { ok: false, reason: 'ITEM_NOT_FOUND' };
     if (how === 'reject') {
       p.status = 'rejected'; p.decided_by = body.rejecter || '팀장(체험)';
-      p.decided_at = new Date().toISOString(); p.decision_note = body.reason || '';
+      p.decided_at = nowStamp(); p.decision_note = body.reason || '';
       save(); return { ok: true };
     }
     /* 승인 — 기준 버전 이후 현황이 바뀌었으면 충돌로 남긴다(로컬 앱과 같은 규칙) */
@@ -596,7 +604,7 @@
     bump(it, p.proposed_value, body.approver || '팀장(체험)', '변경 제안 승인',
       p.evidence_doc_version_id, p.evidence_segment_id);
     p.status = 'approved'; p.decided_by = body.approver || '팀장(체험)';
-    p.decided_at = new Date().toISOString();
+    p.decided_at = nowStamp();
     save();
     return { ok: true, versionNo: it.versionNo };
   }
