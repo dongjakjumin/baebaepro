@@ -158,7 +158,7 @@
       versionNo: 1, effectiveDate: '2026-09-01',
       updatedBy: '예시 데이터', updatedAt: NOW, note: '초기값',
       evidence: [],
-      history: [{ version_no: 1, value: value, created_by: '예시 데이터', created_at: NOW, note: '초기값' }]
+      history: [{ version_no: 1, value: value, effective_date: '2026-09-01', created_by: '예시 데이터', created_at: NOW, note: '초기값', evidence: [] }]
     };
   }
 
@@ -490,29 +490,50 @@
     return r.length ? r[r.length - 1].finished_at : null;
   }
 
-  function bump(it, value, actor, note, evidenceDocVersionId, evidenceSegmentId) {
+  /* 근거 처리(2026-09-25) — 예전엔 새 근거가 없으면 이전 근거가 그대로 남아, 근거 없이 값만
+     고쳐도 옛 근거가 새 값의 근거처럼 보였다. 이제 무엇을 할지 명시한다(로컬 본체와 같은 규칙):
+       keep: 이전 근거를 이어받고 «v(이전)에서 유지»를 남긴다(다시 확인했다는 표시)
+       new : 새 근거로 바꾼다
+       none: 근거 없이 저장한다 — 지정하지 않으면 새 근거가 있을 때 new, 없으면 none
+     이력에는 버전마다 그때의 기준일·근거를 같이 남긴다. */
+  function bump(it, value, actor, note, evidenceDocVersionId, evidenceSegmentId, mode, effectiveDate) {
+    var prevNo = it.versionNo;
+    mode = mode || (evidenceDocVersionId ? 'new' : 'none');
     it.versionNo += 1;
     it.value = value;
     it.updatedBy = actor || '담당자(체험)';
     it.updatedAt = nowStamp();
     it.note = note || '';
-    if (evidenceDocVersionId) {
+    if (effectiveDate !== undefined) it.effectiveDate = effectiveDate || null;
+    if (mode === 'new') {
       var fv = findVersion(evidenceDocVersionId);
       it.evidence = fv ? [{ doc_version_id: fv.ver.id, segment_id: evidenceSegmentId || null,
         original_filename: fv.ver.original_filename, page_no: null, cell_range: null }] : [];
+    } else if (mode === 'keep') {
+      it.evidence = (it.evidence || []).map(function (e) {
+        var c = {}; for (var k in e) c[k] = e[k]; c.carried_from_no = prevNo; return c; });
+    } else {
+      it.evidence = [];
     }
-    it.history.push({ version_no: it.versionNo, value: value,
-      created_by: it.updatedBy, created_at: it.updatedAt, note: it.note });
+    it.history.push({ version_no: it.versionNo, value: value, effective_date: it.effectiveDate || null,
+      created_by: it.updatedBy, created_at: it.updatedAt, note: it.note,
+      evidence: it.evidence.map(function (e) { var c = {}; for (var k in e) c[k] = e[k]; return c; }) });
   }
 
   function editItem(id, body) {
     var it = itemById(id);
     if (!it) return { ok: false, reason: 'NOT_FOUND' };
+    var mode = body.evidenceMode || (body.evidenceDocVersionId ? 'new' : 'none');
+    if (['keep', 'new', 'none'].indexOf(mode) < 0) return { ok: false, reason: 'BAD_EVIDENCE_MODE' };
+    if (mode === 'new' && !body.evidenceDocVersionId) return { ok: false, reason: 'EVIDENCE_REQUIRED' };
+    if (mode === 'keep' && !(it.evidence && it.evidence.length)) return { ok: false, reason: 'NO_EVIDENCE_TO_KEEP' };
+    var eff = body.effectiveDate ? String(body.effectiveDate) : null;
+    if (eff && !/^\d{4}-\d{2}-\d{2}$/.test(eff)) return { ok: false, reason: 'BAD_EFFECTIVE_DATE' };
     if (+body.baseVersionNo !== it.versionNo) return { ok: false, reason: 'CONFLICT', currentNo: it.versionNo };
     bump(it, String(body.value == null ? '' : body.value), body.actor, body.note,
-      body.evidenceDocVersionId, null);
+      body.evidenceDocVersionId, null, mode, body.effectiveDate === undefined ? undefined : eff);
     save();
-    return { ok: true, versionNo: it.versionNo };
+    return { ok: true, versionNo: it.versionNo, evidenceMode: mode };
   }
 
   function addMemo(body) {

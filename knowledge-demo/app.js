@@ -109,15 +109,23 @@ async function renderStatusPanel() {
   items.sort((a, b) => FIELD_ORDER.indexOf(a.key) - FIELD_ORDER.indexOf(b.key));
   const docOptions = docs.map((d) => `<option value="${d.versions[0].id}">${esc(d.title)}</option>`).join('');
 
+  /* 이전 버전 근거를 이어받은 것이면 그 사실을 칩에 붙인다(자동으로 따라온 게 아니라 고른 것) */
   const evidenceHtml = (it) => (it.evidence.length
-    ? it.evidence.map((e) => `<button type="button" class="evidence-chip" data-view="${e.doc_version_id}" data-segment="${e.segment_id ?? ''}">근거: ${esc(e.original_filename)}${e.page_no ? ' p.' + e.page_no : ''}${e.cell_range ? ' ' + esc(e.cell_range) : ''}</button>`).join(' ')
+    ? it.evidence.map((e) => `<button type="button" class="evidence-chip" data-view="${e.doc_version_id}" data-segment="${e.segment_id ?? ''}">근거: ${esc(e.original_filename)}${e.page_no ? ' p.' + e.page_no : ''}${e.cell_range ? ' ' + esc(e.cell_range) : ''}${e.carried_from_no ? ` · v${e.carried_from_no}에서 유지` : ''}</button>`).join(' ')
     : '<span class="hint">연결된 근거 없음</span>');
   const metaHtml = (it) => `v${it.versionNo}${it.effectiveDate ? ' · 기준일 ' + esc(it.effectiveDate) : ''} · ${esc(it.updatedBy)}, ${dt16(it.updatedAt)}`;
   const controlsHtml = (it) => `
       <div class="row-actions"><button class="edit-btn" data-edit="${it.id}">수정</button> <button class="edit-btn" data-history="${it.id}">이력(v${it.versionNo})</button></div>
       <div class="edit-form" data-form="${it.id}" style="display:none;margin-top:8px">
         <textarea rows="2">${esc(it.value)}</textarea>
-        ${docs.length ? `<select data-evidence="${it.id}" style="margin-top:6px"><option value="">근거 자료 선택 안 함</option>${docOptions}</select>` : ''}
+        <div class="ev-mode" role="radiogroup" aria-label="근거 처리">
+          <span class="k">근거</span>
+          ${it.evidence.length ? `<label><input type="radio" name="ev-${it.id}" value="keep"> 기존 근거 유지 <span class="hint">(다시 확인함)</span></label>` : ''}
+          ${docs.length ? `<label><input type="radio" name="ev-${it.id}" value="new"> 새 근거</label>
+          <select data-evidence="${it.id}"><option value="">자료 선택</option>${docOptions}</select>` : ''}
+          <label><input type="radio" name="ev-${it.id}" value="none"> 근거 없음</label>
+        </div>
+        <label class="eff-date">기준일 <input type="date" data-effdate value="${esc(it.effectiveDate || '')}"></label>
         <button class="edit-btn" data-save="${it.id}" data-version="${it.versionNo}" style="margin-top:8px">저장</button>
       </div>`;
   /* 항목 블록의 클래스·data 속성은 예전 그대로다 — 수정·이력·근거 연결이 배치만 바뀐다. */
@@ -271,31 +279,51 @@ function wireStatusControls(panel) {
   }));
   panel.querySelectorAll('[data-history]').forEach((btn) => btn.addEventListener('click', async () => {
     const data = await getJson(`/api/knowledge-items/${btn.dataset.history}/history`);
+    /* 버전마다 그때의 값·기준일·근거를 같이 보여 준다. 근거를 기록하기 전에 저장된 옛 이력은
+       근거를 모른다 — 「없음」이라고 단정하지 않는다. */
     showEvidencePane('<h3>버전 이력</h3>' + data.versions.map((v) => `
-      <div class="status-card"><div class="meta">v${v.version_no} · ${esc(v.created_by)}, ${esc((v.created_at || '').slice(0, 16).replace('T', ' '))}${v.note ? ' · ' + esc(v.note) : ''}</div>
-      <div class="v">${esc(v.value)}</div></div>`).join(''));
+      <div class="status-card"><div class="meta">v${v.version_no}${v.effective_date ? ' · 기준일 ' + esc(v.effective_date) : ''} · ${esc(v.created_by)}, ${dt16(v.created_at)}${v.note ? ' · ' + esc(v.note) : ''}</div>
+      <div class="v">${esc(v.value)}</div>
+      <div class="meta">${!Array.isArray(v.evidence) ? '<span class="hint">근거 기록 없음(이전 형식)</span>'
+        : v.evidence.length ? v.evidence.map((e) => `<button type="button" class="evidence-chip" data-view="${e.doc_version_id}" data-segment="${e.segment_id ?? ''}">근거: ${esc(e.original_filename)}${e.carried_from_no ? ` · v${e.carried_from_no}에서 유지` : ''}</button>`).join(' ')
+        : '<span class="hint">이 버전에 연결된 근거 없음</span>'}</div></div>`).join(''));
+    document.querySelectorAll('#viewerBody .evidence-chip[data-view]').forEach((chip) => chip.addEventListener('click', () => openViewer(chip.dataset.view, chip.dataset.segment || null)));
   }));
   panel.querySelectorAll('[data-save]').forEach((btn) => btn.addEventListener('click', async () => {
     const id = btn.dataset.save;
     const form = panel.querySelector(`[data-form="${id}"]`);
     const textarea = form.querySelector('textarea');
     const evidenceSelect = form.querySelector('[data-evidence]');
+    const say = (text) => {
+      let msg = form.querySelector('.km-msg');
+      if (!msg) { msg = document.createElement('p'); msg.className = 'km-msg err'; form.appendChild(msg); }
+      msg.textContent = text;
+    };
+    /* 근거 처리는 미리 골라 두지 않는다 — 고르지 않고 저장하면 예전 근거가 말없이 새 값의
+       근거처럼 남았다. 무엇을 할지 사람이 고르게 한다. */
+    const mode = form.querySelector(`input[name="ev-${id}"]:checked`)?.value;
+    if (!mode) { say('근거를 어떻게 할지 고르세요 — 기존 근거 유지 · 새 근거 · 근거 없음'); return; }
+    if (mode === 'new' && !evidenceSelect?.value) { say('새 근거로 연결할 자료를 고르세요'); return; }
     const r = await postJson(`/api/knowledge-items/${id}/edit`, {
       baseVersionNo: Number(btn.dataset.version), value: textarea.value, actor: '담당자(시연)', note: '화면에서 직접 수정',
-      evidenceDocVersionId: evidenceSelect?.value ? Number(evidenceSelect.value) : null,
+      evidenceMode: mode, evidenceDocVersionId: mode === 'new' ? Number(evidenceSelect.value) : null,
+      effectiveDate: form.querySelector('[data-effdate]')?.value || null,
     });
     /* 요구 5-3 — 이 어댑터는 HTTP 상태를 늘 200으로 돌려준다. 실패는 반환 데이터의
        ok/reason 에만 담기므로 반드시 그것을 보고 판단한다. 안내는 창을 띄우지 않고
        고치던 자리에 글자로 남긴다. */
     if (!r.ok) {
-      let msg = form.querySelector('.km-msg');
-      if (!msg) { msg = document.createElement('p'); msg.className = 'km-msg err'; form.appendChild(msg); }
-      msg.textContent = r.reason === 'CONFLICT'
+      say(r.reason === 'CONFLICT'
         ? `다른 곳에서 이미 수정되었습니다(현재 버전 v${r.currentNo}). 새로고침 후 다시 시도하세요.`
-        : `저장하지 못했습니다 — ${r.reason}`;
+        : `저장하지 못했습니다 — ${r.reason}`);
       return;
     }
     await renderStatusPanel();
+  }));
+  /* 자료를 고르면 «새 근거»를 고른 것으로 본다 */
+  panel.querySelectorAll('[data-evidence]').forEach((sel) => sel.addEventListener('change', () => {
+    const radio = panel.querySelector(`input[name="ev-${sel.dataset.evidence}"][value="new"]`);
+    if (radio && sel.value) radio.checked = true;
   }));
   panel.querySelectorAll('[data-view]').forEach((chip) => chip.addEventListener('click', () => openViewer(chip.dataset.view, chip.dataset.segment || null)));
 }

@@ -537,3 +537,11 @@
   .km-demo .act-grid dd { margin-bottom: 8px; }
   .km-demo .km-search-field { flex: 1 1 100%; }
 }
+
+/* 현황 수정 양식 — 근거 처리(유지·새 근거·없음)와 기준일(2026-09-25). 미리 골라 두지 않는다 */
+.km-demo .edit-form .ev-mode { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 8px; font-size: 13px; color: var(--km-ink); }
+.km-demo .edit-form .ev-mode .k { font-size: 12.5px; color: var(--km-sub); }
+.km-demo .edit-form .ev-mode label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.km-demo .edit-form .ev-mode select { width: auto; max-width: 100%; font-size: 13px; padding: 4px 8px; }
+.km-demo .edit-form .eff-date { display: inline-flex; align-items: center; gap: 6px; margin: 8px 12px 0 0; font-size: 13px; color: var(--km-sub); }
+.km-demo .edit-form .eff-date input { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--km-line); border-radius: var(--km-rb); color: var(--km-ink); }
